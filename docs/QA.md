@@ -118,7 +118,7 @@ Native UI automation retains an old bundle mapping and extracted copies make bun
 
 ## v0.4.0 compact bar · 2026-10-06
 
-75 unit checks pass locally. Actual Mac source compiled. Own-window fixture matrix checks small/detail EN/RU views, resize handler, one-client bar selection, second-client rotation state, recognized ZCode foreground mapping and unknown-app fallback, movable full widget opened by the status button, show/hide restoration and single-instance rejection. The timer is local UI-only; bundle-ID matching reads no window content. Native ZCode bundle ID verified locally; Codex/Claude matching remains client-version-dependent. Fixture screenshots inspected at actual dimensions; unknown GLM quota remains —.
+75 unit checks pass locally. Actual Mac source compiled. Own-window fixture matrix checks small/detail EN/RU views, resize handler, one-client bar selection, second-client rotation state and actual 8-second timer, recognized ZCode foreground mapping and unknown-app fallback, movable full widget opened by the status button, show/hide restoration and single-instance rejection. The timer is local UI-only; bundle-ID matching reads no window content. Native ZCode bundle ID verified locally; Codex/Claude matching remains client-version-dependent. Fixture screenshots inspected at actual dimensions; unknown GLM quota remains —.
 
 Windows source/frozen smoke adds compact-strip geometry, full-widget restore and five pages covering 13 synthetic clients, with existing native tray/mutex and EN/RU two-quota checks. Hosted Windows and package results will be recorded after completion. Arbitrary live providers, Windows DPI, physical dragging, multiple displays/Spaces/fullscreen and sleep-wake are still manual acceptance cases.
 

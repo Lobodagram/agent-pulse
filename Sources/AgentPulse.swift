@@ -734,7 +734,7 @@ final class FloatingPanel: NSPanel {
             let drag = NSEvent.mouseEvent(with: .leftMouseDragged, location: NSPoint(x: 340, y: 10), modifierFlags: [], timestamp: 0.1, windowNumber: panel?.windowNumber ?? 0, context: nil, eventNumber: 2, clickCount: 1, pressure: 1)!
             grip.mouseDown(with: down); grip.mouseDragged(with: drag)
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + (store.isFixture && args.contains("--rotation-check") ? 9 : 2)) { [weak self] in
             guard let self else { return }
             let w = mode.hasPrefix("analysis") ? self.analysisWindow : mode == "settings" ? self.settingsWindow : self.panel
             let captureView = mode == "menu-bar" ? self.statusItem.button : w?.contentView

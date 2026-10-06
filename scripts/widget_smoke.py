@@ -10,16 +10,17 @@ with tempfile.TemporaryDirectory() as tmp:
     bundle=Path(tmp)/'AgentPulseFixture.app';shutil.copytree(binary.parents[2],bundle)
     info=bundle/'Contents/Info.plist';settings=plistlib.loads(info.read_bytes());settings['CFBundleIdentifier']='app.agentpulse.widgetsmoke';info.write_bytes(plistlib.dumps(settings))
     subprocess.run(['codesign','--force','--sign','-',str(bundle)],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-    for mode,width,height in [('compact',288,216),('expanded',288,344),('resize-check',348,261),('menu-widget',288,216),('menu-bar',288,216),('menu-next',288,216),('menu-active',288,216),('menu-fallback',288,216),('two-quotas',288,216),('expanded-two-quotas',288,344),('pending',288,216),('compact-en',288,216),('single-instance',288,216)]:
+    for mode,width,height in [('compact',288,216),('expanded',288,344),('resize-check',348,261),('menu-widget',288,216),('menu-bar',288,216),('menu-next',288,216),('menu-timer',288,216),('menu-active',288,216),('menu-fallback',288,216),('two-quotas',288,216),('expanded-two-quotas',288,344),('pending',288,216),('compact-en',288,216),('single-instance',288,216)]:
         out=Path(tmp)/(mode+'.png')
         data=json.loads(fixture.read_text())
         if mode in ('two-quotas','expanded-two-quotas'):data['providers'][1]['quotas']=data['providers'][0]['quotas']
         if mode=='pending':data['providers'][0].update(todayTokens=None,todayTokenStatus='account-day-pending')
         demo.write_text(json.dumps(data))
-        view='menu-bar' if mode in ('menu-next','menu-active','menu-fallback') else 'expanded' if mode=='expanded-two-quotas' else mode if mode not in ('two-quotas','pending','compact-en','single-instance') else 'compact'
+        view='menu-bar' if mode in ('menu-next','menu-timer','menu-active','menu-fallback') else 'expanded' if mode=='expanded-two-quotas' else mode if mode not in ('two-quotas','pending','compact-en','single-instance') else 'compact'
         args=['open','-n','-W',str(bundle),'--args','--fixture',str(demo),'--language','en' if mode=='compact-en' else 'ru','--scale','.8','--view',view,'--snapshot',str(out)]
         if mode.startswith('menu'):args.append('--menu-only')
         if mode=='menu-next':args+=['--status-page','1']
+        if mode=='menu-timer':args.append('--rotation-check')
         if mode=='menu-active':args+=['--active-app','dev.zcode.app']
         if mode=='menu-fallback':args+=['--active-app','unknown.app','--status-page','1']
         try:
@@ -42,7 +43,7 @@ with tempfile.TemporaryDirectory() as tmp:
         assert r['fixtureMode'] and out.stat().st_size>100,r
         if mode=='menu-widget':assert r['menuClickShowsPanel'] and r['visibleBefore'] and r['movable'],r
         if mode.startswith('menu'):assert r['displayMode']=='menu' and r['visibleBefore']==(mode=='menu-widget') and r['menuTitle'],r
-        if mode in ('menu-next','menu-active','menu-fallback'):
+        if mode in ('menu-next','menu-timer','menu-active','menu-fallback'):
             assert r['menuTitle'].startswith('GLM —') and f"2/{len(data['providers'])}" in r['menuTitle'],r
             assert 'Cdx 5ч' in r['menuTooltip'] and 'GLM —' in r['menuTooltip'],r
         if mode=='menu-bar':assert r['menuTitle'].startswith('Cdx 5ч') and 'GLM' not in r['menuTitle'],r
