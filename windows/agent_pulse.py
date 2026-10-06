@@ -10,7 +10,7 @@ import threading
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import ttk, messagebox
-from pulse_tray import Tray
+from pulse_tray import Tray, Instance
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import collector
 import analytics
@@ -168,6 +168,13 @@ class Pulse:
             if self.smoke:
                 try:
                     assert not self.tray_initialization_error,self.tray_initialization_error
+                    name='Local\\AgentPulseSmoke'+str(os.getpid())
+                    first=Instance(name);second=Instance(name)
+                    try:assert first.owns and (not second.owns or sys.platform!='win32')
+                    finally:second.close();first.close()
+                    third=Instance(name)
+                    try:assert third.owns
+                    finally:third.close()
                     self.analysis();self.root.update_idletasks();assert self.data.get('providers') and self.root.attributes('-topmost')
                     for size in (.8,.9,1):
                         self.set_scale(size,save=False);self.root.update_idletasks()
@@ -338,8 +345,13 @@ class Pulse:
 
 def main():
     a=argparse.ArgumentParser();a.add_argument('--fixture');a.add_argument('--smoke',action='store_true');args=a.parse_args()
-    root=tk.Tk();app=Pulse(root,args.fixture,args.smoke);root.mainloop()
-    if app.tray:app.tray.close()
+    instance=Instance('Local\\AgentPulseFixture'+str(os.getpid())) if args.fixture else Instance()
+    if not instance.owns:instance.close();return
+    root=tk.Tk();app=Pulse(root,args.fixture,args.smoke)
+    try:root.mainloop()
+    finally:
+        if app.tray:app.tray.close()
+        instance.close()
     if args.smoke and app.smoke_error:raise SystemExit(app.smoke_error)
     if args.smoke and not app.data:raise SystemExit(1)
 if __name__=='__main__':

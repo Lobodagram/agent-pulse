@@ -5,6 +5,21 @@ import os
 import sys
 
 
+class Instance:
+    """Session-local named mutex; fixtures deliberately use a separate name."""
+    def __init__(self, name='Local\\AgentPulseWidget'):
+        self.handle=None;self.owns=True
+        if sys.platform!='win32':return
+        self.kernel=c.WinDLL('kernel32',use_last_error=True)
+        self.kernel.CreateMutexW.argtypes=[c.c_void_p,w.BOOL,w.LPCWSTR];self.kernel.CreateMutexW.restype=w.HANDLE
+        self.kernel.CloseHandle.argtypes=[w.HANDLE];self.kernel.CloseHandle.restype=w.BOOL
+        c.set_last_error(0);self.handle=self.kernel.CreateMutexW(None,False,name)
+        if not self.handle:raise OSError(c.get_last_error(),'Cannot create own instance mutex')
+        self.owns=c.get_last_error()!=183
+    def close(self):
+        if self.handle:self.kernel.CloseHandle(self.handle);self.handle=None
+
+
 class Tray:
     MESSAGE = 0x8014
 

@@ -86,3 +86,6 @@ Mac Swift build and own-window fixture matrix cover 288×216 compact, 288×344 d
 Windows implements its own Win32 notification icon using Shell_NotifyIconW, no global input hooks: hover counters, click show/hide, context menu, Explorer restart re-registration and visible fallback. Source and packaged Windows smoke verify supported native tray registration/callback/recovery or explicitly report unavailable Explorer. Hosted platform results are recorded after the run; Windows live-client and DPI acceptance are not inferred from source compilation.
 
 69 тестов прошли на Mac. Отсутствующий день отделён от нуля; локальные токены включаются отдельно и помечены частичным охватом UTC. Mac-матрица проверяет минимальные размеры, изменение масштаба, запуск в строке меню, настоящее всплывающее табло и вымышленные значения EN/RU. Windows-трей проверяется на Windows; ручная приёмка дисплеев и живых клиентов остаётся отдельной проверкой.
+
+
+The Mac native fixture also verifies a second production launch exits while the existing fixture instance completes. Explicit quit/collapse controls and cleanup of fixture processes on failure prevent leftover test windows. Windows smoke additionally exercises session-local named-mutex lifecycle; its final hosted result follows below.

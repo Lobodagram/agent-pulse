@@ -2,6 +2,7 @@
 
 - Windows native tray: hover counters, click expand/collapse, context menu, Explorer recovery and visible fallback.
 
+- Explicit quit button and production single-instance protection on Mac/Windows; fixture cleanup also runs on failure.
 - Proportional widget sizing, 80/90/100% presets, continuous slider and lower-right resize grip; auxiliary windows retain their original size.
 - Mac menu-bar-only mode, first-two-client compact indicators, icon-only option and click popover.
 - Explain delayed Codex daily reporting; independent opt-in bounded local token projection supplies partial UTC-day counts without tool projection or double-counted account totals.

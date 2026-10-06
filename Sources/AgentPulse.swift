@@ -317,6 +317,7 @@ struct WidgetView: View {
                 ActionButton(symbol: "chart.bar.xaxis", help: tr("Analytics", "Аналитика"), action: actions.showAnalysis)
                 ActionButton(symbol: "gearshape", help: tr("Settings", "Настройки"), action: actions.showSettings)
                 ActionButton(symbol: "minus", help: tr("Collapse to menu bar", "Свернуть в строку меню"), action: actions.collapseToMenu)
+                ActionButton(symbol: "xmark", help: tr("Quit Agent Pulse", "Завершить Agent Pulse"), action: { actions.quit() })
             }
             if let snapshot = store.snapshot {
                 ForEach(store.visibleProviders) { p in ProviderLine(provider: p); Rectangle().fill(divider).frame(height: 1) }
@@ -733,6 +734,10 @@ final class FloatingPanel: NSPanel {
 @main enum AgentPulseMain {
     @MainActor static func main() {
         let app = NSApplication.shared
+        if !CommandLine.arguments.contains("--fixture"), let id = Bundle.main.bundleIdentifier,
+           let existing = NSRunningApplication.runningApplications(withBundleIdentifier: id).first(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }) {
+            existing.activate(options: []); return
+        }
         let delegate = AppDelegate()
         app.delegate = delegate
         app.run()

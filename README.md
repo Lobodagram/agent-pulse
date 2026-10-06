@@ -79,3 +79,6 @@ A missing Codex daily bucket means **awaiting report**, not zero. Enable **Local
 ![Small widget, invented English demo](docs/screenshots/widget-small-en.png)
 
 ![Menu bar, invented counters](docs/screenshots/menu-bar-demo.png)
+
+
+The **−** button collapses into the menu/tray; **×** quits Agent Pulse. Reopening a production app does not create another instance. Test fixtures are isolated and automatically closed.

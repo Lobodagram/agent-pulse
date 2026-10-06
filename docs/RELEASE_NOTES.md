@@ -9,3 +9,6 @@ Missing Codex daily bucket is awaiting report, not zero. Optional local daily to
 Отсутствующая строка за сегодня — ожидание отчёта, не ноль. Локальные токены включаются отдельно: ограниченные события, частичный охват устройства за день UTC. Тексты чатов и код не сохраняются, модели не вызываются.
 
 Python bundled. Mac 14+ ARM64/Intel: ad-hoc signed, not notarized. Windows 10/11 x64: unsigned preview, keep both exe files together. PolyForm Noncommercial 1.0.0; separate purchased written commercial license from Lobodagram. Source-available, not OSI open source.
+
+
+Explicit × exit, −/⌄ collapse, one production instance on both desktops. Явные кнопки выхода и сворачивания, защита от повторных экземпляров.
