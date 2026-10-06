@@ -67,7 +67,7 @@ jobs:
         with:
           path: packages
           merge-multiple: true
-      - run: sha256sum packages/*.zip > packages/SHA256SUMS.txt
+      - run: cd packages && sha256sum *.zip > SHA256SUMS.txt
       - env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}

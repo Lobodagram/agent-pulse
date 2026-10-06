@@ -1,5 +1,12 @@
 # Changelog / Изменения
 
+## 0.2.2 — 2026-10-06
+
+- Resolve the Windows demo fixture to an absolute path before the frozen executable smoke check.
+- Verify macOS ARM64, macOS Intel and packaged Windows x64 before publishing downloadable archives.
+
+Исправлен путь демонстрационных данных при проверке Windows .exe. Все три упакованные версии прошли проверочную сборку до публикации.
+
 ## 0.2.1 — 2026-10-06
 
 - Bundle the official Python 3.12 notice when a runner omits it; verify the final macOS signature after adding runtime notices.

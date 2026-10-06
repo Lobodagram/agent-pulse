@@ -1,4 +1,4 @@
-## Agent Pulse 0.2.1 — public preview
+## Agent Pulse 0.2.2 — public preview
 
 A local always-on-top dashboard for coding-agent quotas, reported tokens, reset times, manual billing dates and recurring tool categories.
 

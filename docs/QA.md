@@ -17,3 +17,9 @@ Prepublication evidence, public counters excluded:
 [Checks run 37422139777](https://github.com/Lobodagram/agent-pulse/actions/runs/37422139777) passed on Linux, macOS and Windows. Windows source demo UI smoke and macOS build/native fixture render passed. Package verification is recorded by the Release packages workflow; interactive acceptance and experimental live accounts remain pending.
 
 Публичный CI прошёл на трёх ОС, включая запуск Windows-демо и сборку/изображение macOS. Упакованные сборки проверяет workflow релиза; ручная приёмка и экспериментальные аккаунты остаются открытыми.
+
+## Package verification before v0.2.2
+
+[Release packages run 37423000057](https://github.com/Lobodagram/agent-pulse/actions/runs/37423000057) passed for macOS ARM64, macOS Intel and Windows x64. Each package ran 26 tests. Both macOS applications rendered their own demo window, their frozen collectors listed the provider catalog, and final bundle signatures verified. The packaged Windows .exe completed the fixture UI smoke check, including its topmost state. Publication was intentionally skipped for this manual pre-release run; the tagged release performs the same checks and uploads the archives.
+
+До v0.2.2 прошли сборки и проверки всех трёх пакетов: два macOS и Windows x64, включая запуск упакованного .exe. Финальная подпись macOS проверена. Ручная приёмка на разных дисплеях, sleep/wake и живых аккаунтах экспериментальных адаптеров остаётся открытой.
