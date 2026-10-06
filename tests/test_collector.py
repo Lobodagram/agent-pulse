@@ -88,6 +88,38 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(((self.store.directory/'metrics.sqlite').stat().st_mode & 0o777),0o600)
         link=Path(self.temp.name)/'link';link.symlink_to(self.store.directory)
         with self.assertRaises(ValueError):c.Store(link)
+    def test_missing_daily_bucket_is_pending_not_zero(self):
+        result=c.codex_usage({'dailyUsageBuckets':[{'startDate':'2026-10-05','tokens':123}]},'2026-10-06')
+        self.assertIsNone(result['todayTokens']);self.assertEqual(result['todayTokenStatus'],'account-day-pending')
+        zero=c.codex_usage({'dailyUsageBuckets':[{'startDate':'2026-10-06','tokens':0}]},'2026-10-06')
+        self.assertEqual(zero['todayTokens'],0);self.assertEqual(zero['todayTokenStatus'],'reported')
+    def test_token_only_projection_excludes_tools_and_deduplicates(self):
+        root=Path(self.temp.name);sessions=root/'.codex/sessions';sessions.mkdir(parents=True)
+        path=sessions/'token-only.jsonl';now=datetime.now(timezone.utc).isoformat()
+        rows=[{'timestamp':now,'type':'event_msg','payload':{'type':'token_count','info':{'total_token_usage':{'total_tokens':100},'last_token_usage':{'total_tokens':50}}}},
+              {'timestamp':now,'type':'response_item','payload':{'type':'function_call','name':'exec_command','arguments':'private fixture'}}]
+        path.write_text(''.join(json.dumps(x)+'\n' for x in rows))
+        with patch('collector.Path.home',return_value=root):
+            self.store.project_rollout({'id':'token-only','path':str(path)},include_tools=False)
+            self.store.project_rollout({'id':'token-only','path':str(path)},include_tools=False)
+        self.assertEqual(self.store.local_tokens(datetime.now(timezone.utc).strftime('%Y-%m-%d')),50)
+        self.assertEqual(self.store.patterns([]),[])
+        self.assertNotIn('private fixture','\n'.join(self.store.db.iterdump()))
+    def test_separate_local_tokens_setting_defaults_off_and_preserves_unknown(self):
+        import providers
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertFalse(providers.load_config(tmp)['localTokens'])
+            providers.atomic_json(Path(tmp)/'config.json',{'localTokens':'false'})
+            with self.assertRaises(ValueError):providers.load_config(tmp)
+            providers.atomic_json(Path(tmp)/'config.json',{'enabledProviders':['codex'],'localPatterns':False,'localTokens':True})
+            day=datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            p={'id':'codex','name':'Codex','status':'ready','quotas':[],'daily':[],'todayTokens':None,'sourceStatus':['tokens_ok'],'todayTokenStatus':'account-day-pending'}
+            with patch.object(c,'collect_codex',return_value=(p,[])) as native:
+                result=c.snapshot(tmp)
+                self.assertTrue(native.call_args.kwargs['read_local_tokens'])
+                self.assertIsNone(result['providers'][0]['todayTokens'])
+                self.assertEqual(result['providers'][0]['todayTokenStatus'],'local-day-pending')
+                self.assertFalse(result['localPatterns']);self.assertTrue(result['localTokens'])
     def test_rollout_dedup_incremental_tokens_and_no_text_retention(self):
         # Only fake files in a fake home. No native database or actual chat is touched.
         root=Path(self.temp.name);sessions=root/'.codex/sessions';sessions.mkdir(parents=True)

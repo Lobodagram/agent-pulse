@@ -31,3 +31,6 @@ Account switching observes only known auth/config file modification/size/inode a
 
 
 Work history remains continuous across account switches. The journal groups by provider/task, not login. Known Codex daily account reports are stored per hashed account/day, updated (not incremented) on each read, then summed for general daily history. Switching back does not count the same account twice. Earlier unscoped rows remain stored; if they overlap a known-account day, they are not added because identity/overlap cannot be verified. Therefore totals cover observed accounts only, not every account ever used. Current quotas and manual billing dates remain account-specific; GLM local aggregates remain client history.
+
+
+Optional local Codex daily tokens (0.3.1): off by default and independent of tool-pattern projection. When enabled, the native metadata API returns at most 30 recent session paths; only bounded token-count events under the native sessions root are projected. Raw records may contain conversation text but no message text, prompts, code or arguments are retained in this mode. The result is a partial device-wide UTC-day count, not a complete account bill or per-tool cost. It is never added to an account daily total. Shared general history and current account quotas remain separate.

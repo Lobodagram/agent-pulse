@@ -21,12 +21,13 @@ IDS={x['id'] for x in CATALOG}
 
 def load_config(directory):
     path=Path(directory)/'config.json'
-    if not path.exists():return {'enabledProviders':['codex','glm'],'localPatterns':False}
+    if not path.exists():return {'enabledProviders':['codex','glm'],'localPatterns':False,'localTokens':False}
     if path.is_symlink() or path.stat().st_size>65536:raise ValueError('invalid_config')
     raw=json.loads(path.read_text(encoding='utf-8'))
     if not isinstance(raw,dict):raise ValueError('invalid_config')
     enabled=raw.get('enabledProviders',['codex','glm'])
     if not isinstance(enabled,list) or any(x not in IDS for x in enabled):raise ValueError('invalid_providers')
+    if 'localTokens' in raw and not isinstance(raw['localTokens'],bool):raise ValueError('invalid_local_tokens')
     raw['enabledProviders']=list(dict.fromkeys(enabled))
     return raw
 

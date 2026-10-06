@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Charts
+import Combine
 
 var russian: Bool { UserDefaults.standard.string(forKey: "language") == "ru" }
 func tr(_ en: String, _ ru: String) -> String { russian ? ru : en }
@@ -17,7 +18,7 @@ struct Provider: Codable, Identifiable {
     var id: String; var name: String; var status: String; var quotas: [Quota]
     var todayTokens: Double?; var lifetimeTokens: Double?; var periodTokens: Double?; var contextTokens: Double?
     var sessions: Double?; var resetCredits: Double?; var sourceStatus: [String]
-    var accountScope: String?; var quotaObservedAt: Double?; var observedAt: Double?; var lastSuccessfulAt: Double?; var tokenSource: String?; var tokenCoverage: String?; var todayTokenCoverage: String?; var subscription: Subscription
+    var accountScope: String?; var quotaObservedAt: Double?; var observedAt: Double?; var lastSuccessfulAt: Double?; var tokenSource: String?; var tokenCoverage: String?; var todayTokenCoverage: String?; var todayTokenStatus: String?; var subscription: Subscription
 }
 struct ProviderSpec: Codable, Identifiable { var id: String; var name: String; var mode: String; var support: String }
 struct DayUsage: Codable, Identifiable {
@@ -32,7 +33,7 @@ struct Pattern: Codable, Identifiable {
 struct Snapshot: Codable {
     var generatedAt: Double; var providers: [Provider]; var history: [DayUsage]; var patterns: [Pattern]
     var analytics: AnalyticsReport?
-    var patternCoverage: String; var privacy: String; var catalog: [ProviderSpec]?; var localPatterns: Bool?
+    var patternCoverage: String; var privacy: String; var catalog: [ProviderSpec]?; var localTokens: Bool?; var localPatterns: Bool?
 }
 struct EventCoverage: Codable, Identifiable {
     var provider: String; var state: String; var calls: Int; var pairedCalls: Int; var rejected: Int
@@ -103,11 +104,16 @@ func subscriptionText(_ s: Subscription) -> String {
     @Published var snapshot: Snapshot?; @Published var loading = false; @Published var error: String?; @Published var settingsMessage: String?
     @Published var expanded = false; @Published var topmost = true; @Published var page = 0
     @Published var language: String = UserDefaults.standard.string(forKey: "language") ?? "en" { didSet { UserDefaults.standard.set(language, forKey: "language") } }
+    @Published var widgetScale: Double = min(1, max(0.8, UserDefaults.standard.double(forKey: "widgetScale") == 0 ? 1 : UserDefaults.standard.double(forKey: "widgetScale"))) { didSet { if !isFixture { UserDefaults.standard.set(widgetScale, forKey: "widgetScale") } } }
+    @Published var displayMode: String = UserDefaults.standard.string(forKey: "displayMode") ?? "floating" { didSet { if !isFixture { UserDefaults.standard.set(displayMode, forKey: "displayMode") } } }
+    @Published var menuNumbers: Bool = UserDefaults.standard.object(forKey: "menuNumbers") as? Bool ?? true { didSet { if !isFixture { UserDefaults.standard.set(menuNumbers, forKey: "menuNumbers") } } }
     let fixture: String?; private var timer: Timer?; private var limitTimer: Timer?; private var readingLimits = false; private var authTimer: Timer?; private var authMarks: [String: String] = [:]; private var authRevision = 0
     init() {
         let args = CommandLine.arguments
         fixture = args.firstIndex(of: "--fixture").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
         if let i = args.firstIndex(of: "--language"), i + 1 < args.count { language = args[i + 1]; UserDefaults.standard.set(language, forKey: "language") }
+        if let i = args.firstIndex(of: "--scale"), i + 1 < args.count, let value = Double(args[i + 1]) { widgetScale = min(1, max(0.8, value)) }
+        if args.contains("--menu-only") { displayMode = "menu" }
         if let fixture {
             do { snapshot = try JSONDecoder().decode(Snapshot.self, from: Data(contentsOf: URL(fileURLWithPath: fixture))) }
             catch { self.error = tr("Could not load demo", "Не удалось прочитать демо") }
@@ -118,6 +124,7 @@ func subscriptionText(_ s: Subscription) -> String {
             refresh(); timer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in Task { @MainActor in self?.refresh() } }
         }
     }
+    var baseHeight: Double { expanded ? 430 : 270 }
     var isFixture: Bool { fixture != nil }
     var pages: Int { max(1, ((snapshot?.providers.count ?? 0) + 1) / 2) }
     var visibleProviders: [Provider] { Array((snapshot?.providers ?? []).dropFirst(min(page, pages - 1) * 2).prefix(2)) }
@@ -218,9 +225,9 @@ func subscriptionText(_ s: Subscription) -> String {
             else { self?.settingsMessage = tr("Configuration failed; inspect the local CLI", "Настройка не удалась; проверьте локальную CLI") }
         }
     }
-    func configure(_ ids: [String], patterns: Bool) {
+    func configure(_ ids: [String], patterns: Bool, tokens: Bool) {
         guard !isFixture else { settingsMessage = tr("Demo: settings are not saved", "Демо: настройки не сохраняются"); return }
-        run(["configure", "--providers", ids.joined(separator: ","), "--local-patterns", patterns ? "on" : "off"]) { [weak self] result in
+        run(["configure", "--providers", ids.joined(separator: ","), "--local-patterns", patterns ? "on" : "off", "--local-tokens", tokens ? "on" : "off"]) { [weak self] result in
             if case .success = result { self?.refresh() }
             else { self?.settingsMessage = tr("Could not save", "Не удалось сохранить") }
         }
@@ -244,12 +251,32 @@ struct DragHandle: NSViewRepresentable {
 }
 struct ActionButton: View {
     var symbol: String; var help: String; var action: () -> Void
-    var body: some View { Button(action: action) { Image(systemName: symbol).frame(width: 26, height: 26) }.buttonStyle(.plain).foregroundStyle(quiet).help(help).accessibilityLabel(help) }
+    var body: some View { Button(action: action) { Image(systemName: symbol).frame(width: 30, height: 30) }.buttonStyle(.plain).foregroundStyle(quiet).help(help).accessibilityLabel(help) }
+}
+func todayText(_ p: Provider) -> String {
+    if let value = p.todayTokens { return shortNumber(value) + (p.todayTokenCoverage == "partial-local" ? tr(" · partial", " · частично") : "") }
+    return p.todayTokenStatus == "account-day-pending" ? tr("awaiting report", "жду отчёт") : p.todayTokenStatus == "local-day-pending" ? tr("no local data yet", "ещё нет данных") : tr("not reported", "не передано")
+}
+struct ResizeGrip: NSViewRepresentable {
+    var actions: AppDelegate
+    final class Grip: NSView {
+        var actions: AppDelegate?; var start: NSPoint = .zero; var width: Double = 360
+        override var mouseDownCanMoveWindow: Bool { false }
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+        override func mouseDown(with event: NSEvent) { start = event.locationInWindow; width = Double(actions?.panel?.frame.width ?? 360) }
+        override func mouseDragged(with event: NSEvent) { actions?.setScale((width + Double(event.locationInWindow.x - start.x)) / 360); syncValue() }
+        override func resetCursorRects() { addCursorRect(bounds, cursor: .crosshair) }
+        func syncValue() { if let actions { setAccessibilityValue(actions.store.widgetScale * 100) } }
+        override func accessibilityPerformIncrement() -> Bool { guard let actions else { return false }; actions.setScale(actions.store.widgetScale + 0.05); syncValue(); return true }
+        override func accessibilityPerformDecrement() -> Bool { guard let actions else { return false }; actions.setScale(actions.store.widgetScale - 0.05); syncValue(); return true }
+    }
+    func makeNSView(context: Context) -> Grip { let view = Grip(); view.actions = actions; view.setAccessibilityElement(true); view.setAccessibilityRole(.slider); view.setAccessibilityLabel(tr("Widget size", "Размер виджета")); return view }
+    func updateNSView(_ view: Grip, context: Context) { view.actions = actions; view.setAccessibilityValue(actions.store.widgetScale * 100) }
 }
 struct ProviderLine: View {
     let provider: Provider
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 2) {
             HStack {
                 Text(provider.name.uppercased()).font(.system(size: 10, weight: .bold, design: .monospaced)).tracking(1).foregroundStyle(quiet)
                 Spacer()
@@ -264,8 +291,8 @@ struct ProviderLine: View {
                         }
                     }
                 }
-                Text(tr("Limit read: ", "Лимит получен: ") + stamp(provider.quotaObservedAt ?? provider.observedAt, compact: true)).font(.system(size: 9)).foregroundStyle(quiet).help(tr("Independent quota snapshot; refresh to compare with the native client", "Независимый снимок лимита; обновите для сравнения с клиентом"))
-                Text(tr("Tokens today: ", "Токены сегодня: ") + shortNumber(provider.todayTokens) + (provider.todayTokenCoverage == "partial-local" ? tr(" · partial", " · частично") : "")).font(.system(size: 10)).foregroundStyle(quiet)
+                Text(tr("Limit read: ", "Лимит получен: ") + stamp(provider.quotaObservedAt ?? provider.observedAt, compact: true)).font(.system(size: 11)).foregroundStyle(quiet).help(tr("Independent quota snapshot; refresh to compare with the native client", "Независимый снимок лимита; обновите для сравнения с клиентом"))
+                Text(tr("Today · UTC: ", "Сегодня · UTC: ") + todayText(provider)).font(.system(size: 10)).foregroundStyle(quiet)
             } else {
                 HStack(alignment: .firstTextBaseline) {
                     Text(shortNumber(provider.todayTokens ?? provider.periodTokens ?? provider.contextTokens)).font(.system(size: 23, weight: .medium, design: .monospaced))
@@ -279,14 +306,17 @@ struct ProviderLine: View {
 struct WidgetView: View {
     @ObservedObject var store: PulseStore; var actions: AppDelegate
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        surface.scaleEffect(store.widgetScale, anchor: .topLeading).frame(width: 360 * store.widgetScale, height: store.baseHeight * store.widgetScale, alignment: .topLeading)
+    }
+    var surface: some View {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 4) {
                 HStack(spacing: 4) { Circle().fill(store.loading ? amber : mint).frame(width: 6, height: 6); Text("AGENT PULSE").font(.system(size: 11, weight: .semibold)).tracking(1); if store.isFixture { Text("DEMO").font(.system(size: 9)).foregroundStyle(amber) } }.frame(height: 26).overlay(DragHandle()).help(tr("Drag by this title", "Перетащить за заголовок"))
                 Spacer()
                 ActionButton(symbol: "arrow.clockwise", help: tr("Refresh", "Обновить"), action: store.refresh)
                 ActionButton(symbol: "chart.bar.xaxis", help: tr("Analytics", "Аналитика"), action: actions.showAnalysis)
                 ActionButton(symbol: "gearshape", help: tr("Settings", "Настройки"), action: actions.showSettings)
-                ActionButton(symbol: "minus", help: tr("Hide to menu bar", "Скрыть в строку меню"), action: actions.hidePanel)
+                ActionButton(symbol: "minus", help: tr("Collapse to menu bar", "Свернуть в строку меню"), action: actions.collapseToMenu)
             }
             if let snapshot = store.snapshot {
                 ForEach(store.visibleProviders) { p in ProviderLine(provider: p); Rectangle().fill(divider).frame(height: 1) }
@@ -296,7 +326,7 @@ struct WidgetView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(p.name).font(.system(size: 12, weight: .semibold))
                             Text(subscriptionText(p.subscription)).font(.system(size: 11)).foregroundStyle(quiet)
-                            Text(tr("Today: ", "Сегодня: ") + fullNumber(p.todayTokens)).font(.system(size: 10)).foregroundStyle(quiet)
+                            Text(tr("Today · UTC: ", "Сегодня · UTC: ") + todayText(p)).font(.system(size: 10)).foregroundStyle(quiet)
                             if p.id == "codex" { Text(tr("Reset credits: ", "Доступные сбросы: ") + fullNumber(p.resetCredits)).font(.system(size: 10)).foregroundStyle(quiet) }
                         }
                     }
@@ -307,9 +337,13 @@ struct WidgetView: View {
                     if store.pages > 1 { Button("‹") { store.page = (store.page + store.pages - 1) % store.pages }.buttonStyle(.plain); Text("\(store.page + 1)/\(store.pages)"); Button("›") { store.page = (store.page + 1) % store.pages }.buttonStyle(.plain) }
                     Text(store.error ?? (store.loading ? tr("Updating…", "Обновление…") : stamp(snapshot.generatedAt, compact: true))).lineLimit(1)
                     Spacer(); Button(store.expanded ? tr("Less ↑", "Меньше ↑") : tr("Details ↓", "Детали ↓")) { actions.toggleExpanded() }.buttonStyle(.plain).foregroundStyle(mint)
-                }.font(.system(size: 9)).foregroundStyle(store.error == nil ? quiet : amber)
+                }.padding(.trailing, 16).font(.system(size: 11)).foregroundStyle(store.error == nil ? quiet : amber)
             } else { Spacer(); Text(store.error ?? tr("Reading client counters…", "Читаю счётчики клиентов…")).font(.system(size: 12)).foregroundStyle(quiet); Spacer() }
         }.padding(.horizontal, 18).padding(.vertical, 10).frame(width: 360, height: store.expanded ? 430 : 270, alignment: .topLeading).background(bg).foregroundStyle(ink).colorScheme(.dark)
+        .overlay(alignment: .bottomTrailing) {
+            Image(systemName: "arrow.up.left.and.arrow.down.right").font(.system(size: 9)).foregroundStyle(quiet).padding(5)
+                .frame(width: 30, height: 30).overlay(ResizeGrip(actions: actions)).help(tr("Drag to resize · 80–100%", "Потяните для изменения размера · 80–100%"))
+        }
     }
 }
 struct AnalysisView: View {
@@ -364,7 +398,7 @@ struct AnalysisView: View {
                 ForEach(snapshot.providers) { p in
                     VStack(alignment: .leading, spacing: 5) {
                         Text(p.name).font(.system(size: 16, weight: .semibold))
-                        Text(tr("Tokens today: ", "Токены сегодня: ") + fullNumber(p.todayTokens)).font(.system(size: 12))
+                        Text(tr("Today · UTC: ", "Сегодня · UTC: ") + fullNumber(p.todayTokens)).font(.system(size: 12))
                         if let context = p.contextTokens { Text(tr("Context gauge: ", "Размер контекста: ") + fullNumber(context)).font(.system(size: 11)).foregroundStyle(amber) }
                         Text(subscriptionText(p.subscription)).font(.system(size: 11)).foregroundStyle(quiet)
                         Text(p.tokenSource ?? tr("Source unavailable", "Источник недоступен")).font(.system(size: 10)).foregroundStyle(quiet)
@@ -494,20 +528,31 @@ struct SubscriptionRow: View {
 }
 struct SettingsView: View {
     @ObservedObject var store: PulseStore; var actions: AppDelegate
-    @State var selected: Set<String> = []; @State var patterns = false
+    @State var selected: Set<String> = []; @State var patterns = false; @State var tokens = false
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text(tr("Agent Pulse settings", "Настройки Agent Pulse")).font(.system(size: 23, weight: .medium))
                 Picker(tr("Language", "Язык"), selection: $store.language) { Text("English").tag("en"); Text("Русский").tag("ru") }.frame(width: 260)
                 Toggle(tr("Keep widget above windows", "Держать поверх окон"), isOn: $store.topmost).onChange(of: store.topmost) { _, value in actions.panel?.level = value ? .floating : .normal }
+                Text(tr("Widget size", "Размер виджета")).font(.system(size: 16, weight: .semibold))
+                HStack { ForEach([0.8, 0.9, 1.0], id: \.self) { value in Button("\(Int(value * 100))%") { actions.setScale(value) } }; Text("\(Int(store.widgetScale * 100))%") }
+                Slider(value: Binding(get: { store.widgetScale }, set: { actions.setScale($0) }), in: 0.8...1).frame(width: 300)
+                Text(tr("Or drag the lower-right corner. Details and analytics stay available.", "Можно тянуть за нижний правый угол. Детали и аналитика остаются доступны.")).font(.system(size: 11)).foregroundStyle(quiet)
+                Picker(tr("Placement", "Размещение"), selection: Binding(get: { store.displayMode }, set: { actions.setDisplayMode($0) })) {
+                    Text(tr("Floating widget", "Плавающий виджет")).tag("floating"); Text(tr("Menu bar only", "Только строка меню")).tag("menu")
+                }.frame(width: 350)
+                Toggle(tr("Compact values in menu bar", "Короткие значения в строке меню"), isOn: $store.menuNumbers)
+                Text(tr("Click the menu-bar icon for the widget; right-click for actions. Icon-only saves space beside the camera.", "Нажмите значок сверху для табло; правая кнопка — действия. Режим без цифр экономит место рядом с камерой.")).font(.system(size: 11)).foregroundStyle(quiet)
                 Text(tr("Clients", "Клиенты")).font(.system(size: 16, weight: .semibold))
                 ForEach(store.snapshot?.catalog ?? []) { spec in
                     Toggle(isOn: Binding(get: { selected.contains(spec.id) }, set: { on in if on { selected.insert(spec.id) } else { selected.remove(spec.id) } })) { VStack(alignment: .leading, spacing: 2) { Text(spec.name); Text(spec.mode == "import" ? tr("Import only; no automatic quota adapter", "Только импорт; автоматических лимитов нет") : spec.mode == "native" ? tr("Built-in client statistics", "Штатная статистика клиента") : spec.mode == "statusline" ? tr("Local status-line bridge", "Локальный мост status-line") : spec.mode == "loopback" ? tr("Existing local dashboard", "Уже запущенное локальное табло") : tr("Optional quota API", "Опциональное чтение квот")).font(.system(size: 10)).foregroundStyle(quiet) } }
                 }
+                Toggle(tr("Local Codex tokens today · partial", "Локальные токены Codex за сегодня · частично"), isOn: $tokens)
+                Text(tr("Off by default. Reads bounded token events from native session paths when account daily reporting lags. No conversation text is saved. UTC day; partial device-wide work across accounts.", "По умолчанию выключено. Читает ограниченные события токенов по путям штатного клиента, когда дневной отчёт задерживается. Тексты чатов не сохраняются. День UTC; частичная работа на устройстве через смену аккаунтов.")).font(.system(size: 11)).foregroundStyle(quiet)
                 Toggle(tr("Optional local Codex event projection", "Опциональный анализ локальных событий Codex"), isOn: $patterns)
                 Text(tr("Off by default. Transient parsing of bounded recent event files; only counters and tool categories are retained.", "По умолчанию выключено. Ограниченное чтение недавних событий; сохраняются только счётчики и категории инструментов.")).font(.system(size: 11)).foregroundStyle(quiet)
-                Button(tr("Apply client selection", "Применить выбор клиентов")) { store.configure((store.snapshot?.catalog ?? []).filter { selected.contains($0.id) }.map { $0.id }, patterns: patterns) }
+                Button(tr("Apply client selection", "Применить выбор клиентов")) { store.configure((store.snapshot?.catalog ?? []).filter { selected.contains($0.id) }.map { $0.id }, patterns: patterns, tokens: tokens) }
                 Divider().overlay(divider)
                 Text(tr("Local event observers · opt in", "Локальные наблюдатели · по выбору")).font(.system(size: 16, weight: .semibold))
                 Text(tr("Records sanitized metadata only. Start a new client session after setup; native hook trust review may be required. Existing hooks are preserved.", "Записываются только очищенные метаданные. После настройки начните новую сессию; клиент может запросить доверие хуку. Существующие хуки сохраняются.")).font(.system(size: 11)).foregroundStyle(quiet)
@@ -521,7 +566,7 @@ struct SettingsView: View {
                 Text(tr("Counters every 5 minutes; Codex limits every minute. Configure bridges/imports as documented in the provider guide. No screen, microphone or Accessibility permission required.", "Счётчики — каждые 5 минут; лимиты Codex — каждую минуту. Мосты и импорт настраиваются по инструкции. Доступ к экрану, микрофону и Accessibility не требуется.")).font(.system(size: 11)).foregroundStyle(quiet)
             }.padding(26)
         }.frame(width: 560, height: 620).background(bg).foregroundStyle(ink).colorScheme(.dark)
-        .onAppear { selected = Set((store.snapshot?.providers ?? []).map { $0.id }); patterns = store.snapshot?.localPatterns ?? false }
+        .onAppear { selected = Set((store.snapshot?.providers ?? []).map { $0.id }); patterns = store.snapshot?.localPatterns ?? false; tokens = store.snapshot?.localTokens ?? false }
     }
 }
 
@@ -530,6 +575,7 @@ final class FloatingPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
+    var observations = Set<AnyCancellable>(); var popover = NSPopover(); var statusMenu: NSMenu?
     var store: PulseStore!
     var panel: FloatingPanel?
     var statusItem: NSStatusItem!
@@ -556,7 +602,10 @@ final class FloatingPanel: NSPanel {
         for (title, selector, key) in [(tr("Show / hide widget", "Показать / скрыть виджет"), #selector(togglePanel), ""), (tr("Analytics", "Аналитика"), #selector(openAnalysis), ""), (tr("Settings", "Настройки"), #selector(openSettings), ""), (tr("Refresh", "Обновить"), #selector(refresh), "r"), (tr("Quit Agent Pulse", "Завершить Agent Pulse"), #selector(quit), "q")] {
             let item = NSMenuItem(title: title, action: selector, keyEquivalent: key); item.target = self; menu.addItem(item)
         }
-        statusItem.menu = menu
+        statusMenu = menu
+        statusItem.button?.target = self; statusItem.button?.action = #selector(statusClicked)
+        statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        store.$snapshot.combineLatest(store.$menuNumbers, store.$displayMode).sink { [weak self] _, _, _ in DispatchQueue.main.async { self?.updateStatus() } }.store(in: &observations)
         let panel = FloatingPanel(contentRect: NSRect(x: 0, y: 0, width: 360, height: 270), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.title = "Agent Pulse"; panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -569,24 +618,63 @@ final class FloatingPanel: NSPanel {
         if !panel.setFrameUsingName("AgentPulsePanel"), let screen = NSScreen.main?.visibleFrame {
             panel.setFrameOrigin(NSPoint(x: screen.maxX - 380, y: screen.maxY - 290))
         }
-        self.panel = panel; panel.orderFrontRegardless()
+        self.panel = panel; resizePanel()
+        if store.displayMode != "menu" { panel.orderFrontRegardless() }
+        updateStatus()
         handleSnapshotArguments()
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        panel?.orderFrontRegardless(); return true
+        if store.displayMode == "menu" { if !popover.isShown { statusClicked() } }
+        else { panel?.orderFrontRegardless() }
+        return true
+    }
+    func updateStatus() {
+        guard let button = statusItem?.button else { return }
+        let title = store.menuNumbers && store.displayMode == "menu" ? (store.snapshot?.providers.prefix(2).map { p in
+            let name = p.id == "codex" ? "C" : p.id == "glm" ? "G" : String(p.name.prefix(2))
+            let value = p.quotas.first?.remainingPercent.map { "\(Int(floor($0)))%" } ?? (p.todayTokens.map { shortNumber($0) } ?? "—")
+            return name + " " + value
+        }.joined(separator: " · ") ?? "") : ""
+        button.title = title; button.imagePosition = .imageLeading; button.font = .monospacedDigitSystemFont(ofSize: 11, weight: .medium)
+        button.toolTip = tr("Agent Pulse · click for widget, right-click for actions", "Agent Pulse · нажмите для табло, правая кнопка — действия")
+    }
+    @objc func statusClicked() {
+        guard let button = statusItem.button else { return }
+        if NSApp.currentEvent?.type == .rightMouseUp { statusMenu?.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.minY), in: button); return }
+        if store.displayMode == "menu" {
+            if popover.isShown { popover.performClose(nil); return }
+            popover.behavior = .transient
+            popover.contentViewController = NSHostingController(rootView: WidgetView(store: store, actions: self))
+            popover.contentSize = NSSize(width: 360 * store.widgetScale, height: store.baseHeight * store.widgetScale)
+            NSApp.activate(ignoringOtherApps: true)
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        } else { togglePanel() }
+    }
+    func setScale(_ value: Double) { store.widgetScale = min(1, max(0.8, value)); resizePanel() }
+    func resizePanel() {
+        guard let panel else { return }
+        let top = panel.frame.maxY
+        panel.setFrame(NSRect(x: panel.frame.minX, y: top - store.baseHeight * store.widgetScale, width: 360 * store.widgetScale, height: store.baseHeight * store.widgetScale), display: true)
+        panel.contentView?.layer?.cornerRadius = 14 * store.widgetScale
+        if popover.isShown { popover.contentSize = panel.frame.size }
+    }
+    func setDisplayMode(_ mode: String) {
+        store.displayMode = mode == "menu" ? "menu" : "floating"; popover.performClose(nil)
+        if store.displayMode == "menu" { panel?.orderOut(nil) } else { panel?.orderFrontRegardless() }
+        updateStatus()
     }
     @objc func refresh() { store.refresh() }
     @objc func quit() { NSApp.terminate(nil) }
     @objc func togglePanel() { if panel?.isVisible == true { hidePanel() } else { panel?.orderFrontRegardless() } }
-    func hidePanel() { panel?.orderOut(nil) }
+    func hidePanel() { panel?.orderOut(nil); popover.performClose(nil) }
+    func collapseToMenu() { setDisplayMode("menu") }
     func toggleExpanded() {
-        guard let panel else { return }
-        let top = panel.frame.maxY
-        store.expanded.toggle()
-        panel.setFrame(NSRect(x: panel.frame.minX, y: top - (store.expanded ? 430 : 270), width: 360, height: store.expanded ? 430 : 270), display: true, animate: false)
+        guard panel != nil else { return }
+        store.expanded.toggle(); resizePanel()
     }
     @objc func openAnalysis() { showAnalysis() }
     func showAnalysis() {
+        popover.performClose(nil)
         if analysisWindow == nil {
             let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 620), styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
             w.title = tr("Agent Pulse · analytics", "Agent Pulse · аналитика"); w.isReleasedWhenClosed = false; w.minSize = NSSize(width: 620, height: 520)
@@ -596,6 +684,7 @@ final class FloatingPanel: NSPanel {
     }
     @objc func openSettings() { showSettings() }
     func showSettings() {
+        popover.performClose(nil)
         if settingsWindow == nil {
             let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 620), styleMask: [.titled, .closable], backing: .buffered, defer: false)
             w.title = tr("Agent Pulse · settings", "Agent Pulse · настройки"); w.isReleasedWhenClosed = false
@@ -612,18 +701,27 @@ final class FloatingPanel: NSPanel {
         if mode.hasPrefix("analysis") { showAnalysis() }
         if mode == "analysis-small" { analysisWindow?.setContentSize(NSSize(width: 620, height: 520)) }
         if mode == "settings" { showSettings() }
+        if mode == "menu-popover" { setDisplayMode("menu"); DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { self.statusClicked() } }
+        if mode == "resize-check", store.isFixture {
+            let grip = ResizeGrip.Grip(); grip.actions = self
+            let down = NSEvent.mouseEvent(with: .leftMouseDown, location: NSPoint(x: 280, y: 10), modifierFlags: [], timestamp: 0, windowNumber: panel?.windowNumber ?? 0, context: nil, eventNumber: 1, clickCount: 1, pressure: 1)!
+            let drag = NSEvent.mouseEvent(with: .leftMouseDragged, location: NSPoint(x: 340, y: 10), modifierFlags: [], timestamp: 0.1, windowNumber: panel?.windowNumber ?? 0, context: nil, eventNumber: 2, clickCount: 1, pressure: 1)!
+            grip.mouseDown(with: down); grip.mouseDragged(with: drag)
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             guard let self else { return }
             let w = mode.hasPrefix("analysis") ? self.analysisWindow : mode == "settings" ? self.settingsWindow : self.panel
-            if let view = w?.contentView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+            let captureView = mode == "menu-popover" ? self.popover.contentViewController?.view : mode == "menu-bar" ? self.statusItem.button : w?.contentView
+            if let view = captureView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
                 view.cacheDisplay(in: view.bounds, to: rep)
                 if let data = rep.representation(using: .png, properties: [:]) { try? data.write(to: URL(fileURLWithPath: path)) }
             }
             if let panel = self.panel {
+                let popoverBefore = self.popover.isShown
                 let before = panel.isVisible
                 self.hidePanel(); let hidden = !panel.isVisible
                 self.togglePanel(); let restored = panel.isVisible
-                let report: [String: Any] = ["view": mode, "panelWidth": panel.frame.width, "panelHeight": panel.frame.height, "floatingLevel": panel.level == .floating, "joinsAllSpaces": panel.collectionBehavior.contains(.canJoinAllSpaces), "fullScreenAuxiliary": panel.collectionBehavior.contains(.fullScreenAuxiliary), "movable": panel.isMovableByWindowBackground, "visibleBefore": before, "hidePassed": hidden, "restorePassed": restored, "statusItem": self.statusItem.button != nil, "fixtureMode": self.store.isFixture, "capturedSize": [w?.contentView?.bounds.width ?? 0, w?.contentView?.bounds.height ?? 0]]
+                let report: [String: Any] = ["view": mode, "panelWidth": panel.frame.width, "panelHeight": panel.frame.height, "floatingLevel": panel.level == .floating, "joinsAllSpaces": panel.collectionBehavior.contains(.canJoinAllSpaces), "fullScreenAuxiliary": panel.collectionBehavior.contains(.fullScreenAuxiliary), "movable": panel.isMovableByWindowBackground, "visibleBefore": before, "hidePassed": hidden, "restorePassed": restored, "statusItem": self.statusItem.button != nil, "fixtureMode": self.store.isFixture, "scale": self.store.widgetScale, "popoverShown": popoverBefore, "displayMode": self.store.displayMode, "menuTitle": self.statusItem.button?.title ?? "", "capturedSize": [w?.contentView?.bounds.width ?? 0, w?.contentView?.bounds.height ?? 0]]
                 if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) {
                     try? data.write(to: URL(fileURLWithPath: path + ".json"))
                 }

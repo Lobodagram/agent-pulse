@@ -1,3 +1,12 @@
+## 0.3.1 · 2026-10-06
+
+- Windows native tray: hover counters, click expand/collapse, context menu, Explorer recovery and visible fallback.
+
+- Proportional widget sizing, 80/90/100% presets, continuous slider and lower-right resize grip; auxiliary windows retain their original size.
+- Mac menu-bar-only mode, first-two-client compact indicators, icon-only option and click popover.
+- Explain delayed Codex daily reporting; independent opt-in bounded local token projection supplies partial UTC-day counts without tool projection or double-counted account totals.
+- Native fixture matrix and token-only privacy/dedup/pending tests.
+
 # Changelog / Изменения
 
 ## 0.3.0 — 2026-10-06

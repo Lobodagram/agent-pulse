@@ -8,7 +8,9 @@ import queue
 import sys
 import threading
 import tkinter as tk
+import tkinter.font as tkfont
 from tkinter import ttk, messagebox
+from pulse_tray import Tray
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import collector
 import analytics
@@ -26,15 +28,76 @@ class Pulse:
         header=tk.Frame(root,bg=BG);header.pack(fill='x',padx=14,pady=(12,6))
         title=tk.Label(header,text='● AGENT PULSE'+(' · DEMO' if fixture else ''),bg=BG,fg=MINT,font=('Segoe UI',10,'bold'));title.pack(side='left')
         title.bind('<Button-1>',self.begin_drag);title.bind('<B1-Motion>',self.drag)
-        for text,command in [('×',root.destroy),('⚙',self.settings),('▥',self.analysis),('↻',self.refresh)]:
-            tk.Button(header,text=text,command=command,bg=BG,fg=FG,bd=0,width=3).pack(side='right')
+        for text,command in [('×',self.quit),('⌄',self.collapse),('⚙',self.settings),('▥',self.analysis),('↻',self.refresh)]:
+            tk.Button(header,text=text,command=command,bg=BG,fg=FG,bd=0,width=2).pack(side='right')
         self.content=tk.Frame(root,bg=BG);self.content.pack(fill='both',expand=True,padx=16)
         self.footer=tk.Frame(root,bg=BG);self.footer.pack(fill='x',padx=16,pady=8)
         tk.Button(self.footer,text='‹',command=lambda:self.change_page(-1),bg=BG,fg=MINT,bd=0).pack(side='left')
         self.page_label=tk.Label(self.footer,bg=BG,fg=QUIET);self.page_label.pack(side='left')
         tk.Button(self.footer,text='›',command=lambda:self.change_page(1),bg=BG,fg=MINT,bd=0).pack(side='left')
         self.status=tk.Label(self.footer,text='Loading…',bg=BG,fg=QUIET,font=('Segoe UI',9));self.status.pack(side='right')
+        self.scale=1.0
+        if not fixture:
+            value=providers.load_config(self.state).get('widgetScale',1)
+            self.scale=min(1,max(.8,value)) if isinstance(value,(int,float)) and not isinstance(value,bool) else 1
+        grip=tk.Label(self.footer,text='◢',bg=BG,fg=QUIET,cursor='sizing');grip.pack(side='right')
+        grip.bind('<Button-1>',self.begin_resize);grip.bind('<B1-Motion>',self.resize_drag);grip.bind('<ButtonRelease-1>',lambda e:self.save_scale())
+        self.set_scale(self.scale,save=False)
+        self.tray=None;self.display_mode='floating';self.smoke_error=None;self.tray_initialization_error=None
+        try:self.tray=Tray(root,self.toggle_widget,self.tray_menu,self.tray_unavailable)
+        except (OSError,AttributeError) as error:self.tray_initialization_error=str(error)
+        root.protocol('WM_DELETE_WINDOW',self.quit)
+        if not fixture:self.set_display_mode(providers.load_config(self.state).get('displayMode','floating'),save=False)
         self.auth_marks=self.authentication_metadata();self.refresh();root.after(5000,self.check_authentication);root.after(100,self.poll);root.after(300000,self.periodic);root.after(60000,self.limits)
+    def quit(self):
+        if getattr(self,'tray',None):self.tray.close()
+        self.root.destroy()
+    def tray_unavailable(self):
+        self.root.deiconify();self.display_mode='floating'
+    def set_display_mode(self,mode,save=True):
+        ready=bool(self.tray and self.tray.available)
+        self.display_mode='tray' if mode=='tray' and ready else 'floating'
+        if self.display_mode=='tray':self.root.withdraw()
+        else:self.root.deiconify()
+        if save and not self.fixture:
+            config=providers.load_config(self.state);config['displayMode']=self.display_mode;providers.atomic_json(self.state/'config.json',config)
+        return mode!='tray' or ready
+    def collapse(self):
+        if not self.set_display_mode('tray'):
+            messagebox.showinfo('Agent Pulse',self.t('System tray unavailable; widget remains visible.','Трей недоступен; виджет остаётся видимым.'))
+    def toggle_widget(self):
+        if self.root.state()=='withdrawn':
+            self.root.deiconify();self.root.lift();self.root.focus_force()
+        else:self.root.withdraw()
+    def tray_menu(self):
+        menu=tk.Menu(self.root,tearoff=False)
+        for title,action in [(self.t('Show / hide widget','Показать / скрыть виджет'),self.toggle_widget),(self.t('Analytics','Аналитика'),self.analysis),(self.t('Settings','Настройки'),self.settings),(self.t('Refresh','Обновить'),self.refresh),(self.t('Quit','Выйти'),self.quit)]:menu.add_command(label=title,command=action)
+        try:menu.tk_popup(self.root.winfo_pointerx(),self.root.winfo_pointery())
+        finally:menu.grab_release()
+    def update_tray(self):
+        if not self.tray:return
+        lines=['Agent Pulse']
+        for p in self.data.get('providers',[])[:2]:
+            quotas=p.get('quotas',[]);remaining=quotas[0].get('remainingPercent') if quotas else None;tokens=p.get('todayTokens')
+            value=f'{int(remaining)}%' if remaining is not None else f'{tokens:,.0f} '+self.t('tokens today','токенов сегодня') if tokens is not None else self.t('not reported','не передано')
+            lines.append(p['name']+': '+value)
+        self.tray.update('\n'.join(lines))
+    def begin_resize(self,e):self.resize_start=(e.x_root,self.root.winfo_width())
+    def resize_drag(self,e):self.set_scale((self.resize_start[1]+e.x_root-self.resize_start[0])/400,save=False)
+    def save_scale(self):
+        if not self.fixture:
+            config=providers.load_config(self.state);config['widgetScale']=self.scale;providers.atomic_json(self.state/'config.json',config)
+    def set_scale(self,value,save=True):
+        self.scale=min(1,max(.8,float(value)));self.root.geometry(f'{round(400*self.scale)}x{round(310*self.scale)}')
+        def visit(w):
+            if isinstance(w,tk.Toplevel):return
+            if 'font' in w.keys():
+                if not hasattr(w,'_pulse_font'):w._pulse_font=tkfont.Font(font=w.cget('font')).actual()
+                f=w._pulse_font;w.configure(font=(f['family'],max(8,round(abs(f['size'])*self.scale)),f['weight']))
+            if 'wraplength' in w.keys() and float(w.cget('wraplength'))>0:w.configure(wraplength=round(400*self.scale-32))
+            for child in w.winfo_children():visit(child)
+        visit(self.root)
+        if save:self.save_scale()
     def t(self,en,ru):return ru if self.language=='ru' else en
     def begin_drag(self,e):self.offset=(e.x_root-self.root.winfo_x(),e.y_root-self.root.winfo_y())
     def drag(self,e):self.root.geometry(f'+{e.x_root-self.offset[0]}+{e.y_root-self.offset[1]}')
@@ -103,7 +166,26 @@ class Pulse:
                 self.data=data;self.status.config(text=self.t('Local counters · UTC','Локальные счётчики · UTC'));self.render()
             else:self.status.config(text=self.t('Unavailable; retained last data','Нет связи; сохранены данные'))
             if self.smoke:
-                self.analysis();self.root.update_idletasks();assert self.data.get('providers') and self.root.attributes('-topmost');self.root.after(100,self.root.destroy)
+                try:
+                    assert not self.tray_initialization_error,self.tray_initialization_error
+                    self.analysis();self.root.update_idletasks();assert self.data.get('providers') and self.root.attributes('-topmost')
+                    for size in (.8,.9,1):
+                        self.set_scale(size,save=False);self.root.update_idletasks()
+                        assert self.root.winfo_width()==round(400*size)
+                        assert self.content.winfo_reqheight()<=self.content.winfo_height(), 'Widget fields clipped at selected size'
+                    if self.set_display_mode('tray',save=False):
+                        assert self.root.state()=='withdrawn'
+                        self.tray.user.SendMessageW(self.tray.hwnd,self.tray.MESSAGE,1,0x202)
+                        self.root.update();assert self.root.state()!='withdrawn'
+                        self.toggle_widget();assert self.root.state()=='withdrawn'
+                        self.tray.restore();assert self.tray.available
+                        print('PASS: native tray registration, own click callback, collapse, restore')
+                    else:
+                        assert self.root.state()!='withdrawn'
+                        print('PASS: tray unavailable fallback; Explorer interaction unverified')
+                    self.set_display_mode('floating',save=False)
+                except Exception as error:self.smoke_error=str(error)
+                self.root.after(100,self.quit)
         except queue.Empty:pass
         self.root.after(100,self.poll)
     def render(self):
@@ -122,7 +204,7 @@ class Pulse:
             tk.Label(self.content,text=text,bg=BG,fg=MINT,font=('Segoe UI',14),anchor='w').pack(fill='x')
             if q:
                 tokens=p.get('todayTokens');resets=[datetime.fromtimestamp(x['resetsAt']).strftime('%d %b %H:%M') for x in q if isinstance(x.get('resetsAt'),(int,float))]
-                line=self.t('Tokens today: ','Токены сегодня: ')+('—' if tokens is None else f'{tokens:,.0f}')+' · '+self.t('reset: ','сброс: ')+(' / '.join(resets) or '—')
+                line=self.t('Today · UTC: ','Сегодня · UTC: ')+(self.t('awaiting report','жду отчёт') if tokens is None and p.get('todayTokenStatus')=='account-day-pending' else self.t('not reported','не передано') if tokens is None else f'{tokens:,.0f}'+(self.t(' · partial',' · частично') if p.get('todayTokenCoverage')=='partial-local' else ''))+' · '+self.t('reset: ','сброс: ')+(' / '.join(resets) or '—')
                 tk.Label(self.content,text=line,bg=BG,fg=QUIET,font=('Segoe UI',8),anchor='w',wraplength=365).pack(fill='x')
             if q:
                 at=p.get('quotaObservedAt',p.get('observedAt'))
@@ -130,6 +212,8 @@ class Pulse:
             s=p['subscription'];date=s.get('date');billing=self.t('Billing date not set','Дата подписки не указана') if not date else s['kind']+': '+date+' · '+self.t('manual','вручную')
             if s['kind']=='none':billing=self.t('No subscription','Без подписки')
             tk.Label(self.content,text=billing,bg=BG,fg=QUIET,font=('Segoe UI',9),anchor='w').pack(fill='x')
+        self.set_scale(self.scale,save=False)
+        self.update_tray()
     def window(self,title):
         w=tk.Toplevel(self.root);w.title(title);w.geometry('760x600');w.configure(bg=BG);w.attributes('-topmost',True);return w
     def analysis(self):
@@ -205,15 +289,27 @@ class Pulse:
         def label(s):tk.Label(f,text=s,bg=BG,fg=FG,anchor='w').pack(fill='x',pady=6)
         lang=tk.StringVar(value=self.language);ttk.Combobox(f,textvariable=lang,values=['en','ru'],state='readonly').pack(anchor='w')
         top=tk.BooleanVar(value=True);tk.Checkbutton(f,text=self.t('Always on top','Поверх окон'),variable=top,command=lambda:self.root.attributes('-topmost',top.get()),bg=BG,fg=FG,selectcolor=BG).pack(anchor='w')
+        label(self.t('Widget size · or drag the lower-right corner','Размер виджета · можно тянуть за нижний правый угол'))
+        size=tk.DoubleVar(value=self.scale)
+        presets=tk.Frame(f,bg=BG);presets.pack(anchor='w')
+        for value in (.8,.9,1):ttk.Button(presets,text=f'{round(value*100)}%',command=lambda v=value:(size.set(v),self.set_scale(v))).pack(side='left')
+        ttk.Scale(f,from_=.8,to=1,variable=size,command=lambda v:self.set_scale(float(v),save=False)).pack(fill='x')
+        label(self.t('Placement · tray icon opens the full widget','Размещение · значок в трее открывает полное табло'))
+        placement=tk.StringVar(value=self.display_mode)
+        ttk.Combobox(f,textvariable=placement,values=['floating','tray'],state='readonly').pack(anchor='w')
+        label(self.t('Hover tray icon for counters. Windows may put it in the hidden-icons area.','Счётчики — при наведении на значок. Windows может убрать его под стрелку скрытых значков.'))
         label(self.t('Clients · see provider guide for setup','Клиенты · настройка по инструкции'));enabled={p['id'] for p in self.data.get('providers',[])};flags={}
         for spec in providers.CATALOG:
             var=tk.BooleanVar(value=spec['id'] in enabled);flags[spec['id']]=var
             tk.Checkbutton(f,text=spec['name']+' · '+spec['mode'],variable=var,bg=BG,fg=FG,selectcolor=BG).pack(anchor='w')
         patterns=tk.BooleanVar(value=self.data.get('localPatterns',False));tk.Checkbutton(f,text=self.t('Optional bounded Codex events (off by default)','Ограниченные события Codex (по умолчанию выкл.)'),variable=patterns,bg=BG,fg=FG,selectcolor=BG).pack(anchor='w')
+        tokens=tk.BooleanVar(value=self.data.get('localTokens',False));tk.Checkbutton(f,text=self.t('Local Codex tokens today · partial, UTC · off by default','Локальные токены Codex сегодня · частично, UTC · по умолчанию выкл.'),variable=tokens,bg=BG,fg=FG,selectcolor=BG).pack(anchor='w')
         def apply():
+            self.save_scale()
             self.language=lang.get()
+            if not self.set_display_mode(placement.get()):messagebox.showinfo('Agent Pulse',self.t('Tray unavailable; floating widget retained.','Трей недоступен; виджет сохранён на экране.'))
             if not self.fixture:
-                config=providers.load_config(self.state);config.update(enabledProviders=[i for i,v in flags.items() if v.get()],localPatterns=patterns.get());providers.atomic_json(self.state/'config.json',config)
+                config=providers.load_config(self.state);config.update(enabledProviders=[i for i,v in flags.items() if v.get()],localPatterns=patterns.get(),localTokens=tokens.get());providers.atomic_json(self.state/'config.json',config)
             self.refresh();w.destroy()
         ttk.Button(f,text=self.t('Apply','Применить'),command=apply).pack(anchor='w',pady=10)
         label(self.t('Local observers · start a new client session after setup','Локальные наблюдатели · после настройки начните новую сессию'))
@@ -243,6 +339,8 @@ class Pulse:
 def main():
     a=argparse.ArgumentParser();a.add_argument('--fixture');a.add_argument('--smoke',action='store_true');args=a.parse_args()
     root=tk.Tk();app=Pulse(root,args.fixture,args.smoke);root.mainloop()
+    if app.tray:app.tray.close()
+    if args.smoke and app.smoke_error:raise SystemExit(app.smoke_error)
     if args.smoke and not app.data:raise SystemExit(1)
 if __name__=='__main__':
     main()

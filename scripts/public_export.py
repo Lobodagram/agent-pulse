@@ -7,7 +7,7 @@ import re
 import shutil
 ROOT=Path(__file__).resolve().parents[1]
 FILES=['journal.py','analytics.py','journal_cli.py','instrumentation.py','mcp_server.py','collector.py','providers.py','platform_support.py','build.sh','requirements-build.txt','LICENSE','README.md','README.ru.md','PRIVACY.md','SECURITY.md','CONTRIBUTING.md','CHANGELOG.md','NOTICE','COMMERCIAL_LICENSE.md','.gitignore']
-DIRS=['Sources','windows','tests','scripts','docs','examples','.github','third_party']
+DIRS=['script','Sources','windows','tests','scripts','docs','examples','.github','third_party']
 def export(destination):
     destination=Path(destination).resolve()
     if destination.exists():raise ValueError('destination_exists')

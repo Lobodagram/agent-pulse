@@ -40,3 +40,5 @@ python windows/agent_pulse.py
 `scripts/public_export.py НОВАЯ_ПАПКА` создаёт отдельное дерево по allowlist без личной истории git/данных и сканирует текст на личные пути и ключи. Приватные контекст/QA не экспортируются. Все публичные изображения — только вымышленное демо.
 
 В 0.3.0 требуется Python 3.11+ (релизная сборка 3.12). Для Windows отдельно соберите консольный сборщик `python -m PyInstaller --clean --noconfirm --onefile --console --name pulse-collector collector.py` и держите pulse-collector.exe рядом с GUI. Хуки и MCP используют консольный сборщик: GUI без консоли не подходит для stdio. В Mac исходники могут выбирать Python через AGENT_PULSE_PYTHON; релиз содержит встроенную среду.
+
+Для локальной разработки Mac: `script/build_and_run.sh` собирает отдельный local-run пакет и не закрывает установленный виджет. Режимы `--verify`, `--debug`, `--logs`, `--telemetry`; для исходников без встроенной среды задайте `AGENT_PULSE_PYTHON` на Python 3.11+. Пути демо/снимков разрешаются от репозитория. Релизные пакеты собираются через `build.sh` со встроенным Python.

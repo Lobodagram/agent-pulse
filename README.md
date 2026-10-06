@@ -43,7 +43,7 @@ Download the matching zip from [Releases](https://github.com/Lobodagram/agent-pu
 
 **macOS 14+:** unzip, move `Agent Pulse.app` to Applications, open it. This preview is ad-hoc signed, **not Apple notarized**. If macOS blocks it, inspect the source/checksum and use Apple's documented approval flow only if you trust the download; the project does not disable Gatekeeper. Release packages contain their own collector runtime; native clients still need to be installed and authenticated by you.
 
-**Windows 10/11 x64:** unzip into a folder you own and run `AgentPulse.exe`. No installer/admin permission needed. The executable is unsigned; SmartScreen reputation may be absent. This preview has a close button; no tray/startup integration yet. Do not run a download you do not trust.
+**Windows 10/11 x64:** unzip into a folder you own and run `AgentPulse.exe`. No installer/admin permission needed. The executable is unsigned; SmartScreen reputation may be absent. Floating-window or system-tray mode is selectable in Settings. Hover the tray icon for counters and click to show/hide the widget; Windows may put the icon in its hidden-icons area. No automatic startup integration. Do not run a download you do not trust.
 
 Open Settings, choose clients, enable event observers separately if desired, configure optional adapters using the provider guide and enter billing dates if desired. Selecting import-only clients shows **unavailable** until you supply metrics. No dates are guessed from subscription names.
 
@@ -68,3 +68,14 @@ Account changes: on desktop, selected supported clients' authentication/config f
 
 
 Work history remains continuous across account switches. The journal groups by provider/task, not login. Known Codex daily account reports are stored per hashed account/day, updated (not incremented) on each read, then summed for general daily history. Switching back does not count the same account twice. Earlier unscoped rows remain stored; if they overlap a known-account day, they are not added because identity/overlap cannot be verified. Therefore totals cover observed accounts only, not every account ever used. Current quotas and manual billing dates remain account-specific; GLM local aggregates remain client history.
+
+
+### Smaller widget and menu bar
+
+Settings offers 80%, 90% and 100% sizes and a continuous slider; drag the lower-right grip to change the proportional size. The smallest Mac widget is 288×216 points, with all displayed fields preserved; details/analytics stay available. On macOS choose **Menu bar only**: click the status icon to open the full widget, right-click for actions. Compact values show the first two enabled clients; icon-only saves menu-bar space. macOS owns the position beside the camera. Windows supports floating-widget scaling (320×248 minimum) and system-tray mode beside the clock. Collapse hides the widget; click the tray icon to reopen it, hover for counters, right-click for actions. If the tray is unavailable the widget stays visible; the icon recovers after Explorer restarts.
+
+A missing Codex daily bucket means **awaiting report**, not zero. Enable **Local Codex tokens today · partial** and Apply in Settings for bounded local token-count events when the account report lags. It is off by default; UTC day and partial device-wide coverage across logins. No account/local totals are added together.
+
+![Small widget, invented English demo](docs/screenshots/widget-small-en.png)
+
+![Menu bar, invented counters](docs/screenshots/menu-bar-demo.png)

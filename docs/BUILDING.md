@@ -55,3 +55,5 @@ The source and exe smoke modes use demo counters and close automatically; they d
 Release notes are bilingual. Package checksum files verify the downloaded bytes; they do not substitute for code signing. Tags describe preview scope; no blanket fully verified provider/OS claim is made.
 
 Before publication, `scripts/public_export.py NEW_DIRECTORY` exports an allowlisted tree, excludes private Git history/local state and scans text for personal home paths/credential patterns. Use only `examples/demo.json` to render public screenshots. Private project context/QA are not part of that export.
+
+Local Mac development: `script/build_and_run.sh` builds/launches an isolated local-run bundle; `--verify`, `--debug`, `--logs`, `--telemetry` supported. Set `AGENT_PULSE_PYTHON` to a Python 3.11+ interpreter for source builds without the frozen collector. Fixture/snapshot paths are resolved from the repository. Public release bundles still use `build.sh` and bundled Python.

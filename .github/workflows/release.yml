@@ -31,6 +31,7 @@ jobs:
           python -m PyInstaller --clean --noconfirm --onefile --name pulse-collector --distpath .build collector.py
           ./build.sh
           'dist/Agent Pulse.app/Contents/MacOS/AgentPulse' --fixture examples/demo.json --snapshot .build/widget.png
+          python scripts/widget_smoke.py 'dist/Agent Pulse.app/Contents/MacOS/AgentPulse'
           'dist/Agent Pulse.app/Contents/Resources/pulse-collector' catalog > .build/catalog.json
           python scripts/frozen_smoke.py 'dist/Agent Pulse.app/Contents/Resources/pulse-collector'
           cp LICENSE NOTICE 'dist/Agent Pulse.app/Contents/Resources/'

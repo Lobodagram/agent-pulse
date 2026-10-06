@@ -162,6 +162,7 @@ def codex_usage(raw, day):
     today = next((i['tokens'] for i in daily if i['date'] == day), None)
     # A missing bucket is not a verified zero.
     return {'todayTokens':today, 'lifetimeTokens':number((raw.get('summary') or {}).get('lifetimeTokens')),
+            'todayTokenStatus':'reported' if today is not None else 'account-day-pending',
             'daily':daily, 'tokenSource':'Codex account/usage/read', 'tokenCoverage':'account-reported'}
 
 
@@ -186,7 +187,7 @@ def zcode_usage(raw, day):
             'tokenCoverage':'local ZCode records · 7 days'}
 
 
-def collect_codex(day, config=None, read_patterns=False, quota_only=False, directory=None):
+def collect_codex(day, config=None, read_patterns=False, quota_only=False, directory=None, read_local_tokens=False):
     binary = (config or {}).get('codexCli') or shutil.which('codex') or '/opt/homebrew/bin/codex'
     rpc = None
     base={'id':'codex','name':'Codex','status':'unavailable','quotas':[],'daily':[],
@@ -194,7 +195,7 @@ def collect_codex(day, config=None, read_patterns=False, quota_only=False, direc
     try:
         # Standalone metadata-only process; no thread/turn create/resume or MCP invocation.
         rpc = RPC([binary, '-c', 'analytics.enabled=false', 'app-server', '--stdio'])
-        rpc.call('initialize', {'clientInfo':{'name':'agent-pulse','version':'0.3.0'},'capabilities':{}})
+        rpc.call('initialize', {'clientInfo':{'name':'agent-pulse','version':'0.3.1'},'capabilities':{}})
         rpc.send({'method':'initialized'})
         try:
             limits=rpc.call('account/rateLimits/read')
@@ -224,7 +225,7 @@ def collect_codex(day, config=None, read_patterns=False, quota_only=False, direc
         except Unavailable as e:base['sourceStatus'].append(str(e))
         threads=[]
         try:
-            if not read_patterns: raise Unavailable('patterns_disabled')
+            if not (read_patterns or read_local_tokens): raise Unavailable('patterns_disabled')
             metadata=rpc.call('thread/list',{'limit':30,'sortKey':'updated_at','useStateDbOnly':True})
             # Keep only identifiers and rollout paths transiently, never titles/previews/turns.
             cutoff=time.time()-7*86400
@@ -345,7 +346,7 @@ class Store:
         result=json.loads(row[1]);result['status']='stale';result['lastSuccessfulAt']=row[0]
         return result
 
-    def project_rollout(self,thread):
+    def project_rollout(self,thread, include_tools=True):
         raw_path=thread.get('path')
         if not isinstance(raw_path,str):return 0
         path=Path(raw_path)
@@ -384,7 +385,7 @@ class Store:
                     eid=hashlib.sha256(f'{ident}:{offset}:tokens'.encode()).hexdigest()
                     self.db.execute('INSERT OR IGNORE INTO token_events VALUES (?,?,?)',(eid,date,amount))
                     self.db.execute('INSERT OR REPLACE INTO token_totals VALUES (?,?)',(ident,total))
-                for at,name,failed in project_event(event):
+                for at,name,failed in (project_event(event) if include_tools else []):
                     eid=hashlib.sha256(f'{ident}:{offset}:{name}'.encode()).hexdigest()
                     before=self.db.total_changes
                     self.db.execute('INSERT OR IGNORE INTO events VALUES (?,?,?,?,?)',(eid,'codex',at,name,int(failed)))
@@ -494,10 +495,11 @@ def snapshot(directory, collect_patterns=None):
     config=adapters.load_config(directory)
     enabled=config['enabledProviders']
     collect_patterns=config.get('localPatterns',False) if collect_patterns is None else collect_patterns
+    collect_tokens=bool(config.get('localTokens',False) or collect_patterns)
     day=datetime.now(timezone.utc).strftime('%Y-%m-%d');store=Store(directory)
     items=[];threads=[]
     def fetch(ident):
-        if ident=='codex': return collect_codex(day,config,collect_patterns,directory=directory)
+        if ident=='codex': return collect_codex(day,config,collect_patterns,directory=directory,read_local_tokens=collect_tokens)
         if ident=='glm': return collect_glm(day,config),[]
         return adapters.collect_extra(ident,directory,config),[]
     with ThreadPoolExecutor(max_workers=4) as pool:
@@ -515,11 +517,12 @@ def snapshot(directory, collect_patterns=None):
                 if item.get('measurementDay')!=day:item['todayTokens']=None
         items.append(item)
     codex=next((p for p in items if p['id']=='codex'),None)
-    if collect_patterns and codex:
-        for thread in threads:store.project_rollout(thread)
+    if collect_tokens and codex:
+        for thread in threads:store.project_rollout(thread,include_tools=bool(collect_patterns))
         store.persist_local_tokens()
         if codex.get('todayTokens') is None:
             codex['todayTokens']=store.local_tokens(day);codex['todayTokenCoverage']='partial-local'
+            codex['todayTokenStatus']='partial-local' if codex['todayTokens'] is not None else 'local-day-pending'
         else:codex['todayTokenCoverage']='account-reported'
     j=journal.Journal(directory)
     try:deep=analytics.report(j,enabled)
@@ -527,7 +530,7 @@ def snapshot(directory, collect_patterns=None):
     settings=store.settings()
     for item in items:
         item['subscription']=settings.get(item['id'],{'date':None,'kind':'renewal','source':'manual'}) if item['id']!='codex' or item.get('accountScope') else {'date':None,'kind':'renewal','source':'manual'}
-    result={'analytics':deep,'generatedAt':int(time.time()),'providers':items,'catalog':adapters.CATALOG,'localPatterns':bool(collect_patterns),
+    result={'analytics':deep,'generatedAt':int(time.time()),'providers':items,'catalog':adapters.CATALOG,'localPatterns':bool(collect_patterns),'localTokens':bool(config.get('localTokens',False)),
             'history':[x for x in store.history() if x['provider'] in enabled],
             'patterns':[x for x in store.patterns([t for p in items for t in p.get('tools',[])]) if x['provider'] in enabled and (x['provider']!='codex' or collect_patterns)],
             'patternCoverage':'Tool categories, partial local records; no per-tool token attribution',
@@ -543,7 +546,7 @@ def main():
     q=sub.add_parser('subscription');q.add_argument('--provider',choices=sorted(adapters.IDS),required=True);q.add_argument('--date',default='');q.add_argument('--kind',choices=['renewal','expiry','none'],required=True)
     sub.add_parser('catalog')
     sub.add_parser('limits')
-    c=sub.add_parser('configure');c.add_argument('--providers',required=True);c.add_argument('--local-patterns',choices=['on','off'],default='off')
+    c=sub.add_parser('configure');c.add_argument('--providers',required=True);c.add_argument('--local-patterns',choices=['on','off'],default='off');c.add_argument('--local-tokens',choices=['on','off'])
     i=sub.add_parser('ingest');i.add_argument('--provider',choices=sorted(adapters.IDS),required=True);i.add_argument('--file',type=Path,required=True)
     h=sub.add_parser('hook');h.add_argument('--provider',choices=sorted(journal.PROVIDERS),required=True)
     h=sub.add_parser('hooks');h.add_argument('--provider',choices=sorted(instrumentation.NATIVE_EVENTS),required=True);h.add_argument('--action',choices=['install','remove'],required=True)
@@ -576,6 +579,7 @@ def main():
             enabled=list(dict.fromkeys(a.providers.split(','))) if a.providers else []
             if any(x not in adapters.IDS for x in enabled):raise ValueError('invalid_provider')
             config=adapters.load_config(a.state);config.update(enabledProviders=enabled,localPatterns=a.local_patterns=='on')
+            if a.local_tokens is not None:config['localTokens']=a.local_tokens=='on'
             adapters.atomic_json(a.state/'config.json',config);result={'saved':True}
         elif a.command=='ingest':
             if a.file.is_symlink() or a.file.stat().st_size>2*1024*1024:raise ValueError('invalid_import')

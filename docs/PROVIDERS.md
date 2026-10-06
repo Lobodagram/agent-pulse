@@ -114,3 +114,5 @@ Replace the demo epoch with the actual observation time in **seconds**, not mill
 - Missing tokens with working quota: normal; not every plan/client exposes token totals.
 - Reset is not renewal: automatic quota timestamps and manual billing dates stay separate.
 - Patterns: hints for human review, not a recommendation to automatically install a skill/MCP or a measurement of per-tool cost.
+
+Codex daily reporting may omit the current UTC day. `todayTokenStatus=account-day-pending` means waiting, not zero. Settings → Local Codex tokens today is a separate default-off option (`configure --local-tokens on`). Bounded native token events can fill a missing bucket; `todayTokenCoverage=partial-local` explicitly labels device-wide partial records across logins. Account totals take precedence when present; never add local and account figures.

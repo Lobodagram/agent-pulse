@@ -75,3 +75,14 @@ The downloaded ARM64 app passed strict/deep signature verification, the bundled 
 The local Codex/ZCode observers point to the installed frozen helper, preserving other settings. New client sessions and any native hook trust review remain necessary to establish live event delivery; configured inventory is not proof of receiving events. Interactive account switching, full desktop placement and Windows live-client acceptance remain open. Release tag is immutable; documentation follow-ups do not rebuild its packages.
 
 Релиз опубликован, все три скачанных архива проверены по SHA256. Скачанная Mac-версия прошла подпись, синтетический полный путь событий и визуальную проверку сценариев. Виджет заменён и запущен; дополнительная проверка его живого окна через автоматизацию не засчитана из-за старого идентификатора в сервисе управления UI. Для живых событий нужны новые сессии клиентов и проверка доверия, если её запросит клиент.
+
+
+## v0.3.1 local verification · 2026-10-06
+
+69 Python 3.12 tests pass on the development Mac. New regressions distinguish delayed daily reporting from zero and verify token-only opt-in projection/deduplication without tool payload retention. A fresh native Codex usage report omitted the current UTC-day bucket; bounded local token projection provided a partial current-day counter on this device. Only availability is recorded, no private counts.
+
+Mac Swift build and own-window fixture matrix cover 288×216 compact, 288×344 detail, synthetic resize-handler 348×261, real menu-only startup/popover and own status-button rendering, English/Russian, unknown today and two quota-bearing clients. Isolated native interactions verified Settings size/placement selection and accessible grip increment (80% to 85%); physical drag, multiple displays/Spaces/fullscreen and sleep/wake remain acceptance cases. Fixtures are invented.
+
+Windows implements its own Win32 notification icon using Shell_NotifyIconW, no global input hooks: hover counters, click show/hide, context menu, Explorer restart re-registration and visible fallback. Source and packaged Windows smoke verify supported native tray registration/callback/recovery or explicitly report unavailable Explorer. Hosted platform results are recorded after the run; Windows live-client and DPI acceptance are not inferred from source compilation.
+
+69 тестов прошли на Mac. Отсутствующий день отделён от нуля; локальные токены включаются отдельно и помечены частичным охватом UTC. Mac-матрица проверяет минимальные размеры, изменение масштаба, запуск в строке меню, настоящее всплывающее табло и вымышленные значения EN/RU. Windows-трей проверяется на Windows; ручная приёмка дисплеев и живых клиентов остаётся отдельной проверкой.
