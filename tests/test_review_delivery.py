@@ -88,11 +88,19 @@ class DeliveryTests(unittest.TestCase):
         with self.assertRaises(ValueError):markdown_pack(report(self.j),'bad')
     def test_cli_markdown_and_file_export(self):
         import subprocess,sys
-        result=subprocess.run([sys.executable,'collector.py','--state',str(self.root/'state'),'journal','--format','markdown','--language','ru'],capture_output=True,text=True,check=True)
+        result=subprocess.run([sys.executable,'collector.py','--state',str(self.root/'state'),'journal','--format','markdown','--language','ru'],capture_output=True,text=True,encoding="utf-8",check=True)
         self.assertTrue(result.stdout.startswith('# Agent Pulse'));self.assertIn('пакет проверки',result.stdout)
         dest=self.root/'report.md'
-        result=subprocess.run([sys.executable,'collector.py','--state',str(self.root/'state'),'journal','--action','export','--format','markdown','--file',str(dest)],capture_output=True,text=True,check=True)
-        self.assertTrue(json.loads(result.stdout)['saved']);self.assertTrue(dest.read_text().startswith('# Agent Pulse'))
+        result=subprocess.run([sys.executable,'collector.py','--state',str(self.root/'state'),'journal','--action','export','--format','markdown','--file',str(dest)],capture_output=True,text=True,encoding="utf-8",check=True)
+        self.assertTrue(json.loads(result.stdout)['saved']);self.assertTrue(dest.read_text(encoding='utf-8').startswith('# Agent Pulse'))
+    def test_cli_utf8_under_legacy_stdout_encoding(self):
+        import subprocess,sys,os
+        env=dict(os.environ,PYTHONIOENCODING='cp1252')
+        result=subprocess.run([sys.executable,'collector.py','--state',str(self.root/'state'),'journal','--format','markdown','--language','ru'],env=env,capture_output=True,check=True)
+        self.assertIn('пакет проверки',result.stdout.decode('utf-8'))
+        request={'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'pulse_review_pack','arguments':{'language':'ru'}}}
+        result=subprocess.run([sys.executable,'collector.py','--state',str(self.root/'state'),'mcp'],env=env,input=(json.dumps(request)+'\n').encode(),capture_output=True,check=True)
+        self.assertIn('пакет проверки',json.loads(json.loads(result.stdout)['result']['content'][0]['text'])['markdown'])
     def test_provider_scoped_reviews(self):
         fid=self.repeats(6,self.now-200);review_finding(self.j,fid,'actioned')
         self.assertEqual(report(self.j,['glm'])['findingReviews'],[])

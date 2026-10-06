@@ -4,6 +4,7 @@
 
 - Literal registered skill-reader evidence, separate source counters and observed MCP namespaces; no raw command retention/backfill or arbitrary generic-category matches.
 - Local manual finding decisions and bounded equal-window observational rechecks; unavailable counts remain unknown and no causal/token savings are claimed.
+- Explicit UTF-8 CLI/MCP output and source reads, including legacy Windows console regression.
 - Bilingual Markdown review export, fifth read-only MCP tool and one source-check/validated-handoff helper.
 - Mac/Windows workflow controls; no peer runtime/configuration/model changes. Additive local tables preserve prior observer schema compatibility.
 

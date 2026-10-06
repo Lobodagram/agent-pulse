@@ -1,3 +1,5 @@
+0.7.0 platform correction: first source CI failed the Russian CLI Markdown test on Windows (legacy output encoding); Linux passed, Mac was cancelled by matrix fail-fast. CLI/MCP now emit explicit UTF-8, fixture exports decode UTF-8, source helper reads UTF-8. A legacy-cp1252 regression test exercises both CLI and MCP. Failed source commit remains in history; no release tag was created for it.
+
 ## 0.7.0 source verification · 2026-10-06
 
 156 Python tests pass on bundled Python 3.12. Source helper exports 102 allowlisted files, validates Python syntax/local links/privacy and produces a validated handoff. Mac source compile and own 15-case widget matrix, EN/RU model-history fixtures pass. Shared skill frontmatter/path checks pass with a stdlib fallback; bundled skill validator cannot import PyYAML (no dependency installed). Actual baseline/experiment and private shared skill are excluded from public export. Package/native/CI acceptance remains a separate final gate, recorded when complete. No model calls or peer runtime changes.

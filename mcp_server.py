@@ -56,6 +56,7 @@ def dispatch(request,state):
     finally:j.close()
 
 def serve(state):
+    if hasattr(sys.stdout,'reconfigure'):sys.stdout.reconfigure(encoding='utf-8')
     while True:
         line=sys.stdin.buffer.readline(MAX_INPUT+1)
         if not line:break

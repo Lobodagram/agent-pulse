@@ -542,6 +542,7 @@ def snapshot(directory, collect_patterns=None):
 
 
 def main():
+    if hasattr(sys.stdout,'reconfigure'):sys.stdout.reconfigure(encoding='utf-8')
     p=argparse.ArgumentParser();p.add_argument('--state',type=Path,default=DEFAULT_STATE);p.add_argument('--debug',action='store_true',help='Print only a safe exception class to stderr, never its message or payload')
     sub=p.add_subparsers(dest='command',required=True)
     s=sub.add_parser('snapshot');s.add_argument('--no-patterns',action='store_true')

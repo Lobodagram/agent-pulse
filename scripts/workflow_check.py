@@ -22,7 +22,7 @@ from journal import atomic_json
 
 def archives(directory,version):
     names=['agent-pulse-macos-arm64.zip','agent-pulse-macos-x64.zip','agent-pulse-windows-x64.zip']
-    directory=Path(directory);sums={r.split()[1]:r.split()[0] for r in (directory/'SHA256SUMS.txt').read_text().splitlines()}
+    directory=Path(directory);sums={r.split()[1]:r.split()[0] for r in (directory/'SHA256SUMS.txt').read_text(encoding='utf-8').splitlines()}
     results=[]
     for name in names:
         path=directory/name
@@ -45,15 +45,15 @@ def archives(directory,version):
     return results
 
 def source_check():
-    checks={};version=tomllib.loads((ROOT/'pyproject.toml').read_text())['project']['version']
+    checks={};version=tomllib.loads((ROOT/'pyproject.toml').read_text(encoding='utf-8'))['project']['version']
     with tempfile.TemporaryDirectory() as tmp:
         tree=Path(tmp)/'public';manifest=export(tree);files=[tree/f for f in manifest['files']]
         for f in files:
-            if f.suffix=='.py':ast.parse(f.read_text(),filename=f.name)
+            if f.suffix=='.py':ast.parse(f.read_text(encoding='utf-8'),filename=f.name)
         count=0
         for f in files:
             if f.suffix!='.md':continue
-            for target in re.findall(r'!?\[[^\]]*\]\(([^\s)]+)\)',f.read_text()):
+            for target in re.findall(r'!?\[[^\]]*\]\(([^\s)]+)\)',f.read_text(encoding='utf-8')):
                 if target.startswith(('https:','http:','#','mailto:')):continue
                 target=urllib.parse.unquote(target.split('#')[0])
                 if not (f.parent/target).exists():raise ValueError('missing_document_link')
@@ -96,7 +96,7 @@ def main():
     try:
         if args.mode=='handoff':
             if not args.input or args.input.is_symlink() or args.input.stat().st_size>32768:raise ValueError('invalid_check_file')
-            result=handoff(json.loads(args.input.read_text()))
+            result=handoff(json.loads(args.input.read_text(encoding='utf-8')))
         else:
             version,checks=source_check();head=subprocess.run(['git','rev-parse','HEAD'],cwd=ROOT,capture_output=True,text=True,timeout=5)
             commit=head.stdout.strip() if head.returncode==0 and re.fullmatch('[a-f0-9]{40}',head.stdout.strip()) else None
