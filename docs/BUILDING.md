@@ -40,7 +40,9 @@ python -m venv .build/venv
 .build/venv/Scripts/python -m pip install -r requirements-build.txt
 .build/venv/Scripts/python -m PyInstaller --clean --noconfirm --onefile --windowed --name AgentPulse --paths . windows/agent_pulse.py
 python windows/agent_pulse.py --fixture examples/demo.json --smoke
-Start-Process -FilePath dist/AgentPulse.exe -ArgumentList '--fixture','examples/demo.json','--smoke' -Wait
+$demo = (Resolve-Path examples/demo.json).Path
+$smoke = Start-Process -FilePath dist/AgentPulse.exe -ArgumentList '--fixture',"`"$demo`"",'--smoke' -Wait -PassThru
+if ($smoke.ExitCode -ne 0) { throw 'Packaged Windows smoke failed' }
 ```
 
 The source and exe smoke modes use demo counters and close automatically; they do not query accounts. Interactive dragging, mixed-DPI/fullscreen behavior and live Windows provider integration still need manual device acceptance. There is no Windows tray yet; close the widget normally.

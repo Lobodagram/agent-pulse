@@ -23,3 +23,13 @@ Prepublication evidence, public counters excluded:
 [Release packages run 37423000057](https://github.com/Lobodagram/agent-pulse/actions/runs/37423000057) passed for macOS ARM64, macOS Intel and Windows x64. Each package ran 26 tests. Both macOS applications rendered their own demo window, their frozen collectors listed the provider catalog, and final bundle signatures verified. The packaged Windows .exe completed the fixture UI smoke check, including its topmost state. Publication was intentionally skipped for this manual pre-release run; the tagged release performs the same checks and uploads the archives.
 
 До v0.2.2 прошли сборки и проверки всех трёх пакетов: два macOS и Windows x64, включая запуск упакованного .exe. Финальная подпись macOS проверена. Ручная приёмка на разных дисплеях, sleep/wake и живых аккаунтах экспериментальных адаптеров остаётся открытой.
+
+## Published v0.2.2
+
+[Tagged run 37423472094](https://github.com/Lobodagram/agent-pulse/actions/runs/37423472094) completed successfully, including all three package jobs and the publication job. [Release v0.2.2](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.2.2) contains Mac ARM64, Mac Intel and Windows x64 archives plus SHA256SUMS.txt. All three archives were downloaded back from the public release and their SHA256 hashes matched; project/runtime notices were found inside each package. This checks the delivered bytes in addition to the pre-release build.
+
+Финальный workflow v0.2.2 прошёл полностью, архивы опубликованы. Все три пакета скачаны с публичного релиза; SHA256 совпали, лицензии проекта и среды присутствуют.
+
+The downloaded macOS ARM64 package was extracted and tested on the development Mac: strict/deep code-signature verification passed, the bundled frozen collector returned its 11-client catalog, and the packaged app rendered its demo window. Own-window diagnostics passed floating level, all-spaces flags, hide/restore and menu-bar presence. This did not query accounts or replace the user's installed app.
+
+Скачанный Mac ARM64-пакет проверен локально: подпись, встроенный сборщик и демонстрационное окно прошли; это не заменяет ручную приёмку всех сценариев рабочего стола.
