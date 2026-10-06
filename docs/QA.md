@@ -1,3 +1,11 @@
+## 0.8.1 delivered verification · 2026-10-06
+
+182 tests and isolated runtime wheel/CLI/hook/MCP pass. [Source Checks37529586577](https://github.com/Lobodagram/agent-pulse/actions/runs/37529586577) passed Linux/Mac/Windows; [packages37529892811](https://github.com/Lobodagram/agent-pulse/actions/runs/37529892811) passed Mac ARM64/Intel, Windows and publication. Immutable v0.8.1 at51f0d21f5bfb5dc76acf2538c96d6e0d8bfcb186;116 public hashes/modes matched.
+
+All three [release archives](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.8.1) downloaded and matched SHA256SUMS/runtime/notices/path checks; Mac embedded versions0.8.1 verified. Exact private key absent from every archive entry. Downloaded ARM64 strict/deep signature, actual two-second frozen hook/journal/MCP,20 widget cases and EN/RU model renders passed, changed renders inspected. Live GLM five-hour/week percentages and reset fields verified using the normal downloaded helper, without environment overrides. Installed that release0.8.1/build20: one instance, config stable, prior/source bundles preserved. Installed strict helper passed; own live UI confirmed quotas, Today switch and returning to quotas. Private live account screenshots are excluded from public export.
+
+Personal key remains only in local own Secrets.json mode0600, supplied through masked Settings for other users. No inference, peer start/config/trust change, native credential read or telemetry upload. Core analytics effectiveness remains7/10 pending accepted comparable tasks; cold first-start, signing/notarization and physical Windows DPI/Intel charts/Spaces/fullscreen/multi-display/sleep-wake remain open.
+
 ## 0.8.1 frozen macOS HTTPS correction · 2026-10-06
 
 Live installed 0.8.0 exposed an HTTPS trust-path packaging defect: the frozen Python framework CA file was absent on the development Mac, while source reads worked. A scoped comparison with the OS-owned /etc/ssl/cert.pem made the same frozen quota GET succeed. 0.8.1 adds OS roots to the frozen Mac HTTPS context with certificate/hostname verification required; no insecure TLS fallback, redirects, proxies or credential changes. Missing/invalid roots remain fail-closed. Four regressions cover strict verification, Mac roots, other runtimes/platforms and invalid roots. Native package/live acceptance is recorded after verification.
