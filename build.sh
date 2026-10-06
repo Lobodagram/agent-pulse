@@ -7,7 +7,10 @@ xcrun swiftc -parse-as-library Sources/AgentPulse.swift -O -o "$PULSE_OUTPUT/Age
 cp compact_summary.py collector.py providers.py platform_support.py journal.py analytics.py journal_cli.py instrumentation.py mcp_server.py "$PULSE_OUTPUT/Agent Pulse.app/Contents/Resources/"
 mkdir -p "$PULSE_OUTPUT/Agent Pulse.app/Contents/Resources/scripts"
 cp scripts/hook_bridge.py "$PULSE_OUTPUT/Agent Pulse.app/Contents/Resources/scripts/"
-if [[ -f .build/pulse-collector ]]; then
+rm -rf "$PULSE_OUTPUT/Agent Pulse.app/Contents/Resources/pulse-runtime"
+if [[ -d .build/pulse-collector ]]; then
+  cp -R .build/pulse-collector/. "$PULSE_OUTPUT/Agent Pulse.app/Contents/Resources/"
+elif [[ -f .build/pulse-collector ]]; then
   cp .build/pulse-collector "$PULSE_OUTPUT/Agent Pulse.app/Contents/Resources/"
 else
   rm -f "$PULSE_OUTPUT/Agent Pulse.app/Contents/Resources/pulse-collector"
@@ -20,8 +23,8 @@ cat > "$PULSE_OUTPUT/Agent Pulse.app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleIdentifier</key><string>app.agentpulse.desktop</string>
 <key>CFBundleName</key><string>Agent Pulse</string>
 <key>CFBundleDisplayName</key><string>Agent Pulse</string>
-<key>CFBundleVersion</key><string>9</string>
-<key>CFBundleShortVersionString</key><string>0.4.0</string>
+<key>CFBundleVersion</key><string>10</string>
+<key>CFBundleShortVersionString</key><string>0.4.1</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>LSUIElement</key><true/>

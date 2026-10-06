@@ -53,7 +53,8 @@ def findings(j,calls):
             families[(c['provider'],c['project'],c['template'])].append(c)
             if c['category']=='read' and c['resource'] and c['revision']:
                 reads[(c['provider'],c['project'],c['turn'],c['resource'],c['revision'])].append(c)
-            if c['turn_source']!='unknown' and c['outcome']!='failed':lanes[(c['provider'],c['project'],c['session'],c['turn'],c['actor'])].append(c)
+        # Keep failures/pending calls as barriers instead of joining their neighbours.
+        if c['turn_source']!='unknown':lanes[(c['provider'],c['project'],c['session'],c['turn'],c['actor'])].append(c)
     result=[]
     for key,items in groups.items():
         fails=[c for c in items if c['outcome']=='failed']
@@ -63,10 +64,12 @@ def findings(j,calls):
         if len(items)>=3:result.append(recommendation(j,key,'repeat_read',items))
     sequences=defaultdict(list)
     for lane,items in lanes.items():
-        items.sort(key=lambda c:c['startedAt'])
+        items.sort(key=lambda c:c['startedAt'] if c['startedAt'] is not None else c['endedAt'])
         # Build only execution-order segments: overlapping calls cannot establish causal chains.
         segments=[];segment=[]
         for c in items:
+            if not c['paired'] or c['outcome']=='failed' or c['endedAt']<c['startedAt']:
+                segments.append(segment);segment=[];continue
             if segment and (c['startedAt'] < segment[-1]['endedAt'] or c['startedAt']-segment[-1]['endedAt']>600):
                 segments.append(segment);segment=[]
             segment.append(c)
@@ -103,22 +106,33 @@ def report(j,providers=None):
     for (provider,sid),items in sessions.items():
         a=j.db.execute('SELECT label,outcome,variant FROM annotation WHERE session=?',(sid,)).fetchone()
         starts=[c['startedAt'] for c in items if c['startedAt'] is not None];ends=[c['endedAt'] for c in items if c['endedAt'] is not None]
-        usage=[dict(r) for r in j.db.execute('SELECT input,cached_input,output,source FROM turn_usage WHERE session=?',(sid,))]
+        usage=[dict(r) for r in j.db.execute('SELECT turn,input,cached_input,output,source FROM turn_usage WHERE session=?',(sid,))]
+        usage_by_turn=defaultdict(list)
+        for u in usage:usage_by_turn[u['turn']].append(u)
+        totals={};conflicts=0
+        for component in ['input','output']:
+            values=[];conflict=False
+            for rows in usage_by_turn.values():
+                known={r[component] for r in rows if r[component] is not None}
+                if len(known)>1:conflict=True;conflicts+=1
+                elif known:values.append(next(iter(known)))
+            totals[component]=None if conflict or not values else sum(values)
         summaries.append({'id':sid,'provider':provider,'projectId':items[0]['project'],'calls':len(items),
           'failed':sum(c['outcome']=='failed' for c in items),'pending':sum(c['outcome']=='pending' for c in items),
           'paired':sum(c['paired'] for c in items),'startedAt':min(starts) if starts else None,'endedAt':max(ends) if ends else None,
           'elapsedMs':(max(ends)-min(starts))*1000 if starts and ends and max(ends)>=min(starts) else None,
           'label':a['label'] if a else None,'outcome':a['outcome'] if a else 'unknown','variant':a['variant'] if a else None,
-          'reportedInputTokens':sum(x['input'] for x in usage if x['input'] is not None) if usage else None,
-          'reportedOutputTokens':sum(x['output'] for x in usage if x['output'] is not None) if usage else None,
+          'reportedInputTokens':totals['input'],'reportedOutputTokens':totals['output'],
           'models':sorted({c['model'] for c in items if c['model']!='other'}),'settingsCoverage':'model identifiers only when native hooks report them; effort and task difficulty unverified',
-          'usageTurns':len(usage),'usageCoverage':'explicit turn reports only; not a session total unless every turn is reported'})
+          'usageTurns':len(usage_by_turn),'usageConflicts':conflicts,'usageCoverage':'explicit turn reports only; conflicting components unknown; not a session total unless every turn is reported'})
     coverage=[]
     health={r['provider']:dict(r) for r in j.db.execute('SELECT * FROM health')}
+    tool_seen={r['provider']:r['at'] for r in j.db.execute("SELECT provider,max(received) AS at FROM observation WHERE call!='' GROUP BY provider")}
     for provider in sorted(providers or {c['provider'] for c in calls}):
         h=health.get(provider,{});items=[c for c in calls if c['provider']==provider];seen=h.get('last_event');active=bool(seen and time.time()-seen<600)
+        recent_tool=tool_seen.get(provider);tool_active=bool(recent_tool and time.time()-recent_tool<600)
         coverage.append({'provider':provider,'mode':'hook-events' if any(c['source']=='hook' for c in items) else 'projected-events' if items else 'no-events',
-          'state':'receiving' if active else 'stale' if seen else 'not-observed','lastEventAt':seen,'calls':len(items),
+          'state':'receiving' if tool_active else 'lifecycle-only' if active else 'stale' if seen else 'not-observed','lastEventAt':seen,'lastToolEventAt':recent_tool,'calls':len(items),
           'pairedCalls':sum(c['paired'] for c in items),'rejected':h.get('rejected',0),
           'completeness':'unknown; hosted tools, disabled hooks and disconnected clients may be absent'})
     total=j.db.execute('SELECT count(*) FROM observation WHERE received>=?',(time.time()-30*86400,)).fetchone()[0]

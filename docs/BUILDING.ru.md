@@ -12,7 +12,7 @@ macOS 14+ и Xcode Command Line Tools. Исходная сборка ищет `p
 python3 -m venv .build/venv
 .build/venv/bin/python -m pip install -r requirements-build.txt
 .build/venv/bin/python -m unittest discover -s tests -v
-.build/venv/bin/python -m PyInstaller --clean --noconfirm --onefile --name pulse-collector --distpath .build collector.py
+.build/venv/bin/python -m PyInstaller --clean --noconfirm --onedir --contents-directory pulse-runtime --name pulse-collector --distpath .build collector.py
 ./build.sh
 open 'dist/Agent Pulse.app'
 ```
@@ -31,7 +31,7 @@ python windows/agent_pulse.py
 
 Для exe создайте venv и выполните PyInstaller-команды из английского руководства. Тестируйте также упакованный exe с `--fixture` и **абсолютным** путём `(Resolve-Path examples/demo.json).Path`, а также `--smoke` (команды в английском руководстве): демо закрывается автоматически и не опрашивает аккаунты.
 
-Перетаскивание, смешанный DPI/fullscreen и живые подключения на Windows требуют ручной проверки устройства. Трея пока нет, виджет закрывается штатной кнопкой.
+Перетаскивание, смешанный DPI/fullscreen и живые подключения на Windows требуют ручной проверки устройства. Есть плавающее окно, компактная полоска и системный трей.
 
 ## GitHub Actions
 
@@ -39,6 +39,6 @@ python windows/agent_pulse.py
 
 `scripts/public_export.py НОВАЯ_ПАПКА` создаёт отдельное дерево по allowlist без личной истории git/данных и сканирует текст на личные пути и ключи. Приватные контекст/QA не экспортируются. Все публичные изображения — только вымышленное демо.
 
-В 0.3.0 требуется Python 3.11+ (релизная сборка 3.12). Для Windows отдельно соберите консольный сборщик `python -m PyInstaller --clean --noconfirm --onefile --console --name pulse-collector collector.py` и держите pulse-collector.exe рядом с GUI. Хуки и MCP используют консольный сборщик: GUI без консоли не подходит для stdio. В Mac исходники могут выбирать Python через AGENT_PULSE_PYTHON; релиз содержит встроенную среду.
+Требуется Python 3.11+ (релизная сборка 3.12). Команды Windows из английской инструкции создают отдельный консольный сборщик в режиме `--onedir`; держите `pulse-collector.exe`, папку `pulse-runtime` и GUI вместе. На Mac сборщик и его среда находятся внутри Resources. Не упаковывайте наблюдатель в `--onefile`: распаковка при каждом событии превышала штатный тайм-аут 2 секунды. Проверка `scripts/frozen_smoke.py ПУТЬ_К_СБОРЩИКУ` ограничивает каждый хук этим сроком. Хуки и MCP используют консольный сборщик; GUI без консоли не подходит для stdio. Исходники Mac могут выбирать Python через AGENT_PULSE_PYTHON; релиз содержит встроенную среду.
 
 Для локальной разработки Mac: `script/build_and_run.sh` собирает отдельный local-run пакет и не закрывает установленный виджет. Режимы `--verify`, `--debug`, `--logs`, `--telemetry`; для исходников без встроенной среды задайте `AGENT_PULSE_PYTHON` на Python 3.11+. Пути демо/снимков разрешаются от репозитория. Релизные пакеты собираются через `build.sh` со встроенным Python.

@@ -28,7 +28,7 @@ jobs:
       - run: python -m pip install -r requirements-build.txt
       - if: runner.os == 'macOS'
         run: |
-          python -m PyInstaller --clean --noconfirm --onefile --name pulse-collector --distpath .build collector.py
+          python -m PyInstaller --clean --noconfirm --onedir --contents-directory pulse-runtime --name pulse-collector --distpath .build collector.py
           ./build.sh
           'dist/Agent Pulse.app/Contents/MacOS/AgentPulse' --fixture examples/demo.json --snapshot .build/widget.png
           python scripts/widget_smoke.py 'dist/Agent Pulse.app/Contents/MacOS/AgentPulse'
@@ -41,7 +41,9 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent 'dist/Agent Pulse.app' 'dist/agent-pulse-${{ matrix.artifact }}.zip'
       - if: runner.os == 'Windows'
         run: |
-          python -m PyInstaller --clean --noconfirm --onefile --console --name pulse-collector collector.py
+          python -m PyInstaller --clean --noconfirm --onedir --contents-directory pulse-runtime --console --name pulse-collector --distpath .build collector.py
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          Copy-Item .build/pulse-collector/* dist/ -Recurse -Force
           & ./dist/pulse-collector.exe catalog
           python scripts/frozen_smoke.py dist/pulse-collector.exe
           if ($LASTEXITCODE -ne 0) { throw "Frozen collector failed" }
@@ -63,7 +65,7 @@ jobs:
           $ruSmoke = Start-Process -FilePath dist/AgentPulse.exe -ArgumentList '--fixture',"`"$quotaDemo`"",'--smoke','--language','ru' -Wait -PassThru
           if ($ruSmoke.ExitCode -ne 0) { throw 'Packaged Russian Windows layout smoke failed' }
           python scripts/runtime_notices.py dist/Licenses
-          Compress-Archive -Path dist/AgentPulse.exe,dist/pulse-collector.exe,dist/Licenses,LICENSE,NOTICE,README.md,README.ru.md -DestinationPath 'dist/agent-pulse-${{ matrix.artifact }}.zip'
+          Compress-Archive -Path dist/AgentPulse.exe,dist/pulse-collector.exe,dist/pulse-runtime,dist/Licenses,LICENSE,NOTICE,README.md,README.ru.md -DestinationPath 'dist/agent-pulse-${{ matrix.artifact }}.zip'
       - uses: actions/upload-artifact@v4
         with:
           name: agent-pulse-${{ matrix.artifact }}

@@ -106,8 +106,8 @@ def outcome(event,raw):
                 if isinstance(text,str):
                     m=re.search(r'(?:"exit_code"\s*:\s*|Process exited with code\s+)(-?\d{1,3})\b',text[:128*1024])
                     if m:code=int(m.group(1));break
+    if failed:return 'failed',code
     if code is not None:return ('success' if code==0 else 'failed'),code
-    if failed:return 'failed',None
     # A completed shell tool can still mean an ongoing process. Do not invent exit status.
     return ('unknown' if shell else 'success'),None
 

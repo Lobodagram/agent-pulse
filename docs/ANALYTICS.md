@@ -1,4 +1,4 @@
-# Local workflow analytics · 0.3.0
+# Local workflow analytics
 
 [Русский](ANALYTICS.ru.md)
 

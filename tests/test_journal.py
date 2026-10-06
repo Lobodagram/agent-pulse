@@ -50,6 +50,9 @@ class JournalTests(unittest.TestCase):
         self.event('PreToolUse');self.event('PostToolUse',tool_response={'session_id':42});self.assertEqual(self.j.calls()[0]['outcome'],'unknown')
     def test_failure_not_hidden(self):
         self.event('PreToolUse');self.event('PostToolUseFailure',error='private error');self.assertEqual(self.j.calls()[0]['outcome'],'failed')
+    def test_error_flag_wins_over_zero_exit(self):
+        self.event('PreToolUse');self.event('PostToolUse',tool_response={'isError':True,'exit_code':0})
+        self.assertEqual(self.j.calls()[0]['outcome'],'failed')
     def test_native_duration_preferred(self):
         self.event('PreToolUse');self.event('PostToolUse',durationMs=23,tool_response={'exit_code':0});c=self.j.calls()[0];self.assertEqual(c['durationMs'],23);self.assertEqual(c['durationSource'],'native')
     def test_negative_duration_unknown(self):
@@ -72,6 +75,18 @@ class JournalTests(unittest.TestCase):
         for n in range(3):
             self.pair(str(n)+'a',turn=str(n),tool='Read',at=self.clock+n*5)
             self.pair(str(n)+'b',turn=str(n),tool='Edit',at=self.clock+n*5+.1)
+        self.assertFalse(any(f['kind']=='sequence' for f in report(self.j)['findings']))
+    def test_failure_breaks_sequence(self):
+        for n in range(3):
+            self.pair(str(n)+'a',turn=str(n),tool='Read',at=self.clock+n*10)
+            self.pair(str(n)+'bad',turn=str(n),at=self.clock+n*10+2,failed=True)
+            self.pair(str(n)+'b',turn=str(n),tool='Edit',at=self.clock+n*10+4)
+        self.assertFalse(any(f['kind']=='sequence' for f in report(self.j)['findings']))
+    def test_invalid_timeline_not_sequence(self):
+        for n in range(3):
+            self.event('PreToolUse',str(n)+'a',turn=str(n),tool='Read',at=self.clock+n*10+1)
+            self.event('PostToolUse',str(n)+'a',turn=str(n),tool='Read',at=self.clock+n*10)
+            self.pair(str(n)+'b',turn=str(n),tool='Edit',at=self.clock+n*10+2)
         self.assertFalse(any(f['kind']=='sequence' for f in report(self.j)['findings']))
     def test_unknown_turn_not_sequence(self):
         for n in range(3):
@@ -103,6 +118,29 @@ class JournalTests(unittest.TestCase):
         with self.assertRaises(ValueError):self.j.usage('codex','s','t',{})
         with self.assertRaises(ValueError):self.j.usage('codex','s','t',{'input':2,'cached_input':3})
         self.pair();self.j.usage('codex','s','t',{'input':10,'cached_input':2,'output':4});r=report(self.j);self.assertEqual(r['sessions'][0]['reportedInputTokens'],10)
+    def test_missing_token_component_stays_unknown(self):
+        self.pair();self.j.usage('codex','s','t',{'output':4})
+        s=report(self.j)['sessions'][0]
+        self.assertIsNone(s['reportedInputTokens']);self.assertEqual(s['reportedOutputTokens'],4)
+    def test_usage_same_turn_multiple_sources_not_added(self):
+        self.pair()
+        for source in ['native-turn','import']:self.j.usage('codex','s','t',{'input':10,'output':4},source)
+        s=report(self.j)['sessions'][0]
+        self.assertEqual(s['reportedInputTokens'],10);self.assertEqual(s['usageTurns'],1)
+    def test_usage_conflicting_sources_unknown(self):
+        self.pair();self.j.usage('codex','s','t',{'input':10,'output':4});self.j.usage('codex','s','t',{'input':12,'output':4},'import')
+        s=report(self.j)['sessions'][0]
+        self.assertIsNone(s['reportedInputTokens']);self.assertEqual(s['reportedOutputTokens'],4)
+    def test_pending_call_breaks_sequence(self):
+        for n in range(3):
+            self.pair(str(n)+'a',turn=str(n),tool='Read',at=self.clock+n*10)
+            self.event('PreToolUse',str(n)+'pending',turn=str(n),at=self.clock+n*10+2)
+            self.pair(str(n)+'b',turn=str(n),tool='Edit',at=self.clock+n*10+4)
+        self.assertFalse(any(f['kind']=='sequence' for f in report(self.j)['findings']))
+    def test_lifecycle_only_is_not_tool_receiving(self):
+        self.event('SessionStart')
+        c=report(self.j,['codex'])['coverage'][0]
+        self.assertEqual(c['state'],'lifecycle-only');self.assertEqual(c['pairedCalls'],0)
     def test_comparison_quality_not_ignored(self):
         for v in ['before','after']:
             for n in range(3):

@@ -15,13 +15,13 @@ macOS 14+, Xcode Command Line Tools. A source-only app expects Python 3.11+ as `
 
 ```sh
 .build/venv/bin/python -m pip install -r requirements-build.txt
-.build/venv/bin/python -m PyInstaller --clean --noconfirm --onefile --name pulse-collector --distpath .build collector.py
+.build/venv/bin/python -m PyInstaller --clean --noconfirm --onedir --contents-directory pulse-runtime --name pulse-collector --distpath .build collector.py
 ./build.sh
 'dist/Agent Pulse.app/Contents/MacOS/AgentPulse' --fixture examples/demo.json --language en --snapshot .build/widget.png
 open 'dist/Agent Pulse.app'
 ```
 
-`build.sh` targets the current machine architecture, macOS 14+, ad-hoc signs the app, and includes `.build/pulse-collector` if present. A release must include that helper. No Apple signing identity/notarization credentials are configured.
+`build.sh` targets the current machine architecture, macOS 14+, ad-hoc signs the app, and copies the `.build/pulse-collector/` helper plus `pulse-runtime` into Resources. A release must include both. The observer must start within the native 2-second timeout; one-file extraction exceeded that budget on the development Mac. Run `python scripts/frozen_smoke.py 'dist/Agent Pulse.app/Contents/Resources/pulse-collector'` to check the packaged event path under that deadline. No Apple signing identity/notarization credentials are configured.
 
 ## Windows
 
@@ -38,7 +38,9 @@ Package in a venv, then test the **packaged** executable:
 ```powershell
 python -m venv .build/venv
 .build/venv/Scripts/python -m pip install -r requirements-build.txt
-.build/venv/Scripts/python -m PyInstaller --clean --noconfirm --onefile --console --name pulse-collector collector.py
+.build/venv/Scripts/python -m PyInstaller --clean --noconfirm --onedir --contents-directory pulse-runtime --console --name pulse-collector --distpath .build collector.py
+New-Item -ItemType Directory -Path dist -Force | Out-Null
+Copy-Item .build/pulse-collector/* dist/ -Recurse -Force
 .build/venv/Scripts/python -m PyInstaller --clean --noconfirm --onefile --windowed --name AgentPulse --paths . windows/agent_pulse.py
 python windows/agent_pulse.py --fixture examples/demo.json --smoke
 $demo = (Resolve-Path examples/demo.json).Path
@@ -46,7 +48,7 @@ $smoke = Start-Process -FilePath dist/AgentPulse.exe -ArgumentList '--fixture',"
 if ($smoke.ExitCode -ne 0) { throw 'Packaged Windows smoke failed' }
 ```
 
-The source and exe smoke modes use demo counters and close automatically; they do not query accounts. Interactive dragging, mixed-DPI/fullscreen behavior and live Windows provider integration still need manual device acceptance. There is no Windows tray yet; close the widget normally.
+Keep `AgentPulse.exe`, `pulse-collector.exe` and the `pulse-runtime` directory together. Run `python scripts/frozen_smoke.py dist/pulse-collector.exe` before distributing. The source and exe smoke modes use demo counters and close automatically; they do not query accounts. Windows has floating, compact-strip and native tray modes. Interactive dragging, mixed-DPI/fullscreen behavior and live Windows provider integration still need manual device acceptance.
 
 ## CI and release
 

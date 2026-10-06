@@ -1,3 +1,22 @@
+# Changelog / Изменения
+
+## 0.4.1 · 2026-10-06
+
+- Directory-based observer runtime removes per-event extraction; packaged hooks must pass the native two-second deadline.
+- Explicit tool errors override zero exit codes. Failed, pending and invalid-timeline calls break workflow sequences.
+- Unreported token components stay unknown; duplicate per-turn sources are not summed and conflicting components remain unknown.
+- Lifecycle-only status differs from receiving tool calls; analytics readiness audit and current bilingual build instructions.
+
+Исправлен запуск наблюдателя: встроенная среда в отдельной папке, проверка штатного тайм-аута. Устранены ложные успехи/цепочки/нулевые значения и повторный подсчёт токенов разных источников. Добавлен честный аудит готовности. Реальная активация хуков и применение скиллов не считаются доказанными тестовыми событиями.
+
+## 0.4.0 · 2026-10-06
+
+- MIT for the current original-source snapshot; copyright notice preserved. Earlier tags unchanged.
+- Mac collapsed bar rotates one selected client every 8 seconds, both reported quota windows; optional foreground desktop selection with rotation fallback. No token-to-quota inference.
+- Click opens the movable/resizable full widget; collapse keeps compact bar data.
+- Windows small strip above taskbar, all-client pages, restore controls and native tray option.
+- Integration feasibility documented; persistent injection into every desktop chat is not claimed.
+
 ## 0.3.3 · 2026-10-06
 
 Remove redundant native Tk label padding, preserving readable fonts and fitting both English/Russian two-quota layouts at 80%.
@@ -17,17 +36,6 @@ Remove redundant native Tk label padding, preserving readable fonts and fitting 
 - Mac menu-bar-only mode, first-two-client compact indicators, icon-only option and click popover.
 - Explain delayed Codex daily reporting; independent opt-in bounded local token projection supplies partial UTC-day counts without tool projection or double-counted account totals.
 - Native fixture matrix and token-only privacy/dedup/pending tests.
-
-# Changelog
-
-## 0.4.0 · 2026-10-06
-
-- MIT for the current original-source snapshot; copyright notice preserved. Earlier tags unchanged.
-- Mac collapsed bar rotates one selected client every 8 seconds, both reported quota windows; optional foreground desktop selection with rotation fallback. No token-to-quota inference.
-- Click opens the movable/resizable full widget; collapse keeps compact bar data.
-- Windows small strip above taskbar, all-client pages, restore controls and native tray option.
-- Integration feasibility documented; persistent injection into every desktop chat is not claimed.
- / Изменения
 
 ## 0.3.0 — 2026-10-06
 

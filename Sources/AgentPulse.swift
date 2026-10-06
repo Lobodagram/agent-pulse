@@ -84,7 +84,7 @@ func outcomeText(_ code: String) -> String {
     return russian ? ru[code] ?? code : code
 }
 func coverageText(_ code: String) -> String {
-    return code == "receiving" ? tr("receiving events", "получает события") : code == "stale" ? tr("no recent events", "нет свежих событий") : tr("not observed", "не наблюдается")
+    return code == "receiving" ? tr("receiving tool events", "получает вызовы") : code == "lifecycle-only" ? tr("lifecycle only", "только события сессии") : code == "stale" ? tr("no recent events", "нет свежих событий") : tr("not observed", "не наблюдается")
 }
 let isoDay: DateFormatter = { let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.timeZone = TimeZone(secondsFromGMT: 0); f.dateFormat = "yyyy-MM-dd"; return f }()
 let bg = Color(red: 0.082, green: 0.102, blue: 0.114)
