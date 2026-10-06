@@ -1,0 +1,116 @@
+# Provider setup
+
+[Русский](PROVIDERS.ru.md)
+
+Enable only the clients you use in Settings. Modes are visible in the catalog. Disabled adapters are not polled. Import-only selection is not an account connection. Refresh is every 5 minutes and manual; counters have UTC daily boundaries, reset timestamps display in your local time. Billing dates are always manual because no billing-renewal API is assumed.
+
+## Own configuration
+
+Use `collector.py` from a source checkout with Python 3.10+:
+
+```sh
+python3 collector.py catalog
+python3 collector.py configure --providers codex,glm,claude --local-patterns off
+python3 collector.py subscription --provider codex --kind renewal --date 2027-02-01
+python3 collector.py snapshot
+```
+
+On Windows use `python` instead of `python3`. Every command accepts `--state PATH` **before** its subcommand to use an isolated test directory. `config.json` in the own state directory holds non-secret settings. Never put keys into that file or this repository.
+
+```json
+{
+  "enabledProviders": ["codex", "glm"],
+  "localPatterns": false
+}
+```
+
+Advanced explicit runtime overrides: `codexCli`, `nodePath`, `zcodeResources`, `zcodeCli`, `zcodeBuiltin`. Paths are used only to run your installed native client; no credentials are extracted. Set only reviewed executables you own/trust. Nothing is downloaded by an adapter.
+
+## Codex
+
+Install/authenticate the native Codex CLI yourself and make `codex` available on PATH, or set `codexCli`. Collector starts a standalone metadata app-server, calls `initialize`, `account/rateLimits/read`, `account/usage/read` where supported, then closes it. No turn/thread start/resume call exists in the allowlist. Different versions/account plans can omit methods or fields. `rateLimitsByLimitId` is preferred; absent values stay unknown. Available reset credits are shown only if reported. Do not infer credits from quota percentages.
+
+Optional local event analysis is off by default. Enable it in Settings or `configure --local-patterns on` only if you accept the bounded local parsing described in PRIVACY.md. `thread/list` then returns up to 30 recent metadata paths. Event counters supplement missing account tokens with a clearly marked partial count; they do not overwrite account history or prove complete coverage. Static tool identifiers from a wrapper can represent code branches that did not execute.
+
+Source contract: [official Codex app-server](https://developers.openai.com/codex/app-server/).
+
+## GLM / ZCode
+
+Uses Node on PATH and the installed ZCode app's CLI to request read-only `usage/stats` for seven days in UTC. macOS default app path is `/Applications/ZCode.app/Contents/Resources`. On Windows the packaging layout may differ: explicitly configure `zcodeResources` or `zcodeCli` + `zcodeBuiltin`, and `nodePath` if necessary. The native resolver receives its installed built-in provider path and its own personal config path; Agent Pulse does not parse its credentials. No native DB is opened directly.
+
+These are **local ZCode records**, not all GLM use on other devices or IDEs. Zero recorded sessions does not establish zero global consumption. Remote subscription quotas/reset dates are not connected in this adapter. Enter billing dates or “No plan” manually.
+
+Source: [ZCode usage statistics](https://zcode.z.ai/en/docs/usage-stats).
+
+## Claude Code: explicit status-line bridge
+
+No automatic settings edit. Keep a backup of your existing Claude status-line configuration. Configure its `statusLine` command to run the reviewed bridge from this checkout (with absolute executable/script paths on your machine):
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "python3 /absolute/path/to/agent-pulse/scripts/claude_statusline.py"
+  }
+}
+```
+
+Windows: use a suitable Python path and quote paths containing spaces. This replaces the status-line command; integrate it with your current script yourself if you want to preserve existing output. It receives official JSON on stdin and writes only projected numbers to Agent Pulse's own `imports/claude.json`. The snapshot is marked stale after 10 minutes without an event. Restart/refresh Agent Pulse after configuring.
+
+`rate_limits.five_hour` and `seven_day` are optional; plan/gateway support varies and an initial model response may be needed by the native client. Agent Pulse **does not initiate that response**. `context_window.total_input_tokens + total_output_tokens` is displayed only as **context size**, never day/session cumulative spend. Session name, ID, transcript path, cwd and prompt fields are discarded.
+
+Contract: [official Claude status-line JSON](https://code.claude.com/docs/en/statusline).
+
+## Kimi Code: experimental quota API
+
+Opt in by enabling Kimi and creating a private own-state `Secrets.json`:
+
+```json
+{"kimi":{"api_key":"YOUR_OWN_KIMI_CODE_KEY"}}
+```
+
+On POSIX protect it with mode 600. On Windows restrict its NTFS access to your user. The literal placeholder is not a usable key; obtain your own key through the native vendor flow. Do not send it in an issue, screenshot or repository.
+
+Reads only `GET https://api.kimi.com/coding/v1/usages`, the endpoint used by the official client. Redirects and environment proxies are disabled. Missing/changed schema or a failed request yields unavailable. Usage units are quotas, **not token-spend budgets**. This endpoint is an experimental integration based on the maintained client contract, not a promised stable public analytics API; live account verification is pending.
+
+Contracts: [official CLI usage command](https://www.kimi.com/code/docs/en/kimi-code-cli/reference/kimi-command), [official quota parser](https://github.com/MoonshotAI/kimi-cli/blob/main/src/kimi_cli/ui/shell/usage.py). Referenced contracts; no client implementation is copied.
+
+## Qwen Code: existing loopback dashboard
+
+Experimental, explicit opt-in. If you already run the native Qwen local server, set `qwenBaseUrl` in the own config to its known loopback origin, for example `http://127.0.0.1:PORT` with its real port. Agent Pulse does not guess the port or start Qwen.
+
+Only HTTP loopback `127.0.0.1` or `::1` is accepted, with no credentials/path/query/fragment; redirects are rejected. Collector reads `/usage/dashboard?range=today&heatmapDays=30`. It projects summary tokens, daily/heatmap counters and sanitized skill names; no transcript files are opened. This does not provide paid subscription quotas or billing dates. Keep your native Qwen server private and appropriately protected.
+
+Contracts: [official route](https://github.com/QwenLM/qwen-code/blob/main/packages/cli/src/serve/routes/usage-stats.ts), [official aggregate schema](https://github.com/QwenLM/qwen-code/blob/main/packages/core/src/services/usage-dashboard-service.ts). Fixture verified; live native integration pending.
+
+## Other clients / normalized import
+
+Gemini, Cursor, Copilot, Windsurf, DeepSeek and OpenRouter currently have **import adapters only**. You supply a local counter export; the widget will not scrape their UI, credential stores, cookies or hidden APIs. The same import is also available for other catalog providers. Counters are user-provided, not verified account truth.
+
+```sh
+python3 collector.py ingest --provider cursor --file /path/to/counters.json
+```
+
+Input fields (all optional except a meaningful timestamp):
+
+```json
+{
+  "observedAt": 1893492000,
+  "todayTokens": 12000,
+  "periodTokens": null,
+  "contextTokens": null,
+  "daily": [{"date": "2027-01-01", "tokens": 12000}],
+  "quotas": [{"kind": "primary", "durationMinutes": 300, "remainingPercent": 70, "resetsAt": 1893500000}],
+  "tools": [{"name": "run_tests", "count": 4}]
+}
+```
+
+Replace the demo epoch with the actual observation time in **seconds**, not milliseconds, and only include a field you can support with evidence. Never manufacture a zero for absent data or convert cost/context/quota units to tokens. Unknown fields are discarded. Numeric values must be finite, nonnegative numbers; booleans are rejected. Names are bounded/sanitized. Imports are limited to 2 MiB. Old, future or missing timestamps are stale. Claude imports deliberately drop token-spend/history fields to preserve context semantics. No dynamic plugin code is executed.
+
+## Troubleshooting
+
+- Unavailable: install/authenticate the native client yourself, review the support mode/runtime paths and refresh. No source means no guessed value.
+- Stale: last successful values or an old import are retained and marked. A previous day's cached token total must not become today's spend.
+- Missing tokens with working quota: normal; not every plan/client exposes token totals.
+- Reset is not renewal: automatic quota timestamps and manual billing dates stay separate.
+- Patterns: hints for human review, not a recommendation to automatically install a skill/MCP or a measurement of per-tool cost.

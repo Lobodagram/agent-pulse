@@ -1,0 +1,309 @@
+{
+  "generatedAt": 1893492000,
+  "catalog": [
+    {
+      "id": "codex",
+      "name": "Codex",
+      "mode": "native",
+      "support": "Native account quotas, account tokens and optional partial local events"
+    },
+    {
+      "id": "glm",
+      "name": "GLM / ZCode",
+      "mode": "native",
+      "support": "Native local ZCode statistics; paid remote quota not connected"
+    },
+    {
+      "id": "claude",
+      "name": "Claude Code",
+      "mode": "statusline",
+      "support": "Official status-line bridge: quotas and context size, not cumulative token spend"
+    },
+    {
+      "id": "kimi",
+      "name": "Kimi Code",
+      "mode": "api",
+      "support": "Opt-in read-only quota API; own key in local Secrets.json; no token-spend API assumed"
+    },
+    {
+      "id": "qwen",
+      "name": "Qwen Code",
+      "mode": "loopback",
+      "support": "Opt-in existing local qwen serve usage dashboard; no daemon is started"
+    },
+    {
+      "id": "gemini",
+      "name": "Gemini CLI",
+      "mode": "import",
+      "support": "Normalized local metrics import; automatic account quota adapter not available"
+    },
+    {
+      "id": "cursor",
+      "name": "Cursor",
+      "mode": "import",
+      "support": "Normalized local metrics import; automatic account quota adapter not available"
+    },
+    {
+      "id": "copilot",
+      "name": "GitHub Copilot",
+      "mode": "import",
+      "support": "Normalized local metrics import; automatic account quota adapter not available"
+    },
+    {
+      "id": "windsurf",
+      "name": "Windsurf",
+      "mode": "import",
+      "support": "Normalized local metrics import; automatic account quota adapter not available"
+    },
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "mode": "import",
+      "support": "Normalized local metrics import; automatic account quota adapter not available"
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "mode": "import",
+      "support": "Normalized local metrics import; automatic account quota adapter not available"
+    }
+  ],
+  "localPatterns": true,
+  "privacy": "Invented demonstration counters",
+  "patternCoverage": "Demo categories; no token attribution",
+  "providers": [
+    {
+      "id": "codex",
+      "name": "Codex",
+      "status": "ready",
+      "quotas": [
+        {
+          "bucket": "codex",
+          "kind": "primary",
+          "durationMinutes": 300,
+          "remainingPercent": 81,
+          "resetsAt": 1893500000
+        },
+        {
+          "bucket": "codex",
+          "kind": "secondary",
+          "durationMinutes": 10080,
+          "remainingPercent": 57,
+          "resetsAt": 1893800000
+        }
+      ],
+      "daily": [],
+      "todayTokens": 124800,
+      "resetCredits": 2,
+      "sourceStatus": [
+        "not_configured"
+      ],
+      "tokenSource": "Demo account counters",
+      "tokenCoverage": "account-reported",
+      "subscription": {
+        "date": "2027-02-01",
+        "kind": "renewal",
+        "source": "manual"
+      },
+      "observedAt": 1893492000
+    },
+    {
+      "id": "glm",
+      "name": "GLM / ZCode",
+      "status": "ready",
+      "quotas": [],
+      "daily": [],
+      "todayTokens": 43800,
+      "resetCredits": null,
+      "sourceStatus": [
+        "not_configured"
+      ],
+      "tokenSource": "Demo ZCode aggregates",
+      "tokenCoverage": "local records \u00b7 7 days",
+      "subscription": {
+        "date": "2027-02-01",
+        "kind": "renewal",
+        "source": "manual"
+      },
+      "observedAt": 1893492000,
+      "periodTokens": 286200,
+      "sessions": 18
+    }
+  ],
+  "history": [
+    {
+      "provider": "codex",
+      "date": "2027-01-01",
+      "tokens": 54000
+    },
+    {
+      "provider": "glm",
+      "date": "2027-01-01",
+      "tokens": 42000
+    },
+    {
+      "provider": "codex",
+      "date": "2027-01-02",
+      "tokens": 75000
+    },
+    {
+      "provider": "glm",
+      "date": "2027-01-02",
+      "tokens": 63000
+    },
+    {
+      "provider": "codex",
+      "date": "2027-01-03",
+      "tokens": 96000
+    },
+    {
+      "provider": "glm",
+      "date": "2027-01-03",
+      "tokens": 84000
+    },
+    {
+      "provider": "codex",
+      "date": "2027-01-04",
+      "tokens": 33000
+    },
+    {
+      "provider": "glm",
+      "date": "2027-01-04",
+      "tokens": 21000
+    },
+    {
+      "provider": "codex",
+      "date": "2027-01-05",
+      "tokens": 54000
+    },
+    {
+      "provider": "glm",
+      "date": "2027-01-05",
+      "tokens": 42000
+    },
+    {
+      "provider": "codex",
+      "date": "2027-01-06",
+      "tokens": 75000
+    },
+    {
+      "provider": "glm",
+      "date": "2027-01-06",
+      "tokens": 63000
+    },
+    {
+      "provider": "codex",
+      "date": "2027-01-07",
+      "tokens": 96000
+    },
+    {
+      "provider": "glm",
+      "date": "2027-01-07",
+      "tokens": 84000
+    },
+    {
+      "provider": "codex",
+      "date": "2027-01-08",
+      "tokens": 33000
+    },
+    {
+      "provider": "glm",
+      "date": "2027-01-08",
+      "tokens": 21000
+    },
+    {
+      "provider": "codex",
+      "date": "2027-01-09",
+      "tokens": 54000
+    },
+    {
+      "provider": "glm",
+      "date": "2027-01-09",
+      "tokens": 42000
+    },
+    {
+      "provider": "codex",
+      "date": "2027-01-10",
+      "tokens": 75000
+    },
+    {
+      "provider": "glm",
+      "date": "2027-01-10",
+      "tokens": 63000
+    },
+    {
+      "provider": "codex",
+      "date": "2027-01-11",
+      "tokens": 96000
+    },
+    {
+      "provider": "glm",
+      "date": "2027-01-11",
+      "tokens": 84000
+    },
+    {
+      "provider": "codex",
+      "date": "2027-01-12",
+      "tokens": 33000
+    },
+    {
+      "provider": "glm",
+      "date": "2027-01-12",
+      "tokens": 21000
+    },
+    {
+      "provider": "codex",
+      "date": "2027-01-13",
+      "tokens": 54000
+    },
+    {
+      "provider": "glm",
+      "date": "2027-01-13",
+      "tokens": 42000
+    },
+    {
+      "provider": "codex",
+      "date": "2027-01-14",
+      "tokens": 75000
+    },
+    {
+      "provider": "glm",
+      "date": "2027-01-14",
+      "tokens": 63000
+    }
+  ],
+  "patterns": [
+    {
+      "provider": "codex",
+      "name": "command.tests",
+      "count": 42,
+      "errors": null,
+      "source": "Invented demo aggregate",
+      "suggestion": "Review workflow before adding tools"
+    },
+    {
+      "provider": "glm",
+      "name": "read_file",
+      "count": 37,
+      "errors": null,
+      "source": "Invented demo aggregate",
+      "suggestion": "Review workflow before adding tools"
+    },
+    {
+      "provider": "codex",
+      "name": "command.search_files",
+      "count": 21,
+      "errors": null,
+      "source": "Invented demo aggregate",
+      "suggestion": "Review workflow before adding tools"
+    },
+    {
+      "provider": "glm",
+      "name": "build",
+      "count": 17,
+      "errors": null,
+      "source": "Invented demo aggregate",
+      "suggestion": "Review workflow before adding tools"
+    }
+  ]
+}

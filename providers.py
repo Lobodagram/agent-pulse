@@ -1,0 +1,180 @@
+"""Explicit provider catalog and read-only adapters. No dynamic plugin code execution."""
+from datetime import datetime
+import json
+import os
+import re
+from pathlib import Path
+import time
+import urllib.request
+from urllib.parse import urlparse
+
+CATALOG=[
+ {'id':'codex','name':'Codex','mode':'native','support':'Native account quotas, account tokens and optional partial local events'},
+ {'id':'glm','name':'GLM / ZCode','mode':'native','support':'Native local ZCode statistics; paid remote quota not connected'},
+ {'id':'claude','name':'Claude Code','mode':'statusline','support':'Official status-line bridge: quotas and context size, not cumulative token spend'},
+ {'id':'kimi','name':'Kimi Code','mode':'api','support':'Opt-in read-only quota API; own key in local Secrets.json; no token-spend API assumed'},
+ {'id':'qwen','name':'Qwen Code','mode':'loopback','support':'Opt-in existing local qwen serve usage dashboard; no daemon is started'},
+ *[{'id':i,'name':n,'mode':'import','support':'Normalized local metrics import; automatic account quota adapter not available'} for i,n in
+   [('gemini','Gemini CLI'),('cursor','Cursor'),('copilot','GitHub Copilot'),('windsurf','Windsurf'),('deepseek','DeepSeek'),('openrouter','OpenRouter')]],
+]
+IDS={x['id'] for x in CATALOG}
+
+def load_config(directory):
+    path=Path(directory)/'config.json'
+    if not path.exists():return {'enabledProviders':['codex','glm'],'localPatterns':False}
+    if path.is_symlink() or path.stat().st_size>65536:raise ValueError('invalid_config')
+    raw=json.loads(path.read_text(encoding='utf-8'))
+    if not isinstance(raw,dict):raise ValueError('invalid_config')
+    enabled=raw.get('enabledProviders',['codex','glm'])
+    if not isinstance(enabled,list) or any(x not in IDS for x in enabled):raise ValueError('invalid_providers')
+    raw['enabledProviders']=list(dict.fromkeys(enabled))
+    return raw
+
+def atomic_json(path,value):
+    path=Path(path)
+    if path.is_symlink():raise ValueError('symlink_not_allowed')
+    if path.parent.is_symlink():raise ValueError('symlink_parent')
+    path.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
+    tmp=path.with_name(path.name+'.tmp-'+str(os.getpid()))
+    fd=os.open(tmp,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+    try:
+        with os.fdopen(fd,'w') as f:json.dump(value,f,ensure_ascii=False,allow_nan=False)
+        os.replace(tmp,path)
+    finally:
+        if tmp.exists():tmp.unlink()
+
+def empty(ident):
+    spec=next(x for x in CATALOG if x['id']==ident)
+    return {'id':ident,'name':spec['name'],'status':'unavailable','quotas':[],'daily':[],
+            'todayTokens':None,'resetCredits':None,'sourceStatus':['not_configured'],
+            'tokenSource':spec['mode'],'tokenCoverage':spec['support']}
+
+def normalized(raw,ident):
+    from collector import number,safe_name
+    if not isinstance(raw,dict):raise ValueError('invalid_metrics')
+    p=empty(ident);p['status']='ready';p['sourceStatus']=['local_metrics_import']
+    for key in ['todayTokens','periodTokens','sessions','contextTokens']:p[key]=number(raw.get(key))
+    p['tokenSource']='Local normalized metrics import';p['tokenCoverage']='user-exported, partial'
+    for q in (raw.get('quotas') if isinstance(raw.get('quotas'),list) else [])[:8]:
+        if not isinstance(q,dict):continue
+        pct=number(q.get('remainingPercent'))
+        p['quotas'].append({'bucket':ident,'kind':safe_name(q.get('kind','primary')),
+                           'durationMinutes':number(q.get('durationMinutes')),
+                           'remainingPercent':min(100,pct) if pct is not None else None,
+                           'resetsAt':number(q.get('resetsAt'))})
+    for r in (raw.get('daily') if isinstance(raw.get('daily'),list) else [])[:366]:
+        if not isinstance(r,dict):continue
+        if not re.fullmatch(r'\d{4}-\d{2}-\d{2}',str(r.get('date',''))):continue
+        try:datetime.strptime(r.get('date',''),'%Y-%m-%d')
+        except (ValueError,TypeError):continue
+        p['daily'].append({'date':r['date'],'tokens':number(r.get('tokens'))})
+    p['tools']=[]
+    for r in (raw.get('tools') if isinstance(raw.get('tools'),list) else [])[:100]:
+        if not isinstance(r,dict):continue
+        name=safe_name(r.get('name'));count=number(r.get('count'))
+        if name=='other' or count is None:continue
+        p['tools'].append({'provider':ident,'name':name,'count':count,'errors':number(r.get('errors')),'source':'local metrics import'})
+    p['observedAt']=number(raw.get('observedAt'))
+    if p['observedAt'] is None:p['status']='stale';p['sourceStatus']=['import_timestamp_missing']
+    elif p['observedAt']>time.time()+60 or time.time()-p['observedAt']>600:p['status']='stale';p['sourceStatus']=['import_stale']
+    return p
+
+def claude_statusline(raw):
+    from collector import number
+    p=empty('claude');p.update(status='ready',sourceStatus=['official_statusline_bridge'],tokenSource='Claude status-line snapshot',tokenCoverage='context gauge; no cumulative spend',todayTokenCoverage='not-reported')
+    context=raw.get('context_window') or {}
+    inp=number(context.get('total_input_tokens'));out=number(context.get('total_output_tokens'))
+    p['contextTokens']=inp+out if inp is not None and out is not None else None
+    limits=raw.get('rate_limits') or {}
+    for key,mins in [('five_hour',300),('seven_day',10080)]:
+        q=limits.get(key) or {};used=number(q.get('used_percentage'))
+        if not q:continue
+        p['quotas'].append({'bucket':'claude','kind':'primary' if mins==300 else 'secondary','durationMinutes':mins,'remainingPercent':max(0,min(100,100-used)) if used is not None else None,'resetsAt':number(q.get('resets_at'))})
+    # Never read transcript_path, session_name, cwd, prompt_id, messages or credentials.
+    p['observedAt']=int(time.time())
+    return p
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self,*args,**kwargs):return None
+
+def get_json(url,headers=None):
+    opener=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect())
+    with opener.open(urllib.request.Request(url,headers=headers or {},method='GET'),timeout=12) as r:
+        body=r.read(2*1024*1024+1)
+        if len(body)>2*1024*1024:raise ValueError('response_too_large')
+        x=json.loads(body)
+        if not isinstance(x,dict):raise ValueError('invalid_response')
+        return x
+
+def kimi_quotas(raw):
+    from collector import number
+    p=empty('kimi');p.update(status='ready',sourceStatus=['quota_api'],tokenSource='Kimi Code quota API',tokenCoverage='quota units, not token spend')
+    rows=[(raw.get('usage'),10080)]
+    for r in (raw.get('limits') or [])[:8]:
+        if isinstance(r,dict):rows.append((r.get('detail') or r,None))
+    for idx,(r,mins) in enumerate(rows):
+        if not isinstance(r,dict):continue
+        limit=number(r.get('limit'));used=number(r.get('used'));remaining=number(r.get('remaining'))
+        if remaining is None and limit is not None and used is not None:remaining=max(0,limit-used)
+        percent=max(0,min(100,remaining/limit*100)) if remaining is not None and limit else None
+        reset=next((r[k] for k in ['reset_at','resetAt','reset_time','resetTime'] if r.get(k) is not None),None)
+        if isinstance(reset,str):
+            try:reset=datetime.fromisoformat(reset.replace('Z','+00:00')).timestamp()
+            except ValueError:reset=None
+        if limit is None and percent is None:continue
+        p['quotas'].append({'bucket':'kimi','kind':'secondary' if idx==0 else 'primary','durationMinutes':mins,'remainingPercent':percent,'resetsAt':number(reset)})
+    if not p['quotas']:p.update(status='unavailable',sourceStatus=['quota_fields_unavailable'])
+    return p
+
+def collect_extra(ident,directory,config):
+    try:
+        path=Path(directory)/'imports'/f'{ident}.json'
+        if path.is_file():
+            if path.parent.is_symlink() or path.is_symlink() or path.stat().st_size>2*1024*1024:raise ValueError('invalid_import')
+            p=normalized(json.loads(path.read_text()),ident)
+            if ident=='claude':p['tokenSource']='Claude official status-line bridge';p['tokenCoverage']='context size, not token spend';p['todayTokens']=None;p['daily']=[];p['periodTokens']=None
+            if p.get('observedAt') is not None and datetime.fromtimestamp(p['observedAt'],__import__('datetime').timezone.utc).strftime('%Y-%m-%d') != datetime.now(__import__('datetime').timezone.utc).strftime('%Y-%m-%d'):p['todayTokens']=None
+            return p
+        if ident=='kimi':
+            secret=Path(directory)/'Secrets.json'
+            if not secret.is_file():return empty(ident)
+            if secret.is_symlink() or secret.stat().st_size>65536:raise ValueError('invalid_secret_file')
+            if os.name!='nt' and secret.stat().st_mode & 0o077:raise ValueError('secret_permissions')
+            key=(json.loads(secret.read_text()).get('kimi') or {}).get('api_key')
+            if not isinstance(key,str) or not key:return empty(ident)
+            return kimi_quotas(get_json('https://api.kimi.com/coding/v1/usages',{'Authorization':'Bearer '+key}))
+        if ident=='qwen' and config.get('qwenBaseUrl'):
+            u=urlparse(config['qwenBaseUrl'])
+            if u.scheme!='http' or u.hostname not in ('127.0.0.1','::1') or u.username or u.password or u.path not in ('','/') or u.query or u.fragment:raise ValueError('loopback_required')
+            raw=get_json(config['qwenBaseUrl'].rstrip('/')+'/usage/dashboard?range=today&heatmapDays=30')
+            return qwen_dashboard(raw)
+        return empty(ident)
+    except Exception:
+        p=empty(ident);p['sourceStatus']=['adapter_unavailable'];return p
+
+def qwen_dashboard(raw):
+    from collector import number
+    p=empty('qwen');p.update(status='ready',sourceStatus=['local_dashboard'],tokenSource='Qwen local usage dashboard',tokenCoverage='native aggregate, local')
+    # Shape documented from the official usage-dashboard-service contract; no transcripts.
+    summary=raw.get('summary') or {}
+    p['todayTokens']=number(summary.get('totalTokens'))
+    p['sessions']=number(summary.get('sessions'))
+    days={}
+    heatmap=raw.get('heatmap') or {}
+    if isinstance(heatmap,dict):
+        for date,r in list(heatmap.items())[:366]:
+            if isinstance(r,dict):days[date]=number(r.get('tokens'))
+    for r in (raw.get('daily') or [])[:366]:
+        if isinstance(r,dict):days[r.get('date')]=number(r.get('tokens'))
+    for date,tokens in days.items():
+        try:datetime.strptime(date,'%Y-%m-%d')
+        except (ValueError,TypeError):continue
+        p['daily'].append({'date':date,'tokens':tokens})
+    p['tools']=[]
+    from collector import safe_name
+    for r in (raw.get('skills') or [])[:100]:
+        if not isinstance(r,dict):continue
+        name=safe_name(r.get('name'));count=number(r.get('count'))
+        if name!='other' and count is not None:p['tools'].append({'provider':'qwen','name':'skill.'+name,'count':count,'errors':None,'source':'Qwen local aggregate'})
+    if p['todayTokens'] is None:p.update(status='unavailable',sourceStatus=['dashboard_schema_unavailable'])
+    return p

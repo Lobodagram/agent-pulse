@@ -1,0 +1,17 @@
+.build/
+dist/
+work/
+__pycache__/
+*.pyc
+*.spec
+.DS_Store
+Secrets.json
+config.json
+metrics.sqlite*
+imports/
+*-snapshot.json
+*.png.json
+.env
+.env.*
+PROJECT_CONTEXT.md
+/QA.md

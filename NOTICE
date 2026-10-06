@@ -1,0 +1,9 @@
+Required Notice: Copyright 2026 Lobodagram (https://github.com/Lobodagram)
+
+Agent Pulse original sources: PolyForm Noncommercial 1.0.0; see LICENSE.
+This license does not relicense third-party components or vendor clients.
+Python runtime: Python Software Foundation License; bundled runtime licensing notices are supplied by PyInstaller/Python.
+Tk/Tcl Windows UI runtime: Tcl/Tk license; included runtime notices apply.
+PyInstaller bootloader: GPL with its distribution exception; see https://pyinstaller.org/en/stable/license.html . Building an application with PyInstaller does not apply the GPL to Agent Pulse's original source.
+SwiftUI/AppKit/Charts and native client executables are platform/vendor components and are not distributed as project source.
+No third-party agent project was copied or forked as the application base.

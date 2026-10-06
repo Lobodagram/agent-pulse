@@ -1,0 +1,54 @@
+# Building / release pipeline
+
+[Русский](BUILDING.ru.md)
+
+Development requires Python 3.10+ (release CI uses 3.12). The collector has no third-party runtime Python dependency. Build-only PyInstaller is pinned in `requirements-build.txt`. Create a virtual environment for builds; do not install build dependencies globally. Native clients are optional and separately installed/authenticated.
+
+```sh
+python3 -m venv .build/venv
+.build/venv/bin/python -m unittest discover -s tests -v
+```
+
+## macOS
+
+macOS 14+, Xcode Command Line Tools. A source-only app expects `python3` on PATH and copies its collector modules; a redistributable release bundles a frozen collector:
+
+```sh
+.build/venv/bin/python -m pip install -r requirements-build.txt
+.build/venv/bin/python -m PyInstaller --clean --noconfirm --onefile --name pulse-collector --distpath .build collector.py
+./build.sh
+'dist/Agent Pulse.app/Contents/MacOS/AgentPulse' --fixture examples/demo.json --language en --snapshot .build/widget.png
+open 'dist/Agent Pulse.app'
+```
+
+`build.sh` targets the current machine architecture, macOS 14+, ad-hoc signs the app, and includes `.build/pulse-collector` if present. A release must include that helper. No Apple signing identity/notarization credentials are configured.
+
+## Windows
+
+Windows 10/11 x64 and official Python 3.12 with Tk. Source mode:
+
+```powershell
+python -m unittest discover -s tests -v
+python windows/agent_pulse.py --fixture examples/demo.json
+python windows/agent_pulse.py
+```
+
+Package in a venv, then test the **packaged** executable:
+
+```powershell
+python -m venv .build/venv
+.build/venv/Scripts/python -m pip install -r requirements-build.txt
+.build/venv/Scripts/python -m PyInstaller --clean --noconfirm --onefile --windowed --name AgentPulse windows/agent_pulse.py
+python windows/agent_pulse.py --fixture examples/demo.json --smoke
+Start-Process -FilePath dist/AgentPulse.exe -ArgumentList '--fixture','examples/demo.json','--smoke' -Wait
+```
+
+The source and exe smoke modes use demo counters and close automatically; they do not query accounts. Interactive dragging, mixed-DPI/fullscreen behavior and live Windows provider integration still need manual device acceptance. There is no Windows tray yet; close the widget normally.
+
+## CI and release
+
+`Checks` runs tests on Linux/macOS/Windows and fixture UI smoke checks on desktop runners. `Release packages` builds macOS ARM64/Intel and Windows x64, tests a frozen collector/catalog or frozen Windows demo, then uploads zip packages and SHA256SUMS to the tagged **prerelease**. Only the publish job has repository contents write permission. No user credentials or telemetry are needed in CI.
+
+Release notes are bilingual. Package checksum files verify the downloaded bytes; they do not substitute for code signing. Tags describe preview scope; no blanket fully verified provider/OS claim is made.
+
+Before publication, `scripts/public_export.py NEW_DIRECTORY` exports an allowlisted tree, excludes private Git history/local state and scans text for personal home paths/credential patterns. Use only `examples/demo.json` to render public screenshots. Private project context/QA are not part of that export.

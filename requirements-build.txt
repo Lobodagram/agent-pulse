@@ -1,0 +1,2 @@
+# Build-only; the running collector uses Python's standard library.
+pyinstaller==6.16.0

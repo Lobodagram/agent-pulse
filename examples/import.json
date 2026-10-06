@@ -1,0 +1,24 @@
+{
+  "observedAt": 1893492000,
+  "todayTokens": 12000,
+  "daily": [
+    {
+      "date": "2027-01-01",
+      "tokens": 12000
+    }
+  ],
+  "tools": [
+    {
+      "name": "run_tests",
+      "count": 4
+    }
+  ],
+  "quotas": [
+    {
+      "kind": "primary",
+      "durationMinutes": 300,
+      "remainingPercent": 70,
+      "resetsAt": 1893500000
+    }
+  ]
+}
