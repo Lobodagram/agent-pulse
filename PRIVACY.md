@@ -1,3 +1,5 @@
+0.7.0 adds fixed source labels for registered reads and local manual finding status/reason plus numeric baseline/window summaries (30-day retention). There are no free-text review notes or retained shell paths/payloads. Markdown packs are bounded local exports; only their owner can authorize sharing. / В 0.7.0 добавлены фиксированные источники чтения, локальные статусы/причины решений и числовые окна наблюдения (30 дней). Произвольные заметки, пути shell и аргументы не сохраняются. Markdown — ограниченный локальный экспорт, передача требует решения владельца.
+
 # Privacy / Приватность
 
 0.5.0 adds bounded sanitized operation families/operators, result-source labels and reviewed capability IDs with loaded/invoked/declared counts. Skill-file locators are keyed hashes; literal paths and instructions never persist. Evidence packs remain private local exports, never automatically uploaded.

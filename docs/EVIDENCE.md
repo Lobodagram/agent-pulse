@@ -1,3 +1,5 @@
+[0.7.0 literal-reader sources, namespaces and reviewed rechecks](IMPROVEMENT_LOOP.md). Reading may be partial/empty and is not proof of application.
+
 # Evidence contracts in 0.5.0
 
 [Русский](EVIDENCE.ru.md)

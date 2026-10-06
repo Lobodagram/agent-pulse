@@ -1,6 +1,6 @@
 # Local workflow analytics
 
-[Paged session viewing and empty-state guide](READING_ANALYTICS.md). In 0.6.1 CLI/desktop returns up to 500 calls per page, MCP up to 100. Continue with nextCursor; general-export recentCalls remains a preview.
+[Paged session viewing and empty-state guide](READING_ANALYTICS.md). Since 0.6.1 CLI/desktop returns up to 500 calls per page, MCP up to 100. Continue with nextCursor; general-export recentCalls remains a preview.
 
 [Русский](ANALYTICS.ru.md)
 
@@ -56,7 +56,7 @@ Reports/exports contain private activity metadata even without payloads. They ar
 
 ## Optional local MCP
 
-Start `python3 /absolute/checkout/collector.py mcp`, or register the installed `pulse-collector` helper with argument `mcp` in your native MCP client. Source-mode arguments must include the absolute collector path before `mcp`. No API key or port is required. Add global `--state /your/state` **before** `mcp` when using a custom journal. Available read-only tools: `pulse_report`, `pulse_session`, `pulse_compare`, `pulse_evidence`. No command execution, client control, skill installation or automatic agent loop is exposed. Reads may perform housekeeping of the tool's own cache. Registration is optional and does not happen silently.
+Start `python3 /absolute/checkout/collector.py mcp`, or register the installed `pulse-collector` helper with argument `mcp` in your native MCP client. Source-mode arguments must include the absolute collector path before `mcp`. No API key or port is required. Add global `--state /your/state` **before** `mcp` when using a custom journal. Available read-only tools: `pulse_report`, `pulse_session`, `pulse_compare`, `pulse_evidence`, `pulse_review_pack`. No command execution, client control, skill installation or automatic agent loop is exposed. Reads may perform housekeeping of the tool's own cache. Registration is optional and does not happen silently.
 
 ## Coverage, retention and privacy
 
@@ -73,3 +73,5 @@ Account changes: on desktop, selected supported clients' authentication/config f
 Work history remains continuous across account switches. The journal groups by provider/task, not login. Known Codex daily account reports are stored per hashed account/day, updated (not incremented) on each read, then summed for general daily history. Switching back does not count the same account twice. Earlier unscoped rows remain stored; if they overlap a known-account day, they are not added because identity/overlap cannot be verified. Therefore totals cover observed accounts only, not every account ever used. Current quotas and manual billing dates remain account-specific; GLM local aggregates remain client history.
 
 [0.5.0 evidence contracts / Контракты 0.5.0](EVIDENCE.md).
+
+[Reviewed improvement decisions and Markdown export](IMPROVEMENT_LOOP.md).
