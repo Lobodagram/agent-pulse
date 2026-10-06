@@ -63,16 +63,31 @@ struct WorkflowFinding: Codable, Identifiable {
     var suggestion: String; var suggestionRu: String; var occurrences: Int; var sessions: Int
     var sequence: [String]; var evidenceSessions: [String]?; var evidenceIds: [String]; var inventoryStatus: String; var confidence: String
     var operations: [String]?; var sequenceBasis: String?
+    var models: [String]?; var unknownModelCalls: Int?
 }
 struct JournalCall: Codable, Identifiable {
     var id: String; var provider: String; var session: String; var tool: String; var category: String
     var template: String; var outcome: String; var durationMs: Double?; var durationSource: String
     var startedAt: Double?; var endedAt: Double?; var paired: Bool; var source: String; var turn_source: String
     var outcomeSource: String?; var collectionIssue: String?
+    var model: String?; var modelSource: String?
 }
 struct JournalSession: Codable, Identifiable {
     var id: String; var provider: String; var calls: Int; var failed: Int; var pending: Int; var paired: Int
     var elapsedMs: Double?; var startedAt: Double?; var label: String?; var outcome: String; var variant: String?
+    var models: [String]? = nil; var modelHistory: ModelHistory? = nil
+}
+struct ModelHistory: Codable {
+    var segments: [ModelSegment]; var truncated: Bool; var knownModelCalls: Int; var unknownModelCalls: Int; var reportedChanges: Int
+}
+struct ModelSegment: Codable, Identifiable {
+    var model: String; var firstObservedAt: Double?; var lastObservedAt: Double?; var calls: Int; var transition: String; var evidenceIds: [String]
+    var id: String { evidenceIds.first ?? "unknown" }
+}
+func modelText(_ model: String?) -> String { model == nil || model == "other" ? tr("Unknown model", "Модель неизвестна") : model! }
+func modelTransitionText(_ value: String) -> String {
+    let ru = ["first-observed":"первое наблюдение", "unknown-gap":"модель не передана", "after-unknown":"после пропуска", "timing-unverified":"порядок не подтверждён", "overlapping-observations":"параллельные наблюдения", "reported-change":"изменение в наблюдаемых вызовах", "same-reported-model":"та же модель"]
+    return russian ? ru[value] ?? value : value.replacingOccurrences(of: "-", with: " ")
 }
 struct AnalyticsReport: Codable {
     var calls: Int; var inventoryCount: Int; var eventLimitReached: Bool
@@ -124,6 +139,11 @@ func fullNumber(_ value: Double?) -> String {
 func stamp(_ value: Double?, compact: Bool = false) -> String {
     guard let value else { return tr("not reported", "не передано") }
     let f = DateFormatter(); f.locale = Locale(identifier: russian ? "ru_RU" : "en_US"); f.dateFormat = compact ? "d MMM, HH:mm" : "d MMMM, HH:mm"
+    return f.string(from: Date(timeIntervalSince1970: value))
+}
+func modelStamp(_ value: Double?) -> String {
+    guard let value else { return "—" }
+    let f = DateFormatter(); f.locale = Locale(identifier: russian ? "ru_RU" : "en_US"); f.dateFormat = "d MMM, HH:mm:ss"
     return f.string(from: Date(timeIntervalSince1970: value))
 }
 func subscriptionText(_ s: Subscription) -> String {
@@ -383,17 +403,20 @@ struct AnalysisView: View {
     @ObservedObject var store: PulseStore
     @State var tab = CommandLine.arguments.firstIndex(of: "--tab").flatMap { $0 + 1 < CommandLine.arguments.count ? CommandLine.arguments[$0 + 1] : nil } ?? "overview"
     @State var selectedSession: String?; @State var calls: [JournalCall] = []; @State var evidence: Set<String> = []
+    @State var modelHistory: ModelHistory?
     @State var label = ""; @State var variant = "before"; @State var outcome = "unknown"
     @State var before = "before"; @State var after = "after"; @State var message = ""
     func select(_ session: JournalSession, evidenceIds: [String] = []) {
         selectedSession = session.id; label = session.label ?? ""; variant = session.variant ?? "before"; outcome = session.outcome
         evidence = Set(evidenceIds); tab = "sessions"; message = ""
         calls = (store.snapshot?.analytics?.recentCalls ?? []).filter { $0.session == session.id }
+        modelHistory = session.modelHistory
         if !store.isFixture {
             store.run(["journal", "--action", "session", "--session", session.id]) { r in
-                struct Result: Decodable { var calls: [JournalCall]; var truncated: Bool }
-                if case .success(let data) = r, let result = try? JSONDecoder().decode(Result.self, from: data) {
+                struct Result: Decodable { var calls: [JournalCall]; var truncated: Bool; var modelHistory: ModelHistory? }
+                if selectedSession == session.id, case .success(let data) = r, let result = try? JSONDecoder().decode(Result.self, from: data) {
                     calls = result.calls
+                    modelHistory = result.modelHistory
                     if result.truncated { message = tr("Showing first 500 calls; export for further review", "Первые 500 вызовов; используйте экспорт для продолжения") }
                 }
             }
@@ -401,7 +424,7 @@ struct AnalysisView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack { Text(tr("Agent activity", "Работа агентов")).font(.system(size: 26, weight: .medium)); Spacer(); Button(tr("Refresh", "Обновить"), action: store.refresh).disabled(store.loading || store.isFixture) }
+            HStack { Text(tr("Agent activity", "Работа агентов")).font(.system(size: 26, weight: .medium)); if store.isFixture { Text("DEMO").font(.system(size: 10)).foregroundStyle(amber) }; Spacer(); Button(tr("Refresh", "Обновить"), action: store.refresh).disabled(store.loading || store.isFixture) }
             Picker("View", selection: $tab) {
                 Text(tr("Overview", "Обзор")).tag("overview"); Text(tr("Workflows", "Сценарии")).tag("workflows")
                 Text(tr("Sessions", "Сессии")).tag("sessions"); Text(tr("Compare", "Сравнение")).tag("compare")
@@ -426,6 +449,7 @@ struct AnalysisView: View {
             let args = CommandLine.arguments
             if store.isFixture, let i = args.firstIndex(of: "--analysis-tab"), i+1 < args.count, ["overview", "workflows", "sessions", "compare", "capabilities"].contains(args[i+1]) { tab = args[i+1] }
             if CommandLine.arguments.contains("--session-demo"), let first = store.snapshot?.analytics?.sessions.first { select(first) }
+            if store.isFixture, CommandLine.arguments.contains("--model-demo"), let first = store.snapshot?.analytics?.sessions.first(where: { ($0.modelHistory?.reportedChanges ?? 0) > 0 }) { select(first) }
         }
     }
     func overview(_ snapshot: Snapshot) -> some View {
@@ -500,6 +524,7 @@ struct AnalysisView: View {
                     if !finding.sequence.isEmpty { Text(finding.sequence.map(categoryText).joined(separator: " → ")).font(.system(size: 12, design: .monospaced)).foregroundStyle(mint) }
                     if let operations = finding.operations { Text(operations.joined(separator: " → ")).font(.system(size: 10, design: .monospaced)).foregroundStyle(quiet).fixedSize(horizontal: false, vertical: true) }
                     Text("\(finding.occurrences) " + tr("occurrences · ", "повторов · ") + "\(finding.sessions) " + tr("sessions", "сессий")).font(.system(size: 11)).foregroundStyle(quiet)
+                    if let models = finding.models { Text(tr("Models: ", "Модели: ") + (models.isEmpty ? modelText(nil) : models.joined(separator: ", ")) + " · \(finding.unknownModelCalls ?? 0) " + tr("unknown", "неизвестных")).font(.system(size: 10)).foregroundStyle(quiet).fixedSize(horizontal: false, vertical: true) }
                     Text(russian ? finding.suggestionRu : finding.suggestion).font(.system(size: 12))
                     Text(finding.inventoryStatus == "inventory_unknown" ? tr("Inventory unknown: no claim that a tool is missing", "Каталог неизвестен: отсутствие инструмента не установлено") : finding.inventoryStatus == "configured_unverified" ? tr("Candidate configured; live availability unverified", "Кандидат настроен; доступность не проверена") : tr("Category match requires manual review", "Совпадение категорий требует ручной проверки")).font(.system(size: 10)).foregroundStyle(amber)
                     if let sid = finding.evidenceSessions?.first ?? report.recentCalls.first(where: { finding.evidenceIds.contains($0.id) })?.session {
@@ -524,6 +549,7 @@ struct AnalysisView: View {
                     Button { select(session) } label: {
                         HStack { VStack(alignment: .leading, spacing: 4) { Text(session.provider.uppercased() + " · " + String(session.id.prefix(8))).font(.system(size: 13, weight: .semibold, design: .monospaced)); Text(stamp(session.startedAt, compact: true)).font(.system(size: 11)).foregroundStyle(quiet) }; Spacer(); Text("\(session.calls) " + tr("calls · ", "вызовов · ") + "\(session.failed) " + tr("failed", "ошибок")).font(.system(size: 11)) }.padding(.vertical, 5)
                     }.buttonStyle(.plain)
+                    Text(tr("Models: ", "Модели: ") + ((session.models ?? []).isEmpty ? modelText(nil) : session.models!.joined(separator: ", ")) + " · \(session.modelHistory?.unknownModelCalls ?? session.calls) " + tr("unknown calls", "вызовов без модели")).font(.system(size: 10)).foregroundStyle(quiet).fixedSize(horizontal: false, vertical: true)
                     Divider()
                 }
                 if report.sessions.isEmpty { Text(tr("No observed sessions", "Наблюдаемых сессий пока нет")).foregroundStyle(quiet) }
@@ -535,6 +561,7 @@ struct AnalysisView: View {
                 Button(tr("← Sessions", "← Сессии")) { selectedSession = nil; evidence = [] }
                 Text(String(selectedSession!.prefix(12))).font(.system(size: 17, weight: .medium, design: .monospaced))
                 Text(tr("Arguments are intentionally hidden. Safe command shape, outcome and wall time only; overlapping durations are not summed.", "Аргументы скрыты. Только безопасная форма команды, исход и время; длительности параллельных вызовов не складываются.")).font(.system(size: 11)).foregroundStyle(quiet)
+                if let history = modelHistory { modelTimeline(history) }
                 HStack { TextField(tr("Task label (slug)", "Метка задачи (slug)"), text: $label); TextField(tr("Variant", "Вариант"), text: $variant); Picker(tr("Outcome", "Исход"), selection: $outcome) { ForEach(["unknown", "accepted", "failed", "rework"], id: \.self) { Text(outcomeText($0)).tag($0) } }.labelsHidden().frame(width: 160) }
                 Button(tr("Save review", "Сохранить оценку")) {
                     guard let sid = selectedSession else { return }
@@ -551,14 +578,30 @@ struct AnalysisView: View {
     func callRow(_ call: JournalCall) -> some View {
         let duration = call.durationMs.map { String(format: "%.2f s", $0 / 1000) } ?? "—"
         let incomplete = call.paired ? "" : tr(" · incomplete pair", " · неполная пара")
-        let metadata = [stamp(call.startedAt, compact: true), duration, call.durationSource].joined(separator: " · ") + incomplete
+        let metadata = [modelStamp(call.startedAt), duration, call.durationSource].joined(separator: " · ") + incomplete
         return
                     VStack(alignment: .leading, spacing: 4) {
                         HStack { Text(categoryText(call.category).uppercased()).font(.system(size: 10, weight: .bold)).foregroundStyle(evidence.contains(call.id) ? mint : quiet); Text(call.tool).font(.system(size: 11, design: .monospaced)); Spacer(); Text(outcomeText(call.outcome)).font(.system(size: 11)).foregroundStyle(call.outcome == "failed" ? amber : quiet) }
                         if let source = call.outcomeSource { Text(tr("Result source: ", "Источник результата: ") + source + (call.collectionIssue.map { " · " + $0 } ?? "")).font(.system(size: 10)).foregroundStyle(quiet) }
+                        Text(modelText(call.model) + " · " + (call.modelSource ?? "not-reported")).font(.system(size: 11, design: .monospaced)).foregroundStyle(call.model == nil || call.model == "other" ? quiet : mint).fixedSize(horizontal: false, vertical: true)
                         Text(call.template).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
                         Text(metadata).font(.system(size: 10)).foregroundStyle(quiet)
                     }.padding(.vertical, 6)
+    }
+    func modelTimeline(_ history: ModelHistory) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(tr("Observed model history", "История наблюдаемых моделей")).font(.system(size: 14, weight: .semibold))
+            Text("\(history.knownModelCalls) " + tr("identified · ", "с моделью · ") + "\(history.unknownModelCalls) " + tr("unknown · ", "без модели · ") + "\(history.reportedChanges) " + tr("observed changes", "наблюдаемых изменений")).font(.system(size: 11)).foregroundStyle(quiet)
+            Text(tr("Times mark observed calls, not the exact UI switch. Gaps and parallel lanes stay separate.", "Время относится к вызовам, а не к точному переключению в интерфейсе. Пропуски и параллельные ветки разделены.")).font(.system(size: 10)).foregroundStyle(quiet)
+            ForEach(history.segments) { segment in
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(modelText(segment.model) + " · \(segment.calls) " + tr("calls", "вызовов")).font(.system(size: 12, weight: .medium, design: .monospaced)).fixedSize(horizontal: false, vertical: true)
+                    Text(modelStamp(segment.firstObservedAt) + " → " + modelStamp(segment.lastObservedAt) + " · " + modelTransitionText(segment.transition)).font(.system(size: 10)).foregroundStyle(quiet).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            if history.truncated { Text(tr("Last 100 segments; export for full review", "Последние 100 участков; для полного просмотра — экспорт")).font(.system(size: 10)).foregroundStyle(amber) }
+            Divider()
+        }
     }
     func comparison(_ report: AnalyticsReport) -> some View {
         VStack(alignment: .leading, spacing: 14) {

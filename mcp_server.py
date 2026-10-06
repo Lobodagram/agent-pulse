@@ -16,7 +16,7 @@ TOOLS=[
 
 def dispatch(request,state):
     method=request.get('method');params=request.get('params') or {}
-    if method=='initialize':return {'protocolVersion':'2024-11-05','capabilities':{'tools':{}},'serverInfo':{'name':'agent-pulse-local','version':'0.5.2'}}
+    if method=='initialize':return {'protocolVersion':'2024-11-05','capabilities':{'tools':{}},'serverInfo':{'name':'agent-pulse-local','version':'0.6.0'}}
     if method=='ping':return {}
     if method=='tools/list':return {'tools':TOOLS}
     if method!='tools/call':raise ValueError('method_not_allowed')
@@ -28,11 +28,17 @@ def dispatch(request,state):
             data=report(j);data.pop('recentCalls',None);data['sessions']=data['sessions'][:20];data['findings']=data['findings'][:10]
             data['capabilitiesTruncated']=len(data['capabilities'])>20
             data['capabilities']=data['capabilities'][:20];data['toolUsage']=data['toolUsage'][:30];data['crossClientPatterns']=data['crossClientPatterns'][:10]
+            data['modelHistory']['truncated'] |= len(data['modelHistory']['segments'])>20
+            data['modelHistory']['segments']=data['modelHistory']['segments'][-20:]
+            for session in data['sessions']:
+                session['modelHistory']['truncated'] |= len(session['modelHistory']['segments'])>5
+                session['modelHistory']['segments']=session['modelHistory']['segments'][-5:]
         elif name=='pulse_evidence' and set(args)=={'findingId'}:data=evidence_pack(j,args['findingId'])
         elif name=='pulse_session' and set(args)=={'sessionId'} and isinstance(args['sessionId'],str):
             import re
             if not re.fullmatch('[a-f0-9]{32}',args['sessionId']):raise ValueError('invalid_session')
-            rows=j.calls(args['sessionId']);data={'calls':rows[:100],'truncated':len(rows)>100}
+            from model_evidence import model_history
+            rows=j.calls(args['sessionId']);data={'calls':rows[:100],'truncated':len(rows)>100,'modelHistory':model_history(rows,20)}
         elif name=='pulse_compare' and set(args)=={'label','before','after'}:data=compare(j,args['label'],args['before'],args['after'])
         else:raise ValueError('tool_not_allowed')
         text=json.dumps(data,ensure_ascii=False,allow_nan=False)

@@ -3,6 +3,7 @@ from collections import defaultdict
 import statistics
 import time
 from capability_report import capabilities
+from model_evidence import model_history
 
 TEXT = {
  'sequence':('Repeated workflow','Повторяющийся сценарий','Review this sequence for a tested script or skill.','Проверьте цепочку как кандидата на скрипт или скилл.'),
@@ -47,6 +48,7 @@ def recommendation(j,key,kind,calls,sequence=None):
       'sequence':sequence or [],'evidenceSessions':list(dict.fromkeys(c['session'] for c in calls[:10])),'evidenceIds':[c['id'] for c in calls[:10]],
       'medianDurationMs':statistics.median(durations) if durations else None,'failedCalls':sum(c['outcome']=='failed' for c in calls),
       'unknownOutcomes':sum(c['outcome']=='unknown' for c in calls),'sampledCapabilityInvocations':observed_candidates,
+      'models':sorted({c['model'] for c in calls if c['model']!='other'}),'unknownModelCalls':sum(c['model']=='other' for c in calls),
       'inventoryStatus':match,'inventoryDetail':detail,'inventoryCandidates':[{'id':r['id'],'kind':r['kind'],'status':r['status']} for r in relevant[:10]],
       'measuredTokenSavings':None,'limitations':['Observed calls only; unknown coverage outside this journal.','Frequency does not prove waste or exact per-tool token cost.']}
 
@@ -143,7 +145,8 @@ def report(j,providers=None):
           'elapsedMs':(max(ends)-min(starts))*1000 if starts and ends and max(ends)>=min(starts) else None,
           'label':a['label'] if a else None,'outcome':a['outcome'] if a else 'unknown','variant':a['variant'] if a else None,
           'reportedInputTokens':totals['input'],'reportedOutputTokens':totals['output'],
-          'models':sorted({c['model'] for c in items if c['model']!='other'}),'settingsCoverage':'model identifiers only when native hooks report them; effort and task difficulty unverified',
+          'models':sorted({c['model'] for c in items if c['model']!='other'}),'modelHistory':model_history(items),
+          'settingsCoverage':'model identifiers only when native hooks report them; effort and task difficulty unverified',
           'usageTurns':len(usage_by_turn),'usageConflicts':conflicts,'usageCoverage':'explicit turn reports only; conflicting components unknown; not a session total unless every turn is reported'})
     coverage=[]
     health={r['provider']:dict(r) for r in j.db.execute('SELECT * FROM health')}
@@ -178,10 +181,11 @@ def report(j,providers=None):
         if len(ps)>=2 and len(turns)>=3 and len(items)>=6:
             cross.append({'operation':op,'providers':ps,'calls':len(items),'turns':len(turns),'projectId':project,
                           'evidenceIds':[c['id'] for c in items[:10]],'confidence':'low; same family, not equivalent task'})
-    return {'schemaVersion':2,'generatedAt':time.time(),'coverage':coverage,'sessions':sorted(summaries,key=lambda x:x['startedAt'] or 0,reverse=True)[:100],
+    return {'schemaVersion':3,'generatedAt':time.time(),'coverage':coverage,'sessions':sorted(summaries,key=lambda x:x['startedAt'] or 0,reverse=True)[:100],
       'findings':findings(j,calls),'recentCalls':calls[-100:],'calls':len(calls),'eventLimitReached':total>20000,
       'capabilities':capabilities(j,providers),'toolUsage':sorted(tool_usage,key=lambda x:-x['calls'])[:100],
       'crossClientPatterns':sorted(cross,key=lambda x:-x['calls'])[:30],
+      'modelHistory':model_history(calls),
       'quality':{'pairedCalls':sum(c['paired'] for c in calls),'knownOutcomes':sum(c['paired'] and c['outcome'] in {'success','failed'} for c in calls),
                  'unpairedCalls':sum(not c['paired'] for c in calls),'windowDays':30,'completeCoverage':False},
       'tokenAttribution':'native turn usage only; no per-tool costs or subscription-token conversion',
@@ -196,6 +200,8 @@ def compare(j,label,before,after):
     for v,items in groups.items():
         durations=[s['elapsedMs'] for s in items if s['elapsedMs'] is not None]
         result['groups'][v]={'sessions':len(items),'accepted':sum(s['outcome']=='accepted' for s in items),'failedOrRework':sum(s['outcome'] in {'failed','rework'} for s in items),
-          'medianCalls':statistics.median([s['calls'] for s in items]) if items else None,'medianElapsedMs':statistics.median(durations) if durations else None}
+          'medianCalls':statistics.median([s['calls'] for s in items]) if items else None,'medianElapsedMs':statistics.median(durations) if durations else None,
+          'models':sorted({m for s in items for m in s['models']}),'unknownModelCalls':sum(s['modelHistory']['unknownModelCalls'] for s in items),
+          'reportedModelChanges':sum(s['modelHistory']['reportedChanges'] for s in items)}
     if all(len(x)>=3 for x in groups.values()):result['confidence']='observational'
     return result

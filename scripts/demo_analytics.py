@@ -20,7 +20,8 @@ def demo():
                     for i,(tool,args) in enumerate([('Read',{'path':'/invented/verify-module/SKILL.md'}),('Edit',{'path':'module.py'}),('Bash',{'command':'python -m unittest discover'}),('Skill',{'skill':'verify-module'}),('mcp__local-checks__verify',{})]):
                         at=epoch-240+n*30+i*4
                         for event,dt in [('PreToolUse',0),('PostToolUse',1)]:
-                            raw={'hook_event_name':event,'session_id':provider+str(n),'turn_id':str(n),'tool_use_id':str(i),'tool_name':tool,'tool_input':args,'cwd':'/invented/demo','timestamp':at+dt,'tool_response':{'exit_code':0},'model':'demo-model'}
+                            raw={'hook_event_name':event,'session_id':provider+str(n),'turn_id':str(n),'tool_use_id':str(i),'tool_name':tool,'tool_input':args,'cwd':'/invented/demo','timestamp':at+dt,'tool_response':{'exit_code':0}}
+                            if i!=3:raw['model']='demo-'+provider+('-large' if i<2 else '-flash')
                             j.record(provider,raw)
                     sid=j.digest('session',[provider,provider+str(n)]);j.annotate(sid,'verify-module','accepted','before')
             for n in range(3):

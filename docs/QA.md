@@ -1,5 +1,9 @@
 # Verification — 2026-10-06 / Проверка
 
+## 0.6.0 local verification — 2026-10-06
+
+130 tests, including native model identifiers, missing/conflicting model fields, repeated events, unknown gaps and parallel actor/outer-call barriers, pass locally. Fourteen invented mechanics cases still pass. Mac 15-case widget matrix, two EN/RU minimum model-history renders and two-second frozen hook→journal→MCP pass. Both model-history images visually inspected. No model called or raw native payload inspected. Cross-platform source/package verification will be recorded after publication. Native ZCode tool events observed here omit per-call models; the timeline therefore preserves unknowns. The adapter proposal is documentation, not installed plugins or billing integration.
+
 ## Delivered 0.5.2 - 2026-10-06
 
 [Source Checks 37475778755](https://github.com/Lobodagram/agent-pulse/actions/runs/37475778755) and [tagged packages 37476184197](https://github.com/Lobodagram/agent-pulse/actions/runs/37476184197) passed all targets at dc559877ff17b8844470abff7abbcf4810aa9f13. 115 unit tests; 14 invented labeled mechanics cases. Native Mac 15-case matrix retains focus/restore/placement and second-instance assertions; window-focus starts on text-only Workflows to isolate the hosted Intel Metal issue. Windows source/frozen EN/RU, tray and layout checks pass. Synthetic mechanics do not prove full native collection or real-task semantic precision.

@@ -499,7 +499,7 @@
     }
   ],
   "analytics": {
-    "schemaVersion": 2,
+    "schemaVersion": 3,
     "generatedAt": 1801396800.0,
     "coverage": [
       {
@@ -537,9 +537,9 @@
     ],
     "sessions": [
       {
-        "id": "67b9f34cf28260a41a9df9c3bfa37e7c",
+        "id": "37cbac9364c77e59064598387dfee2bc",
         "provider": "glm",
-        "projectId": "026dd309595e44af61b12c4e32767344",
+        "projectId": "ea7763adb133f20a12a8612c5c333969",
         "calls": 3,
         "failed": 3,
         "pending": 0,
@@ -553,15 +553,42 @@
         "reportedInputTokens": null,
         "reportedOutputTokens": null,
         "models": [],
+        "modelHistory": {
+          "segments": [
+            {
+              "provider": "glm",
+              "session": "37cbac9364c77e59064598387dfee2bc",
+              "actor": "0e29f5f093b2cc8911c585b97dafe2a0",
+              "model": "other",
+              "firstObservedAt": 1801396770.0,
+              "lastObservedAt": 1801396776.0,
+              "calls": 3,
+              "unknownOutcomes": 0,
+              "failed": 3,
+              "transition": "first-observed",
+              "previousObservedAt": null,
+              "evidenceIds": [
+                "1d30bfabc7bcc391c81809798d78abd9",
+                "7145631be2ed2596bfe6433db8c0c143",
+                "fd8dd98c9c1fcefd497560b3eae87ca3"
+              ]
+            }
+          ],
+          "truncated": false,
+          "knownModelCalls": 0,
+          "unknownModelCalls": 3,
+          "reportedChanges": 0,
+          "coverage": "native call identifiers only; observation times, not exact UI switch times; unknowns never inherited"
+        },
         "settingsCoverage": "model identifiers only when native hooks report them; effort and task difficulty unverified",
         "usageTurns": 0,
         "usageConflicts": 0,
         "usageCoverage": "explicit turn reports only; conflicting components unknown; not a session total unless every turn is reported"
       },
       {
-        "id": "edccf4dd450adf66946d85d3c284b97e",
+        "id": "333ee5d14c175821a88bf77bddf5e4e0",
         "provider": "glm",
-        "projectId": "026dd309595e44af61b12c4e32767344",
+        "projectId": "ea7763adb133f20a12a8612c5c333969",
         "calls": 5,
         "failed": 0,
         "pending": 0,
@@ -575,17 +602,92 @@
         "reportedInputTokens": null,
         "reportedOutputTokens": null,
         "models": [
-          "demo-model"
+          "demo-glm-flash",
+          "demo-glm-large"
         ],
+        "modelHistory": {
+          "segments": [
+            {
+              "provider": "glm",
+              "session": "333ee5d14c175821a88bf77bddf5e4e0",
+              "actor": "1f12e9a2f59ba79479b96ddfe707f81c",
+              "model": "demo-glm-large",
+              "firstObservedAt": 1801396620.0,
+              "lastObservedAt": 1801396624.0,
+              "calls": 2,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "first-observed",
+              "previousObservedAt": null,
+              "evidenceIds": [
+                "13d4de9cd31eaa6470867180d907311f",
+                "eb6546c457a3c06a176a86c9436de4f8"
+              ]
+            },
+            {
+              "provider": "glm",
+              "session": "333ee5d14c175821a88bf77bddf5e4e0",
+              "actor": "1f12e9a2f59ba79479b96ddfe707f81c",
+              "model": "demo-glm-flash",
+              "firstObservedAt": 1801396628.0,
+              "lastObservedAt": 1801396628.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "reported-change",
+              "previousObservedAt": 1801396624.0,
+              "evidenceIds": [
+                "7aebe06e38cc51f86ab4407c97df928a"
+              ]
+            },
+            {
+              "provider": "glm",
+              "session": "333ee5d14c175821a88bf77bddf5e4e0",
+              "actor": "1f12e9a2f59ba79479b96ddfe707f81c",
+              "model": "other",
+              "firstObservedAt": 1801396632.0,
+              "lastObservedAt": 1801396632.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "unknown-gap",
+              "previousObservedAt": 1801396628.0,
+              "evidenceIds": [
+                "89f27ca50fc9058f66b06dd0000ee58e"
+              ]
+            },
+            {
+              "provider": "glm",
+              "session": "333ee5d14c175821a88bf77bddf5e4e0",
+              "actor": "1f12e9a2f59ba79479b96ddfe707f81c",
+              "model": "demo-glm-flash",
+              "firstObservedAt": 1801396636.0,
+              "lastObservedAt": 1801396636.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "after-unknown",
+              "previousObservedAt": 1801396632.0,
+              "evidenceIds": [
+                "429ddd73e7e70086cbf4c431fa3e4ab2"
+              ]
+            }
+          ],
+          "truncated": false,
+          "knownModelCalls": 4,
+          "unknownModelCalls": 1,
+          "reportedChanges": 1,
+          "coverage": "native call identifiers only; observation times, not exact UI switch times; unknowns never inherited"
+        },
         "settingsCoverage": "model identifiers only when native hooks report them; effort and task difficulty unverified",
         "usageTurns": 0,
         "usageConflicts": 0,
         "usageCoverage": "explicit turn reports only; conflicting components unknown; not a session total unless every turn is reported"
       },
       {
-        "id": "a5a24b971a09cb2101f22cbe4339be75",
+        "id": "973ddbd42455e829607e03a92db704f6",
         "provider": "codex",
-        "projectId": "026dd309595e44af61b12c4e32767344",
+        "projectId": "ea7763adb133f20a12a8612c5c333969",
         "calls": 5,
         "failed": 0,
         "pending": 0,
@@ -599,17 +701,92 @@
         "reportedInputTokens": null,
         "reportedOutputTokens": null,
         "models": [
-          "demo-model"
+          "demo-codex-flash",
+          "demo-codex-large"
         ],
+        "modelHistory": {
+          "segments": [
+            {
+              "provider": "codex",
+              "session": "973ddbd42455e829607e03a92db704f6",
+              "actor": "4b59ca9ece79949eca2460bc05e43e83",
+              "model": "demo-codex-large",
+              "firstObservedAt": 1801396620.0,
+              "lastObservedAt": 1801396624.0,
+              "calls": 2,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "first-observed",
+              "previousObservedAt": null,
+              "evidenceIds": [
+                "6796ad64921d48eed3628b4bce639bcf",
+                "8eed49f3598e4140a7caf1008cec543e"
+              ]
+            },
+            {
+              "provider": "codex",
+              "session": "973ddbd42455e829607e03a92db704f6",
+              "actor": "4b59ca9ece79949eca2460bc05e43e83",
+              "model": "demo-codex-flash",
+              "firstObservedAt": 1801396628.0,
+              "lastObservedAt": 1801396628.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "reported-change",
+              "previousObservedAt": 1801396624.0,
+              "evidenceIds": [
+                "4817ea373ea5fc895f2e7eb20b4cd10d"
+              ]
+            },
+            {
+              "provider": "codex",
+              "session": "973ddbd42455e829607e03a92db704f6",
+              "actor": "4b59ca9ece79949eca2460bc05e43e83",
+              "model": "other",
+              "firstObservedAt": 1801396632.0,
+              "lastObservedAt": 1801396632.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "unknown-gap",
+              "previousObservedAt": 1801396628.0,
+              "evidenceIds": [
+                "43a5cbf29ae69c4b079f668dc3de7eee"
+              ]
+            },
+            {
+              "provider": "codex",
+              "session": "973ddbd42455e829607e03a92db704f6",
+              "actor": "4b59ca9ece79949eca2460bc05e43e83",
+              "model": "demo-codex-flash",
+              "firstObservedAt": 1801396636.0,
+              "lastObservedAt": 1801396636.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "after-unknown",
+              "previousObservedAt": 1801396632.0,
+              "evidenceIds": [
+                "a2736c57932c5331f6975688a6f19f59"
+              ]
+            }
+          ],
+          "truncated": false,
+          "knownModelCalls": 4,
+          "unknownModelCalls": 1,
+          "reportedChanges": 1,
+          "coverage": "native call identifiers only; observation times, not exact UI switch times; unknowns never inherited"
+        },
         "settingsCoverage": "model identifiers only when native hooks report them; effort and task difficulty unverified",
         "usageTurns": 0,
         "usageConflicts": 0,
         "usageCoverage": "explicit turn reports only; conflicting components unknown; not a session total unless every turn is reported"
       },
       {
-        "id": "cb1f23925d495e10cdb10561bd26ffa7",
+        "id": "da1715ff8a704e3b20bcafd3ccd81308",
         "provider": "glm",
-        "projectId": "026dd309595e44af61b12c4e32767344",
+        "projectId": "ea7763adb133f20a12a8612c5c333969",
         "calls": 5,
         "failed": 0,
         "pending": 0,
@@ -623,17 +800,92 @@
         "reportedInputTokens": null,
         "reportedOutputTokens": null,
         "models": [
-          "demo-model"
+          "demo-glm-flash",
+          "demo-glm-large"
         ],
+        "modelHistory": {
+          "segments": [
+            {
+              "provider": "glm",
+              "session": "da1715ff8a704e3b20bcafd3ccd81308",
+              "actor": "7e0b3d08aa6ea117979fe4c170801b22",
+              "model": "demo-glm-large",
+              "firstObservedAt": 1801396590.0,
+              "lastObservedAt": 1801396594.0,
+              "calls": 2,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "first-observed",
+              "previousObservedAt": null,
+              "evidenceIds": [
+                "8f31909ba3ba3ff1abfc5778fa03bf49",
+                "48f77730aa69ebc6f0f43a39a4519ead"
+              ]
+            },
+            {
+              "provider": "glm",
+              "session": "da1715ff8a704e3b20bcafd3ccd81308",
+              "actor": "7e0b3d08aa6ea117979fe4c170801b22",
+              "model": "demo-glm-flash",
+              "firstObservedAt": 1801396598.0,
+              "lastObservedAt": 1801396598.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "reported-change",
+              "previousObservedAt": 1801396594.0,
+              "evidenceIds": [
+                "9b13af8bcc9c54a4007c6dc640d3a648"
+              ]
+            },
+            {
+              "provider": "glm",
+              "session": "da1715ff8a704e3b20bcafd3ccd81308",
+              "actor": "7e0b3d08aa6ea117979fe4c170801b22",
+              "model": "other",
+              "firstObservedAt": 1801396602.0,
+              "lastObservedAt": 1801396602.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "unknown-gap",
+              "previousObservedAt": 1801396598.0,
+              "evidenceIds": [
+                "ab5b17f821a4db1ace5aebca705dcbd3"
+              ]
+            },
+            {
+              "provider": "glm",
+              "session": "da1715ff8a704e3b20bcafd3ccd81308",
+              "actor": "7e0b3d08aa6ea117979fe4c170801b22",
+              "model": "demo-glm-flash",
+              "firstObservedAt": 1801396606.0,
+              "lastObservedAt": 1801396606.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "after-unknown",
+              "previousObservedAt": 1801396602.0,
+              "evidenceIds": [
+                "61ab909fbda43e84b9d85b3a1332c7fa"
+              ]
+            }
+          ],
+          "truncated": false,
+          "knownModelCalls": 4,
+          "unknownModelCalls": 1,
+          "reportedChanges": 1,
+          "coverage": "native call identifiers only; observation times, not exact UI switch times; unknowns never inherited"
+        },
         "settingsCoverage": "model identifiers only when native hooks report them; effort and task difficulty unverified",
         "usageTurns": 0,
         "usageConflicts": 0,
         "usageCoverage": "explicit turn reports only; conflicting components unknown; not a session total unless every turn is reported"
       },
       {
-        "id": "b37649c68c16bcb12827f765056c3753",
+        "id": "101c751e1daf0097a1924be0d9c7d64a",
         "provider": "codex",
-        "projectId": "026dd309595e44af61b12c4e32767344",
+        "projectId": "ea7763adb133f20a12a8612c5c333969",
         "calls": 5,
         "failed": 0,
         "pending": 0,
@@ -647,17 +899,92 @@
         "reportedInputTokens": null,
         "reportedOutputTokens": null,
         "models": [
-          "demo-model"
+          "demo-codex-flash",
+          "demo-codex-large"
         ],
+        "modelHistory": {
+          "segments": [
+            {
+              "provider": "codex",
+              "session": "101c751e1daf0097a1924be0d9c7d64a",
+              "actor": "0836c38cbf664fd4a510cac850e5d864",
+              "model": "demo-codex-large",
+              "firstObservedAt": 1801396590.0,
+              "lastObservedAt": 1801396594.0,
+              "calls": 2,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "first-observed",
+              "previousObservedAt": null,
+              "evidenceIds": [
+                "71693deddb02e50d319e4aed33c48c01",
+                "339e921af296a576be6012d4226c74e5"
+              ]
+            },
+            {
+              "provider": "codex",
+              "session": "101c751e1daf0097a1924be0d9c7d64a",
+              "actor": "0836c38cbf664fd4a510cac850e5d864",
+              "model": "demo-codex-flash",
+              "firstObservedAt": 1801396598.0,
+              "lastObservedAt": 1801396598.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "reported-change",
+              "previousObservedAt": 1801396594.0,
+              "evidenceIds": [
+                "039b8c6db229fc840eeec6b2115483f9"
+              ]
+            },
+            {
+              "provider": "codex",
+              "session": "101c751e1daf0097a1924be0d9c7d64a",
+              "actor": "0836c38cbf664fd4a510cac850e5d864",
+              "model": "other",
+              "firstObservedAt": 1801396602.0,
+              "lastObservedAt": 1801396602.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "unknown-gap",
+              "previousObservedAt": 1801396598.0,
+              "evidenceIds": [
+                "39e3f93183679469a6310699f6d32d92"
+              ]
+            },
+            {
+              "provider": "codex",
+              "session": "101c751e1daf0097a1924be0d9c7d64a",
+              "actor": "0836c38cbf664fd4a510cac850e5d864",
+              "model": "demo-codex-flash",
+              "firstObservedAt": 1801396606.0,
+              "lastObservedAt": 1801396606.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "after-unknown",
+              "previousObservedAt": 1801396602.0,
+              "evidenceIds": [
+                "a93b23e7bed9bc6eeb6266a3ae6c998e"
+              ]
+            }
+          ],
+          "truncated": false,
+          "knownModelCalls": 4,
+          "unknownModelCalls": 1,
+          "reportedChanges": 1,
+          "coverage": "native call identifiers only; observation times, not exact UI switch times; unknowns never inherited"
+        },
         "settingsCoverage": "model identifiers only when native hooks report them; effort and task difficulty unverified",
         "usageTurns": 0,
         "usageConflicts": 0,
         "usageCoverage": "explicit turn reports only; conflicting components unknown; not a session total unless every turn is reported"
       },
       {
-        "id": "6a233a73f79efb47936ec1fc90044a7a",
+        "id": "fbf556fea303044294286937a53eae41",
         "provider": "glm",
-        "projectId": "026dd309595e44af61b12c4e32767344",
+        "projectId": "ea7763adb133f20a12a8612c5c333969",
         "calls": 5,
         "failed": 0,
         "pending": 0,
@@ -671,17 +998,92 @@
         "reportedInputTokens": null,
         "reportedOutputTokens": null,
         "models": [
-          "demo-model"
+          "demo-glm-flash",
+          "demo-glm-large"
         ],
+        "modelHistory": {
+          "segments": [
+            {
+              "provider": "glm",
+              "session": "fbf556fea303044294286937a53eae41",
+              "actor": "87f06b86a104bcdf9c4140dacd488954",
+              "model": "demo-glm-large",
+              "firstObservedAt": 1801396560.0,
+              "lastObservedAt": 1801396564.0,
+              "calls": 2,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "first-observed",
+              "previousObservedAt": null,
+              "evidenceIds": [
+                "b3242b1a87e285b6a072b3d05a3eaa1a",
+                "383b1aa817a614c8b67b56af62b7ff42"
+              ]
+            },
+            {
+              "provider": "glm",
+              "session": "fbf556fea303044294286937a53eae41",
+              "actor": "87f06b86a104bcdf9c4140dacd488954",
+              "model": "demo-glm-flash",
+              "firstObservedAt": 1801396568.0,
+              "lastObservedAt": 1801396568.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "reported-change",
+              "previousObservedAt": 1801396564.0,
+              "evidenceIds": [
+                "f35f1a8be640af4dac6256e9b2bfa67a"
+              ]
+            },
+            {
+              "provider": "glm",
+              "session": "fbf556fea303044294286937a53eae41",
+              "actor": "87f06b86a104bcdf9c4140dacd488954",
+              "model": "other",
+              "firstObservedAt": 1801396572.0,
+              "lastObservedAt": 1801396572.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "unknown-gap",
+              "previousObservedAt": 1801396568.0,
+              "evidenceIds": [
+                "d921eb4e5e7b940f62665156e7e0343d"
+              ]
+            },
+            {
+              "provider": "glm",
+              "session": "fbf556fea303044294286937a53eae41",
+              "actor": "87f06b86a104bcdf9c4140dacd488954",
+              "model": "demo-glm-flash",
+              "firstObservedAt": 1801396576.0,
+              "lastObservedAt": 1801396576.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "after-unknown",
+              "previousObservedAt": 1801396572.0,
+              "evidenceIds": [
+                "e95add02a2f55ff599e3e777e36007e6"
+              ]
+            }
+          ],
+          "truncated": false,
+          "knownModelCalls": 4,
+          "unknownModelCalls": 1,
+          "reportedChanges": 1,
+          "coverage": "native call identifiers only; observation times, not exact UI switch times; unknowns never inherited"
+        },
         "settingsCoverage": "model identifiers only when native hooks report them; effort and task difficulty unverified",
         "usageTurns": 0,
         "usageConflicts": 0,
         "usageCoverage": "explicit turn reports only; conflicting components unknown; not a session total unless every turn is reported"
       },
       {
-        "id": "ae819269c6f6db4a0bd920a12eccb86d",
+        "id": "5fc8f3c7d1eca6ef206113bd911ba384",
         "provider": "codex",
-        "projectId": "026dd309595e44af61b12c4e32767344",
+        "projectId": "ea7763adb133f20a12a8612c5c333969",
         "calls": 5,
         "failed": 0,
         "pending": 0,
@@ -695,8 +1097,83 @@
         "reportedInputTokens": null,
         "reportedOutputTokens": null,
         "models": [
-          "demo-model"
+          "demo-codex-flash",
+          "demo-codex-large"
         ],
+        "modelHistory": {
+          "segments": [
+            {
+              "provider": "codex",
+              "session": "5fc8f3c7d1eca6ef206113bd911ba384",
+              "actor": "c83abd81d10a2c2ff4612cefde97f436",
+              "model": "demo-codex-large",
+              "firstObservedAt": 1801396560.0,
+              "lastObservedAt": 1801396564.0,
+              "calls": 2,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "first-observed",
+              "previousObservedAt": null,
+              "evidenceIds": [
+                "614ffa9ee2e438464c7064f5f271e3a7",
+                "e6baa7887f8c3fdc4ab035ee52659abf"
+              ]
+            },
+            {
+              "provider": "codex",
+              "session": "5fc8f3c7d1eca6ef206113bd911ba384",
+              "actor": "c83abd81d10a2c2ff4612cefde97f436",
+              "model": "demo-codex-flash",
+              "firstObservedAt": 1801396568.0,
+              "lastObservedAt": 1801396568.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "reported-change",
+              "previousObservedAt": 1801396564.0,
+              "evidenceIds": [
+                "fad0ef1cfae5d288e6a73ff03ee361ef"
+              ]
+            },
+            {
+              "provider": "codex",
+              "session": "5fc8f3c7d1eca6ef206113bd911ba384",
+              "actor": "c83abd81d10a2c2ff4612cefde97f436",
+              "model": "other",
+              "firstObservedAt": 1801396572.0,
+              "lastObservedAt": 1801396572.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "unknown-gap",
+              "previousObservedAt": 1801396568.0,
+              "evidenceIds": [
+                "2cfa5563ba985a6d241c11f095494f97"
+              ]
+            },
+            {
+              "provider": "codex",
+              "session": "5fc8f3c7d1eca6ef206113bd911ba384",
+              "actor": "c83abd81d10a2c2ff4612cefde97f436",
+              "model": "demo-codex-flash",
+              "firstObservedAt": 1801396576.0,
+              "lastObservedAt": 1801396576.0,
+              "calls": 1,
+              "unknownOutcomes": 0,
+              "failed": 0,
+              "transition": "after-unknown",
+              "previousObservedAt": 1801396572.0,
+              "evidenceIds": [
+                "a3b23f76a1f706136c413f184e1531b2"
+              ]
+            }
+          ],
+          "truncated": false,
+          "knownModelCalls": 4,
+          "unknownModelCalls": 1,
+          "reportedChanges": 1,
+          "coverage": "native call identifiers only; observation times, not exact UI switch times; unknowns never inherited"
+        },
         "settingsCoverage": "model identifiers only when native hooks report them; effort and task difficulty unverified",
         "usageTurns": 0,
         "usageConflicts": 0,
@@ -705,7 +1182,7 @@
     ],
     "findings": [
       {
-        "id": "74a4e15b29e80a0dc4d9990a25f5586c",
+        "id": "1890e1ce06131737ad64183d6e1b0dbf",
         "provider": "glm",
         "kind": "retry",
         "title": "Repeated failing call",
@@ -718,17 +1195,19 @@
         "sessions": 1,
         "sequence": [],
         "evidenceSessions": [
-          "67b9f34cf28260a41a9df9c3bfa37e7c"
+          "37cbac9364c77e59064598387dfee2bc"
         ],
         "evidenceIds": [
-          "5ac5bfdf3e5298416282d00ecefc4d41",
-          "c9071967507c27b1a3c0548e17f8e6a3",
-          "40afce97cd525bf0ba86ada925fd00bf"
+          "1d30bfabc7bcc391c81809798d78abd9",
+          "7145631be2ed2596bfe6433db8c0c143",
+          "fd8dd98c9c1fcefd497560b3eae87ca3"
         ],
         "medianDurationMs": 1000.0,
         "failedCalls": 3,
         "unknownOutcomes": 0,
         "sampledCapabilityInvocations": [],
+        "models": [],
+        "unknownModelCalls": 3,
         "inventoryStatus": "no_match_in_inventory",
         "inventoryDetail": "No category match in this user-supplied inventory; global absence is not established.",
         "inventoryCandidates": [],
@@ -739,7 +1218,7 @@
         ]
       },
       {
-        "id": "0b0ab89fe400974b5450116306566a1b",
+        "id": "1ac40f140a15a948960b974afcf73d51",
         "provider": "glm",
         "kind": "sequence",
         "title": "Repeated workflow",
@@ -757,21 +1236,21 @@
           "other"
         ],
         "evidenceSessions": [
-          "6a233a73f79efb47936ec1fc90044a7a",
-          "cb1f23925d495e10cdb10561bd26ffa7",
-          "edccf4dd450adf66946d85d3c284b97e"
+          "fbf556fea303044294286937a53eae41",
+          "da1715ff8a704e3b20bcafd3ccd81308",
+          "333ee5d14c175821a88bf77bddf5e4e0"
         ],
         "evidenceIds": [
-          "e640969f767545b2176e56e797f164e1",
-          "04581a0e8458341f7266d8d49c5c60f9",
-          "bcc88671d6f84d1bde744965268a62d7",
-          "5f3a71cd391c04558f413e6079e47570",
-          "d8aa4508d61a3541cea3698e4510026c",
-          "817a0d0119ed9285f8766978f65d1ca9",
-          "a6ff8a899d1fe0224b88cd3773d29db7",
-          "d9a3957482020389408135584a1574c1",
-          "1638d2191a9265ea80feddb2119e8c14",
-          "505fe7f9469cc1d66517cf7b54760548"
+          "b3242b1a87e285b6a072b3d05a3eaa1a",
+          "383b1aa817a614c8b67b56af62b7ff42",
+          "f35f1a8be640af4dac6256e9b2bfa67a",
+          "d921eb4e5e7b940f62665156e7e0343d",
+          "8f31909ba3ba3ff1abfc5778fa03bf49",
+          "48f77730aa69ebc6f0f43a39a4519ead",
+          "9b13af8bcc9c54a4007c6dc640d3a648",
+          "ab5b17f821a4db1ace5aebca705dcbd3",
+          "13d4de9cd31eaa6470867180d907311f",
+          "eb6546c457a3c06a176a86c9436de4f8"
         ],
         "medianDurationMs": 1000.0,
         "failedCalls": 0,
@@ -783,6 +1262,11 @@
             "calls": 2
           }
         ],
+        "models": [
+          "demo-glm-flash",
+          "demo-glm-large"
+        ],
+        "unknownModelCalls": 3,
         "inventoryStatus": "configured_unverified",
         "inventoryDetail": "A candidate is configured, but its live availability is unverified.",
         "inventoryCandidates": [
@@ -811,7 +1295,7 @@
         "sequenceBasis": "operation-family"
       },
       {
-        "id": "ffdd15e8745d6a3aa09facb76c6eb9d3",
+        "id": "74865447bc3e58e3f001441f04710629",
         "provider": "glm",
         "kind": "sequence",
         "title": "Repeated workflow",
@@ -829,21 +1313,21 @@
           "remote"
         ],
         "evidenceSessions": [
-          "6a233a73f79efb47936ec1fc90044a7a",
-          "cb1f23925d495e10cdb10561bd26ffa7",
-          "edccf4dd450adf66946d85d3c284b97e"
+          "fbf556fea303044294286937a53eae41",
+          "da1715ff8a704e3b20bcafd3ccd81308",
+          "333ee5d14c175821a88bf77bddf5e4e0"
         ],
         "evidenceIds": [
-          "04581a0e8458341f7266d8d49c5c60f9",
-          "bcc88671d6f84d1bde744965268a62d7",
-          "5f3a71cd391c04558f413e6079e47570",
-          "ab30e2c462df646f8245ea6c935a68c7",
-          "817a0d0119ed9285f8766978f65d1ca9",
-          "a6ff8a899d1fe0224b88cd3773d29db7",
-          "d9a3957482020389408135584a1574c1",
-          "f3b34430bdebea79a5c1ad274413b200",
-          "505fe7f9469cc1d66517cf7b54760548",
-          "83d91fd63979077819844eb386f54432"
+          "383b1aa817a614c8b67b56af62b7ff42",
+          "f35f1a8be640af4dac6256e9b2bfa67a",
+          "d921eb4e5e7b940f62665156e7e0343d",
+          "e95add02a2f55ff599e3e777e36007e6",
+          "48f77730aa69ebc6f0f43a39a4519ead",
+          "9b13af8bcc9c54a4007c6dc640d3a648",
+          "ab5b17f821a4db1ace5aebca705dcbd3",
+          "61ab909fbda43e84b9d85b3a1332c7fa",
+          "eb6546c457a3c06a176a86c9436de4f8",
+          "7aebe06e38cc51f86ab4407c97df928a"
         ],
         "medianDurationMs": 1000.0,
         "failedCalls": 0,
@@ -860,6 +1344,11 @@
             "calls": 2
           }
         ],
+        "models": [
+          "demo-glm-flash",
+          "demo-glm-large"
+        ],
+        "unknownModelCalls": 3,
         "inventoryStatus": "configured_unverified",
         "inventoryDetail": "A candidate is configured, but its live availability is unverified.",
         "inventoryCandidates": [
@@ -888,7 +1377,7 @@
         "sequenceBasis": "operation-family"
       },
       {
-        "id": "24ebdb0e35eee2911200e5d40d12fe31",
+        "id": "f66e9d318930d67a928ed6b996dcf8cd",
         "provider": "codex",
         "kind": "sequence",
         "title": "Repeated workflow",
@@ -906,21 +1395,21 @@
           "other"
         ],
         "evidenceSessions": [
-          "ae819269c6f6db4a0bd920a12eccb86d",
-          "b37649c68c16bcb12827f765056c3753",
-          "a5a24b971a09cb2101f22cbe4339be75"
+          "5fc8f3c7d1eca6ef206113bd911ba384",
+          "101c751e1daf0097a1924be0d9c7d64a",
+          "973ddbd42455e829607e03a92db704f6"
         ],
         "evidenceIds": [
-          "182f59da2af22d69e90aa733190d8446",
-          "05b7669f342768192d9135ba06473560",
-          "7a61148449bce0dd14c4b86c06a8a107",
-          "9811a21763a19643dc26f5a98e061618",
-          "523ebed3ba3d3c0a5ca2c6e0107ac47e",
-          "97eb5452a5d7126f5630b1798a1e0af0",
-          "cf8f4113cc1a3cc7723baf0f54e25265",
-          "b517ff9cf6c3d81e82a6576c9bda81c5",
-          "60db483fc90e4f757a785f8371beff41",
-          "a303892476aee917e5bacc7f94721813"
+          "614ffa9ee2e438464c7064f5f271e3a7",
+          "e6baa7887f8c3fdc4ab035ee52659abf",
+          "fad0ef1cfae5d288e6a73ff03ee361ef",
+          "2cfa5563ba985a6d241c11f095494f97",
+          "71693deddb02e50d319e4aed33c48c01",
+          "339e921af296a576be6012d4226c74e5",
+          "039b8c6db229fc840eeec6b2115483f9",
+          "39e3f93183679469a6310699f6d32d92",
+          "6796ad64921d48eed3628b4bce639bcf",
+          "8eed49f3598e4140a7caf1008cec543e"
         ],
         "medianDurationMs": 1000.0,
         "failedCalls": 0,
@@ -932,6 +1421,11 @@
             "calls": 2
           }
         ],
+        "models": [
+          "demo-codex-flash",
+          "demo-codex-large"
+        ],
+        "unknownModelCalls": 3,
         "inventoryStatus": "configured_unverified",
         "inventoryDetail": "A candidate is configured, but its live availability is unverified.",
         "inventoryCandidates": [
@@ -960,7 +1454,7 @@
         "sequenceBasis": "operation-family"
       },
       {
-        "id": "8173acdf7a1578cc63a2c899176fd209",
+        "id": "438e10bfdeffd91a1671a503df1e7416",
         "provider": "codex",
         "kind": "sequence",
         "title": "Repeated workflow",
@@ -978,21 +1472,21 @@
           "remote"
         ],
         "evidenceSessions": [
-          "ae819269c6f6db4a0bd920a12eccb86d",
-          "b37649c68c16bcb12827f765056c3753",
-          "a5a24b971a09cb2101f22cbe4339be75"
+          "5fc8f3c7d1eca6ef206113bd911ba384",
+          "101c751e1daf0097a1924be0d9c7d64a",
+          "973ddbd42455e829607e03a92db704f6"
         ],
         "evidenceIds": [
-          "05b7669f342768192d9135ba06473560",
-          "7a61148449bce0dd14c4b86c06a8a107",
-          "9811a21763a19643dc26f5a98e061618",
-          "e35f57790b5f05f6a57b5afd35e7b74d",
-          "97eb5452a5d7126f5630b1798a1e0af0",
-          "cf8f4113cc1a3cc7723baf0f54e25265",
-          "b517ff9cf6c3d81e82a6576c9bda81c5",
-          "837d998907afa97f52001ca030495eb7",
-          "a303892476aee917e5bacc7f94721813",
-          "5b626d9edbe944373593ddca28c97dcf"
+          "e6baa7887f8c3fdc4ab035ee52659abf",
+          "fad0ef1cfae5d288e6a73ff03ee361ef",
+          "2cfa5563ba985a6d241c11f095494f97",
+          "a3b23f76a1f706136c413f184e1531b2",
+          "339e921af296a576be6012d4226c74e5",
+          "039b8c6db229fc840eeec6b2115483f9",
+          "39e3f93183679469a6310699f6d32d92",
+          "a93b23e7bed9bc6eeb6266a3ae6c998e",
+          "8eed49f3598e4140a7caf1008cec543e",
+          "4817ea373ea5fc895f2e7eb20b4cd10d"
         ],
         "medianDurationMs": 1000.0,
         "failedCalls": 0,
@@ -1009,6 +1503,11 @@
             "calls": 2
           }
         ],
+        "models": [
+          "demo-codex-flash",
+          "demo-codex-large"
+        ],
+        "unknownModelCalls": 3,
         "inventoryStatus": "configured_unverified",
         "inventoryDetail": "A candidate is configured, but its live availability is unverified.",
         "inventoryCandidates": [
@@ -1040,21 +1539,21 @@
     "recentCalls": [
       {
         "provider": "glm",
-        "session": "6a233a73f79efb47936ec1fc90044a7a",
-        "turn": "abce6f344ceaa2c1f26c0b527b9c6aa7",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "04e4cac8613a2da1372c303b85faf5b5",
-        "call": "e640969f767545b2176e56e797f164e1",
+        "session": "fbf556fea303044294286937a53eae41",
+        "turn": "74f43ab2bc68d25028cbfdc5183e19cb",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "87f06b86a104bcdf9c4140dacd488954",
+        "call": "b3242b1a87e285b6a072b3d05a3eaa1a",
         "tool": "Read",
         "category": "read",
-        "fingerprint": "cdc7ed6c1ba9badf0e9256bf3e24852c",
+        "fingerprint": "234cb23c1592621107ff538fbfd522fa",
         "template": "read.Read",
-        "resource": "b19065dd69afd5466b593bd35a289cb2",
+        "resource": "24e636d57a5d617e776f90a02624b955",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "e640969f767545b2176e56e797f164e1",
+        "model": "demo-glm-large",
+        "id": "b3242b1a87e285b6a072b3d05a3eaa1a",
         "startedAt": 1801396560.0,
         "endedAt": 1801396561.0,
         "outcome": "success",
@@ -1063,30 +1562,31 @@
         "durationSource": "hook-wall",
         "operation": "read",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "ad3e742482ab3aa94e4a968553c6ee23",
-          "f6fa8ffac4a8950b0f71f8c374f17d96"
+          "a556147c7d11ed340e3fe1215e429dac",
+          "673b0237d2eb3508c17d7619c19afc2e"
         ],
         "paired": true
       },
       {
         "provider": "codex",
-        "session": "ae819269c6f6db4a0bd920a12eccb86d",
-        "turn": "a4bde658bee5cb52d4dc4fd1d3c62aa1",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "f7a601cdde567d68941312d6f8f8c408",
-        "call": "182f59da2af22d69e90aa733190d8446",
+        "session": "5fc8f3c7d1eca6ef206113bd911ba384",
+        "turn": "03bb8cbf9190a76a5a96a63a1abbca1e",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "c83abd81d10a2c2ff4612cefde97f436",
+        "call": "614ffa9ee2e438464c7064f5f271e3a7",
         "tool": "Read",
         "category": "read",
-        "fingerprint": "cdc7ed6c1ba9badf0e9256bf3e24852c",
+        "fingerprint": "234cb23c1592621107ff538fbfd522fa",
         "template": "read.Read",
-        "resource": "b19065dd69afd5466b593bd35a289cb2",
+        "resource": "24e636d57a5d617e776f90a02624b955",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "182f59da2af22d69e90aa733190d8446",
+        "model": "demo-codex-large",
+        "id": "614ffa9ee2e438464c7064f5f271e3a7",
         "startedAt": 1801396560.0,
         "endedAt": 1801396561.0,
         "outcome": "success",
@@ -1095,30 +1595,31 @@
         "durationSource": "hook-wall",
         "operation": "read",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "40e8ea4194c6918998bfea490eff3f0d",
-          "64527f6c377c0cdbef0efa45311b52f3"
+          "349a1d9728a6811bff9e2ddeb68a5611",
+          "8aab97f8d2c4fbce231cdcb07123b063"
         ],
         "paired": true
       },
       {
         "provider": "glm",
-        "session": "6a233a73f79efb47936ec1fc90044a7a",
-        "turn": "abce6f344ceaa2c1f26c0b527b9c6aa7",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "04e4cac8613a2da1372c303b85faf5b5",
-        "call": "04581a0e8458341f7266d8d49c5c60f9",
+        "session": "fbf556fea303044294286937a53eae41",
+        "turn": "74f43ab2bc68d25028cbfdc5183e19cb",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "87f06b86a104bcdf9c4140dacd488954",
+        "call": "383b1aa817a614c8b67b56af62b7ff42",
         "tool": "Edit",
         "category": "edit",
-        "fingerprint": "511ac21eb04cc48a71f9f2791a69b9a4",
+        "fingerprint": "b119e5f85de1807b2bdc95f21f4328a0",
         "template": "edit.Edit",
-        "resource": "5ee145b85b4df3819801c9f288369462",
+        "resource": "39e0a706ccf2883266f6f413579aa87b",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "04581a0e8458341f7266d8d49c5c60f9",
+        "model": "demo-glm-large",
+        "id": "383b1aa817a614c8b67b56af62b7ff42",
         "startedAt": 1801396564.0,
         "endedAt": 1801396565.0,
         "outcome": "success",
@@ -1127,30 +1628,31 @@
         "durationSource": "hook-wall",
         "operation": "edit",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "4d34f511b5ba83c6f5797690707b6757",
-          "93117e88ed9cbcadfbe3dd367d25cd08"
+          "de6d1fca40c1c2315f19c595f2b01252",
+          "568f0ecb12c8090b545e70247685fb45"
         ],
         "paired": true
       },
       {
         "provider": "codex",
-        "session": "ae819269c6f6db4a0bd920a12eccb86d",
-        "turn": "a4bde658bee5cb52d4dc4fd1d3c62aa1",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "f7a601cdde567d68941312d6f8f8c408",
-        "call": "05b7669f342768192d9135ba06473560",
+        "session": "5fc8f3c7d1eca6ef206113bd911ba384",
+        "turn": "03bb8cbf9190a76a5a96a63a1abbca1e",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "c83abd81d10a2c2ff4612cefde97f436",
+        "call": "e6baa7887f8c3fdc4ab035ee52659abf",
         "tool": "Edit",
         "category": "edit",
-        "fingerprint": "511ac21eb04cc48a71f9f2791a69b9a4",
+        "fingerprint": "b119e5f85de1807b2bdc95f21f4328a0",
         "template": "edit.Edit",
-        "resource": "5ee145b85b4df3819801c9f288369462",
+        "resource": "39e0a706ccf2883266f6f413579aa87b",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "05b7669f342768192d9135ba06473560",
+        "model": "demo-codex-large",
+        "id": "e6baa7887f8c3fdc4ab035ee52659abf",
         "startedAt": 1801396564.0,
         "endedAt": 1801396565.0,
         "outcome": "success",
@@ -1159,30 +1661,31 @@
         "durationSource": "hook-wall",
         "operation": "edit",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "4be00eef65265b7ee9795d1da6132994",
-          "3f0c1669fc445033b060c5aabd0b34a9"
+          "4b261171b3f19c11880e03d5b4f72ecb",
+          "96d0b39e4bc9a82903ad780aceffbde9"
         ],
         "paired": true
       },
       {
         "provider": "glm",
-        "session": "6a233a73f79efb47936ec1fc90044a7a",
-        "turn": "abce6f344ceaa2c1f26c0b527b9c6aa7",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "04e4cac8613a2da1372c303b85faf5b5",
-        "call": "bcc88671d6f84d1bde744965268a62d7",
+        "session": "fbf556fea303044294286937a53eae41",
+        "turn": "74f43ab2bc68d25028cbfdc5183e19cb",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "87f06b86a104bcdf9c4140dacd488954",
+        "call": "f35f1a8be640af4dac6256e9b2bfa67a",
         "tool": "Bash",
         "category": "test",
-        "fingerprint": "71826c3be972ec51f18296b9182762f4",
+        "fingerprint": "df02d27657bc64dff96cf287f83a15ae",
         "template": "python -m unittest discover",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "bcc88671d6f84d1bde744965268a62d7",
+        "model": "demo-glm-flash",
+        "id": "f35f1a8be640af4dac6256e9b2bfa67a",
         "startedAt": 1801396568.0,
         "endedAt": 1801396569.0,
         "outcome": "success",
@@ -1191,30 +1694,31 @@
         "durationSource": "hook-wall",
         "operation": "test.python-test",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "e8c702a3a30e602c98e661caf1e520e0",
-          "4c5de98e2cf38a0996dc1f5d9179aef5"
+          "d02c74a8137434c330c0f8d7a78eab7c",
+          "b2f4d5d262051d47aea4ac0c001ff697"
         ],
         "paired": true
       },
       {
         "provider": "codex",
-        "session": "ae819269c6f6db4a0bd920a12eccb86d",
-        "turn": "a4bde658bee5cb52d4dc4fd1d3c62aa1",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "f7a601cdde567d68941312d6f8f8c408",
-        "call": "7a61148449bce0dd14c4b86c06a8a107",
+        "session": "5fc8f3c7d1eca6ef206113bd911ba384",
+        "turn": "03bb8cbf9190a76a5a96a63a1abbca1e",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "c83abd81d10a2c2ff4612cefde97f436",
+        "call": "fad0ef1cfae5d288e6a73ff03ee361ef",
         "tool": "Bash",
         "category": "test",
-        "fingerprint": "71826c3be972ec51f18296b9182762f4",
+        "fingerprint": "df02d27657bc64dff96cf287f83a15ae",
         "template": "python -m unittest discover",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "7a61148449bce0dd14c4b86c06a8a107",
+        "model": "demo-codex-flash",
+        "id": "fad0ef1cfae5d288e6a73ff03ee361ef",
         "startedAt": 1801396568.0,
         "endedAt": 1801396569.0,
         "outcome": "success",
@@ -1223,30 +1727,31 @@
         "durationSource": "hook-wall",
         "operation": "test.python-test",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "c783573592554d7a786d8a24f0daf3be",
-          "8db45de9c94d2e5e709a6d60663eb5e3"
+          "075430920dbea1b64a4317ce53c006eb",
+          "31b2352117e93bac16f279f4548fc349"
         ],
         "paired": true
       },
       {
         "provider": "glm",
-        "session": "6a233a73f79efb47936ec1fc90044a7a",
-        "turn": "abce6f344ceaa2c1f26c0b527b9c6aa7",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "04e4cac8613a2da1372c303b85faf5b5",
-        "call": "5f3a71cd391c04558f413e6079e47570",
+        "session": "fbf556fea303044294286937a53eae41",
+        "turn": "74f43ab2bc68d25028cbfdc5183e19cb",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "87f06b86a104bcdf9c4140dacd488954",
+        "call": "d921eb4e5e7b940f62665156e7e0343d",
         "tool": "Skill",
         "category": "other",
-        "fingerprint": "2c6a1b0cc58b5fe5ac23b52a932cd169",
+        "fingerprint": "933bdbf8bec8f87438cd15ceb4d9b3f4",
         "template": "other.Skill",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "5f3a71cd391c04558f413e6079e47570",
+        "model": "other",
+        "id": "d921eb4e5e7b940f62665156e7e0343d",
         "startedAt": 1801396572.0,
         "endedAt": 1801396573.0,
         "outcome": "success",
@@ -1255,30 +1760,31 @@
         "durationSource": "hook-wall",
         "operation": "other",
         "outcomeSource": "structured-exit",
+        "modelSource": "not-reported",
         "collectionIssue": null,
         "evidence": [
-          "e0c0c8479c0ed0fa07391c89fc1aa1a9",
-          "7d6194b08d780a2d67ed688147fa7ce8"
+          "090ac1d297b06763304a9078bffe0946",
+          "f894ed152a1386ccea2a135e1e1313f0"
         ],
         "paired": true
       },
       {
         "provider": "codex",
-        "session": "ae819269c6f6db4a0bd920a12eccb86d",
-        "turn": "a4bde658bee5cb52d4dc4fd1d3c62aa1",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "f7a601cdde567d68941312d6f8f8c408",
-        "call": "9811a21763a19643dc26f5a98e061618",
+        "session": "5fc8f3c7d1eca6ef206113bd911ba384",
+        "turn": "03bb8cbf9190a76a5a96a63a1abbca1e",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "c83abd81d10a2c2ff4612cefde97f436",
+        "call": "2cfa5563ba985a6d241c11f095494f97",
         "tool": "Skill",
         "category": "other",
-        "fingerprint": "2c6a1b0cc58b5fe5ac23b52a932cd169",
+        "fingerprint": "933bdbf8bec8f87438cd15ceb4d9b3f4",
         "template": "other.Skill",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "9811a21763a19643dc26f5a98e061618",
+        "model": "other",
+        "id": "2cfa5563ba985a6d241c11f095494f97",
         "startedAt": 1801396572.0,
         "endedAt": 1801396573.0,
         "outcome": "success",
@@ -1287,30 +1793,31 @@
         "durationSource": "hook-wall",
         "operation": "other",
         "outcomeSource": "structured-exit",
+        "modelSource": "not-reported",
         "collectionIssue": null,
         "evidence": [
-          "602c0f1925ba3f99c0e26391d9f8d12a",
-          "b38f169667eff6b780b75dcb8abb83cf"
+          "258da3f3e64409241e491af9800537d1",
+          "7fe7c8b814a27b2055c14facc63da1d4"
         ],
         "paired": true
       },
       {
         "provider": "glm",
-        "session": "6a233a73f79efb47936ec1fc90044a7a",
-        "turn": "abce6f344ceaa2c1f26c0b527b9c6aa7",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "04e4cac8613a2da1372c303b85faf5b5",
-        "call": "ab30e2c462df646f8245ea6c935a68c7",
+        "session": "fbf556fea303044294286937a53eae41",
+        "turn": "74f43ab2bc68d25028cbfdc5183e19cb",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "87f06b86a104bcdf9c4140dacd488954",
+        "call": "e95add02a2f55ff599e3e777e36007e6",
         "tool": "mcp__local-checks__verify",
         "category": "remote",
-        "fingerprint": "ee767db4157cf0dcaf324d4a878f9c65",
+        "fingerprint": "306ea2041b06d7e9f6489b2f722d4aa1",
         "template": "remote.mcp__local-checks__verify",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "ab30e2c462df646f8245ea6c935a68c7",
+        "model": "demo-glm-flash",
+        "id": "e95add02a2f55ff599e3e777e36007e6",
         "startedAt": 1801396576.0,
         "endedAt": 1801396577.0,
         "outcome": "success",
@@ -1319,30 +1826,31 @@
         "durationSource": "hook-wall",
         "operation": "remote",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "9bd279503acf0afcd53b796e7519c955",
-          "ec7057fe0ce5811d6ee218593adeb5d2"
+          "58ebf3fd6d4786d58487060a6db661e1",
+          "d94edd44df8127fd3e0e0f529f9af8a2"
         ],
         "paired": true
       },
       {
         "provider": "codex",
-        "session": "ae819269c6f6db4a0bd920a12eccb86d",
-        "turn": "a4bde658bee5cb52d4dc4fd1d3c62aa1",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "f7a601cdde567d68941312d6f8f8c408",
-        "call": "e35f57790b5f05f6a57b5afd35e7b74d",
+        "session": "5fc8f3c7d1eca6ef206113bd911ba384",
+        "turn": "03bb8cbf9190a76a5a96a63a1abbca1e",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "c83abd81d10a2c2ff4612cefde97f436",
+        "call": "a3b23f76a1f706136c413f184e1531b2",
         "tool": "mcp__local-checks__verify",
         "category": "remote",
-        "fingerprint": "ee767db4157cf0dcaf324d4a878f9c65",
+        "fingerprint": "306ea2041b06d7e9f6489b2f722d4aa1",
         "template": "remote.mcp__local-checks__verify",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "e35f57790b5f05f6a57b5afd35e7b74d",
+        "model": "demo-codex-flash",
+        "id": "a3b23f76a1f706136c413f184e1531b2",
         "startedAt": 1801396576.0,
         "endedAt": 1801396577.0,
         "outcome": "success",
@@ -1351,30 +1859,31 @@
         "durationSource": "hook-wall",
         "operation": "remote",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "ed0a6c06ffbe6f04e4f1470cbb453fc9",
-          "c42b25caf7b43ea0148ae3687eddb0a8"
+          "bbe9f4c8264eba43775eb8bc77e0eb2f",
+          "4c33cee00cf8504798954e2454c7192b"
         ],
         "paired": true
       },
       {
         "provider": "glm",
-        "session": "cb1f23925d495e10cdb10561bd26ffa7",
-        "turn": "7d96d411f89eb2ee387adec0bb415729",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "72b6a09f43933f8e566c4822b9b955ae",
-        "call": "d8aa4508d61a3541cea3698e4510026c",
+        "session": "da1715ff8a704e3b20bcafd3ccd81308",
+        "turn": "b20e44d5267ddeef9e22f924a4436ed0",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "7e0b3d08aa6ea117979fe4c170801b22",
+        "call": "8f31909ba3ba3ff1abfc5778fa03bf49",
         "tool": "Read",
         "category": "read",
-        "fingerprint": "cdc7ed6c1ba9badf0e9256bf3e24852c",
+        "fingerprint": "234cb23c1592621107ff538fbfd522fa",
         "template": "read.Read",
-        "resource": "b19065dd69afd5466b593bd35a289cb2",
+        "resource": "24e636d57a5d617e776f90a02624b955",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "d8aa4508d61a3541cea3698e4510026c",
+        "model": "demo-glm-large",
+        "id": "8f31909ba3ba3ff1abfc5778fa03bf49",
         "startedAt": 1801396590.0,
         "endedAt": 1801396591.0,
         "outcome": "success",
@@ -1383,30 +1892,31 @@
         "durationSource": "hook-wall",
         "operation": "read",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "376c4f8efedc343c158f7f760540f7ce",
-          "39ed62e9178ae47a310951691f484d8e"
+          "adfa3944faca12885c439b79658d2c85",
+          "733ab38319ec6298bced27b0126bd07e"
         ],
         "paired": true
       },
       {
         "provider": "codex",
-        "session": "b37649c68c16bcb12827f765056c3753",
-        "turn": "622522b4f2f8a984025c5b329e683396",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "7e4adcebc43f4274b9b36c05d06b74ac",
-        "call": "523ebed3ba3d3c0a5ca2c6e0107ac47e",
+        "session": "101c751e1daf0097a1924be0d9c7d64a",
+        "turn": "80a97c7601a68ff0004431d2c0122c36",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "0836c38cbf664fd4a510cac850e5d864",
+        "call": "71693deddb02e50d319e4aed33c48c01",
         "tool": "Read",
         "category": "read",
-        "fingerprint": "cdc7ed6c1ba9badf0e9256bf3e24852c",
+        "fingerprint": "234cb23c1592621107ff538fbfd522fa",
         "template": "read.Read",
-        "resource": "b19065dd69afd5466b593bd35a289cb2",
+        "resource": "24e636d57a5d617e776f90a02624b955",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "523ebed3ba3d3c0a5ca2c6e0107ac47e",
+        "model": "demo-codex-large",
+        "id": "71693deddb02e50d319e4aed33c48c01",
         "startedAt": 1801396590.0,
         "endedAt": 1801396591.0,
         "outcome": "success",
@@ -1415,30 +1925,31 @@
         "durationSource": "hook-wall",
         "operation": "read",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "bcdd902cadc23d24678b89afca39857e",
-          "380e23339e5739a91290f3a6a2bd3071"
+          "4e636f996ad19b50e76c58a5b9022041",
+          "40f3370062d3f8033f168fb28a1b3218"
         ],
         "paired": true
       },
       {
         "provider": "glm",
-        "session": "cb1f23925d495e10cdb10561bd26ffa7",
-        "turn": "7d96d411f89eb2ee387adec0bb415729",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "72b6a09f43933f8e566c4822b9b955ae",
-        "call": "817a0d0119ed9285f8766978f65d1ca9",
+        "session": "da1715ff8a704e3b20bcafd3ccd81308",
+        "turn": "b20e44d5267ddeef9e22f924a4436ed0",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "7e0b3d08aa6ea117979fe4c170801b22",
+        "call": "48f77730aa69ebc6f0f43a39a4519ead",
         "tool": "Edit",
         "category": "edit",
-        "fingerprint": "511ac21eb04cc48a71f9f2791a69b9a4",
+        "fingerprint": "b119e5f85de1807b2bdc95f21f4328a0",
         "template": "edit.Edit",
-        "resource": "5ee145b85b4df3819801c9f288369462",
+        "resource": "39e0a706ccf2883266f6f413579aa87b",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "817a0d0119ed9285f8766978f65d1ca9",
+        "model": "demo-glm-large",
+        "id": "48f77730aa69ebc6f0f43a39a4519ead",
         "startedAt": 1801396594.0,
         "endedAt": 1801396595.0,
         "outcome": "success",
@@ -1447,30 +1958,31 @@
         "durationSource": "hook-wall",
         "operation": "edit",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "69cea769a11be81124494933671502c3",
-          "65912cabda5d8a46b8c0fad3707eb85f"
+          "dd9239d97a39efc272945e25a2f95207",
+          "395e7c61b6a440076d99d4e05334fbaa"
         ],
         "paired": true
       },
       {
         "provider": "codex",
-        "session": "b37649c68c16bcb12827f765056c3753",
-        "turn": "622522b4f2f8a984025c5b329e683396",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "7e4adcebc43f4274b9b36c05d06b74ac",
-        "call": "97eb5452a5d7126f5630b1798a1e0af0",
+        "session": "101c751e1daf0097a1924be0d9c7d64a",
+        "turn": "80a97c7601a68ff0004431d2c0122c36",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "0836c38cbf664fd4a510cac850e5d864",
+        "call": "339e921af296a576be6012d4226c74e5",
         "tool": "Edit",
         "category": "edit",
-        "fingerprint": "511ac21eb04cc48a71f9f2791a69b9a4",
+        "fingerprint": "b119e5f85de1807b2bdc95f21f4328a0",
         "template": "edit.Edit",
-        "resource": "5ee145b85b4df3819801c9f288369462",
+        "resource": "39e0a706ccf2883266f6f413579aa87b",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "97eb5452a5d7126f5630b1798a1e0af0",
+        "model": "demo-codex-large",
+        "id": "339e921af296a576be6012d4226c74e5",
         "startedAt": 1801396594.0,
         "endedAt": 1801396595.0,
         "outcome": "success",
@@ -1479,30 +1991,31 @@
         "durationSource": "hook-wall",
         "operation": "edit",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "fb4565112140580bc970c0cff6f51031",
-          "2c98f5fde4b573d48c09d1d97cf08793"
+          "15571dc98cf557369b748b8cdf8ff011",
+          "3b860a0a41c15dff931feff755ad33d1"
         ],
         "paired": true
       },
       {
         "provider": "glm",
-        "session": "cb1f23925d495e10cdb10561bd26ffa7",
-        "turn": "7d96d411f89eb2ee387adec0bb415729",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "72b6a09f43933f8e566c4822b9b955ae",
-        "call": "a6ff8a899d1fe0224b88cd3773d29db7",
+        "session": "da1715ff8a704e3b20bcafd3ccd81308",
+        "turn": "b20e44d5267ddeef9e22f924a4436ed0",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "7e0b3d08aa6ea117979fe4c170801b22",
+        "call": "9b13af8bcc9c54a4007c6dc640d3a648",
         "tool": "Bash",
         "category": "test",
-        "fingerprint": "71826c3be972ec51f18296b9182762f4",
+        "fingerprint": "df02d27657bc64dff96cf287f83a15ae",
         "template": "python -m unittest discover",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "a6ff8a899d1fe0224b88cd3773d29db7",
+        "model": "demo-glm-flash",
+        "id": "9b13af8bcc9c54a4007c6dc640d3a648",
         "startedAt": 1801396598.0,
         "endedAt": 1801396599.0,
         "outcome": "success",
@@ -1511,30 +2024,31 @@
         "durationSource": "hook-wall",
         "operation": "test.python-test",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "7a62c4d3c927cfdfa7a607e5f654535a",
-          "57cb2da94a9f3044be4a1521c4600057"
+          "de1deaec4e0a4ad109206925f0566ef2",
+          "c846befd4819fdbb062fa50f34908160"
         ],
         "paired": true
       },
       {
         "provider": "codex",
-        "session": "b37649c68c16bcb12827f765056c3753",
-        "turn": "622522b4f2f8a984025c5b329e683396",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "7e4adcebc43f4274b9b36c05d06b74ac",
-        "call": "cf8f4113cc1a3cc7723baf0f54e25265",
+        "session": "101c751e1daf0097a1924be0d9c7d64a",
+        "turn": "80a97c7601a68ff0004431d2c0122c36",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "0836c38cbf664fd4a510cac850e5d864",
+        "call": "039b8c6db229fc840eeec6b2115483f9",
         "tool": "Bash",
         "category": "test",
-        "fingerprint": "71826c3be972ec51f18296b9182762f4",
+        "fingerprint": "df02d27657bc64dff96cf287f83a15ae",
         "template": "python -m unittest discover",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "cf8f4113cc1a3cc7723baf0f54e25265",
+        "model": "demo-codex-flash",
+        "id": "039b8c6db229fc840eeec6b2115483f9",
         "startedAt": 1801396598.0,
         "endedAt": 1801396599.0,
         "outcome": "success",
@@ -1543,30 +2057,31 @@
         "durationSource": "hook-wall",
         "operation": "test.python-test",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "8b19e098b7bc5d319ca9cbfcefd30d63",
-          "43991a46edf5461d0cda1fbc41e7aece"
+          "aef5d5d1fa449115e8abd5707d080f8a",
+          "9f846fd14c18c57552e08494883ff45e"
         ],
         "paired": true
       },
       {
         "provider": "glm",
-        "session": "cb1f23925d495e10cdb10561bd26ffa7",
-        "turn": "7d96d411f89eb2ee387adec0bb415729",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "72b6a09f43933f8e566c4822b9b955ae",
-        "call": "d9a3957482020389408135584a1574c1",
+        "session": "da1715ff8a704e3b20bcafd3ccd81308",
+        "turn": "b20e44d5267ddeef9e22f924a4436ed0",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "7e0b3d08aa6ea117979fe4c170801b22",
+        "call": "ab5b17f821a4db1ace5aebca705dcbd3",
         "tool": "Skill",
         "category": "other",
-        "fingerprint": "2c6a1b0cc58b5fe5ac23b52a932cd169",
+        "fingerprint": "933bdbf8bec8f87438cd15ceb4d9b3f4",
         "template": "other.Skill",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "d9a3957482020389408135584a1574c1",
+        "model": "other",
+        "id": "ab5b17f821a4db1ace5aebca705dcbd3",
         "startedAt": 1801396602.0,
         "endedAt": 1801396603.0,
         "outcome": "success",
@@ -1575,30 +2090,31 @@
         "durationSource": "hook-wall",
         "operation": "other",
         "outcomeSource": "structured-exit",
+        "modelSource": "not-reported",
         "collectionIssue": null,
         "evidence": [
-          "1ced5ed62bd08b320f3de20bdc78e9a0",
-          "164ea1a080e52b17cba0b98b4c7bcbf8"
+          "7644610a2e0b850a749a8b0267200afb",
+          "2672d2c769bc8ab6a2f94c1c61d5822e"
         ],
         "paired": true
       },
       {
         "provider": "codex",
-        "session": "b37649c68c16bcb12827f765056c3753",
-        "turn": "622522b4f2f8a984025c5b329e683396",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "7e4adcebc43f4274b9b36c05d06b74ac",
-        "call": "b517ff9cf6c3d81e82a6576c9bda81c5",
+        "session": "101c751e1daf0097a1924be0d9c7d64a",
+        "turn": "80a97c7601a68ff0004431d2c0122c36",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "0836c38cbf664fd4a510cac850e5d864",
+        "call": "39e3f93183679469a6310699f6d32d92",
         "tool": "Skill",
         "category": "other",
-        "fingerprint": "2c6a1b0cc58b5fe5ac23b52a932cd169",
+        "fingerprint": "933bdbf8bec8f87438cd15ceb4d9b3f4",
         "template": "other.Skill",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "b517ff9cf6c3d81e82a6576c9bda81c5",
+        "model": "other",
+        "id": "39e3f93183679469a6310699f6d32d92",
         "startedAt": 1801396602.0,
         "endedAt": 1801396603.0,
         "outcome": "success",
@@ -1607,30 +2123,31 @@
         "durationSource": "hook-wall",
         "operation": "other",
         "outcomeSource": "structured-exit",
+        "modelSource": "not-reported",
         "collectionIssue": null,
         "evidence": [
-          "ab1bba532a4a28966ba4268e946870b6",
-          "2f60aa5952aac3486a5bcf7771d7254f"
+          "ea0f38fd4054643c17528688af215698",
+          "f88168d5bede85ce21a71f8d4e603f68"
         ],
         "paired": true
       },
       {
         "provider": "glm",
-        "session": "cb1f23925d495e10cdb10561bd26ffa7",
-        "turn": "7d96d411f89eb2ee387adec0bb415729",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "72b6a09f43933f8e566c4822b9b955ae",
-        "call": "f3b34430bdebea79a5c1ad274413b200",
+        "session": "da1715ff8a704e3b20bcafd3ccd81308",
+        "turn": "b20e44d5267ddeef9e22f924a4436ed0",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "7e0b3d08aa6ea117979fe4c170801b22",
+        "call": "61ab909fbda43e84b9d85b3a1332c7fa",
         "tool": "mcp__local-checks__verify",
         "category": "remote",
-        "fingerprint": "ee767db4157cf0dcaf324d4a878f9c65",
+        "fingerprint": "306ea2041b06d7e9f6489b2f722d4aa1",
         "template": "remote.mcp__local-checks__verify",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "f3b34430bdebea79a5c1ad274413b200",
+        "model": "demo-glm-flash",
+        "id": "61ab909fbda43e84b9d85b3a1332c7fa",
         "startedAt": 1801396606.0,
         "endedAt": 1801396607.0,
         "outcome": "success",
@@ -1639,30 +2156,31 @@
         "durationSource": "hook-wall",
         "operation": "remote",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "4f300779c52600922592eb6b4fffec76",
-          "ba7f82edb7133171b67bf277b8bdf78c"
+          "31694d4cb1f0e572bcdf253d4126519a",
+          "0b84ade120a98ab2c16a374b955ae8d0"
         ],
         "paired": true
       },
       {
         "provider": "codex",
-        "session": "b37649c68c16bcb12827f765056c3753",
-        "turn": "622522b4f2f8a984025c5b329e683396",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "7e4adcebc43f4274b9b36c05d06b74ac",
-        "call": "837d998907afa97f52001ca030495eb7",
+        "session": "101c751e1daf0097a1924be0d9c7d64a",
+        "turn": "80a97c7601a68ff0004431d2c0122c36",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "0836c38cbf664fd4a510cac850e5d864",
+        "call": "a93b23e7bed9bc6eeb6266a3ae6c998e",
         "tool": "mcp__local-checks__verify",
         "category": "remote",
-        "fingerprint": "ee767db4157cf0dcaf324d4a878f9c65",
+        "fingerprint": "306ea2041b06d7e9f6489b2f722d4aa1",
         "template": "remote.mcp__local-checks__verify",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "837d998907afa97f52001ca030495eb7",
+        "model": "demo-codex-flash",
+        "id": "a93b23e7bed9bc6eeb6266a3ae6c998e",
         "startedAt": 1801396606.0,
         "endedAt": 1801396607.0,
         "outcome": "success",
@@ -1671,30 +2189,31 @@
         "durationSource": "hook-wall",
         "operation": "remote",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "6d7eb6eade331498382b4afcc5c95461",
-          "c5e32a0debd9f0432b799d59313525ff"
+          "541aec8761c755bca0f505ca74113959",
+          "08cc78051f9196af79cee2e4b74ffd5a"
         ],
         "paired": true
       },
       {
         "provider": "glm",
-        "session": "edccf4dd450adf66946d85d3c284b97e",
-        "turn": "e75b4db5f0ca0b0fed0e4569993cc692",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "a4e3ef87f0d632e2a8fc564638be64c1",
-        "call": "1638d2191a9265ea80feddb2119e8c14",
+        "session": "333ee5d14c175821a88bf77bddf5e4e0",
+        "turn": "3c70e205fa44ffb9ee0acfe4176b0732",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "1f12e9a2f59ba79479b96ddfe707f81c",
+        "call": "13d4de9cd31eaa6470867180d907311f",
         "tool": "Read",
         "category": "read",
-        "fingerprint": "cdc7ed6c1ba9badf0e9256bf3e24852c",
+        "fingerprint": "234cb23c1592621107ff538fbfd522fa",
         "template": "read.Read",
-        "resource": "b19065dd69afd5466b593bd35a289cb2",
+        "resource": "24e636d57a5d617e776f90a02624b955",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "1638d2191a9265ea80feddb2119e8c14",
+        "model": "demo-glm-large",
+        "id": "13d4de9cd31eaa6470867180d907311f",
         "startedAt": 1801396620.0,
         "endedAt": 1801396621.0,
         "outcome": "success",
@@ -1703,30 +2222,31 @@
         "durationSource": "hook-wall",
         "operation": "read",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "8547e418d56a6eec83d00b2788d3da28",
-          "0852dc4514847a7813cf9ce6b8bcd94b"
+          "07eef1afb930621e6bfeb7fc857e78ce",
+          "6a788bb2303facc8041ec82070b978b1"
         ],
         "paired": true
       },
       {
         "provider": "codex",
-        "session": "a5a24b971a09cb2101f22cbe4339be75",
-        "turn": "c8f576a0afb501a5ea42652790cd2a2b",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "fe60bf6009ac600e6dabb612f0bd83c9",
-        "call": "60db483fc90e4f757a785f8371beff41",
+        "session": "973ddbd42455e829607e03a92db704f6",
+        "turn": "566ac672d39efb02d4f2aac23649081b",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "4b59ca9ece79949eca2460bc05e43e83",
+        "call": "6796ad64921d48eed3628b4bce639bcf",
         "tool": "Read",
         "category": "read",
-        "fingerprint": "cdc7ed6c1ba9badf0e9256bf3e24852c",
+        "fingerprint": "234cb23c1592621107ff538fbfd522fa",
         "template": "read.Read",
-        "resource": "b19065dd69afd5466b593bd35a289cb2",
+        "resource": "24e636d57a5d617e776f90a02624b955",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "60db483fc90e4f757a785f8371beff41",
+        "model": "demo-codex-large",
+        "id": "6796ad64921d48eed3628b4bce639bcf",
         "startedAt": 1801396620.0,
         "endedAt": 1801396621.0,
         "outcome": "success",
@@ -1735,30 +2255,31 @@
         "durationSource": "hook-wall",
         "operation": "read",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "b77701522a383850dbefa8c4ea582856",
-          "86728639b411df77003b93bec62f3842"
+          "6fcf4fd76502a15211ffbd08be227c6a",
+          "b7a37a8ad20aea75f29523ff74669d55"
         ],
         "paired": true
       },
       {
         "provider": "glm",
-        "session": "edccf4dd450adf66946d85d3c284b97e",
-        "turn": "e75b4db5f0ca0b0fed0e4569993cc692",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "a4e3ef87f0d632e2a8fc564638be64c1",
-        "call": "505fe7f9469cc1d66517cf7b54760548",
+        "session": "333ee5d14c175821a88bf77bddf5e4e0",
+        "turn": "3c70e205fa44ffb9ee0acfe4176b0732",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "1f12e9a2f59ba79479b96ddfe707f81c",
+        "call": "eb6546c457a3c06a176a86c9436de4f8",
         "tool": "Edit",
         "category": "edit",
-        "fingerprint": "511ac21eb04cc48a71f9f2791a69b9a4",
+        "fingerprint": "b119e5f85de1807b2bdc95f21f4328a0",
         "template": "edit.Edit",
-        "resource": "5ee145b85b4df3819801c9f288369462",
+        "resource": "39e0a706ccf2883266f6f413579aa87b",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "505fe7f9469cc1d66517cf7b54760548",
+        "model": "demo-glm-large",
+        "id": "eb6546c457a3c06a176a86c9436de4f8",
         "startedAt": 1801396624.0,
         "endedAt": 1801396625.0,
         "outcome": "success",
@@ -1767,30 +2288,31 @@
         "durationSource": "hook-wall",
         "operation": "edit",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "628f5d02b829dca02176ad776c4f049b",
-          "e5ed24de37a1bd950ff8ca059e252d2c"
+          "c8a44a8d8011c36dac9a3eebf3babfdb",
+          "29cec2f7decc0dc32de1df6994784a2e"
         ],
         "paired": true
       },
       {
         "provider": "codex",
-        "session": "a5a24b971a09cb2101f22cbe4339be75",
-        "turn": "c8f576a0afb501a5ea42652790cd2a2b",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "fe60bf6009ac600e6dabb612f0bd83c9",
-        "call": "a303892476aee917e5bacc7f94721813",
+        "session": "973ddbd42455e829607e03a92db704f6",
+        "turn": "566ac672d39efb02d4f2aac23649081b",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "4b59ca9ece79949eca2460bc05e43e83",
+        "call": "8eed49f3598e4140a7caf1008cec543e",
         "tool": "Edit",
         "category": "edit",
-        "fingerprint": "511ac21eb04cc48a71f9f2791a69b9a4",
+        "fingerprint": "b119e5f85de1807b2bdc95f21f4328a0",
         "template": "edit.Edit",
-        "resource": "5ee145b85b4df3819801c9f288369462",
+        "resource": "39e0a706ccf2883266f6f413579aa87b",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "a303892476aee917e5bacc7f94721813",
+        "model": "demo-codex-large",
+        "id": "8eed49f3598e4140a7caf1008cec543e",
         "startedAt": 1801396624.0,
         "endedAt": 1801396625.0,
         "outcome": "success",
@@ -1799,30 +2321,31 @@
         "durationSource": "hook-wall",
         "operation": "edit",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "9350448f906b4d3985b54ed6c7c8fc01",
-          "956613bf4a41a2d1f3b9570ec94c2017"
+          "1ad8c36cb7b02cb613e11f641f23a593",
+          "938c7412a9f6998027fe4aff1c22d97a"
         ],
         "paired": true
       },
       {
         "provider": "glm",
-        "session": "edccf4dd450adf66946d85d3c284b97e",
-        "turn": "e75b4db5f0ca0b0fed0e4569993cc692",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "a4e3ef87f0d632e2a8fc564638be64c1",
-        "call": "83d91fd63979077819844eb386f54432",
+        "session": "333ee5d14c175821a88bf77bddf5e4e0",
+        "turn": "3c70e205fa44ffb9ee0acfe4176b0732",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "1f12e9a2f59ba79479b96ddfe707f81c",
+        "call": "7aebe06e38cc51f86ab4407c97df928a",
         "tool": "Bash",
         "category": "test",
-        "fingerprint": "71826c3be972ec51f18296b9182762f4",
+        "fingerprint": "df02d27657bc64dff96cf287f83a15ae",
         "template": "python -m unittest discover",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "83d91fd63979077819844eb386f54432",
+        "model": "demo-glm-flash",
+        "id": "7aebe06e38cc51f86ab4407c97df928a",
         "startedAt": 1801396628.0,
         "endedAt": 1801396629.0,
         "outcome": "success",
@@ -1831,30 +2354,31 @@
         "durationSource": "hook-wall",
         "operation": "test.python-test",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "db11d095667fb5cc81455b62a3dd75fb",
-          "8da1a7053061e4426d04a7742813adc9"
+          "bc23c7298da65226369ac003caa90236",
+          "df2cc9e916565f389496dd0fbe17a5b8"
         ],
         "paired": true
       },
       {
         "provider": "codex",
-        "session": "a5a24b971a09cb2101f22cbe4339be75",
-        "turn": "c8f576a0afb501a5ea42652790cd2a2b",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "fe60bf6009ac600e6dabb612f0bd83c9",
-        "call": "5b626d9edbe944373593ddca28c97dcf",
+        "session": "973ddbd42455e829607e03a92db704f6",
+        "turn": "566ac672d39efb02d4f2aac23649081b",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "4b59ca9ece79949eca2460bc05e43e83",
+        "call": "4817ea373ea5fc895f2e7eb20b4cd10d",
         "tool": "Bash",
         "category": "test",
-        "fingerprint": "71826c3be972ec51f18296b9182762f4",
+        "fingerprint": "df02d27657bc64dff96cf287f83a15ae",
         "template": "python -m unittest discover",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "5b626d9edbe944373593ddca28c97dcf",
+        "model": "demo-codex-flash",
+        "id": "4817ea373ea5fc895f2e7eb20b4cd10d",
         "startedAt": 1801396628.0,
         "endedAt": 1801396629.0,
         "outcome": "success",
@@ -1863,30 +2387,31 @@
         "durationSource": "hook-wall",
         "operation": "test.python-test",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "8669c497d1a760d72f7a49cac2f83b85",
-          "4d7e5a64acae0eef6973b60ae6b4c64e"
+          "70eca026849d0aee37fb2277247b285a",
+          "ff7764e1617f85a61bcdebc55cc294fd"
         ],
         "paired": true
       },
       {
         "provider": "glm",
-        "session": "edccf4dd450adf66946d85d3c284b97e",
-        "turn": "e75b4db5f0ca0b0fed0e4569993cc692",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "a4e3ef87f0d632e2a8fc564638be64c1",
-        "call": "55d2d7eaa29b388824360e43b694b3fa",
+        "session": "333ee5d14c175821a88bf77bddf5e4e0",
+        "turn": "3c70e205fa44ffb9ee0acfe4176b0732",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "1f12e9a2f59ba79479b96ddfe707f81c",
+        "call": "89f27ca50fc9058f66b06dd0000ee58e",
         "tool": "Skill",
         "category": "other",
-        "fingerprint": "2c6a1b0cc58b5fe5ac23b52a932cd169",
+        "fingerprint": "933bdbf8bec8f87438cd15ceb4d9b3f4",
         "template": "other.Skill",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "55d2d7eaa29b388824360e43b694b3fa",
+        "model": "other",
+        "id": "89f27ca50fc9058f66b06dd0000ee58e",
         "startedAt": 1801396632.0,
         "endedAt": 1801396633.0,
         "outcome": "success",
@@ -1895,30 +2420,31 @@
         "durationSource": "hook-wall",
         "operation": "other",
         "outcomeSource": "structured-exit",
+        "modelSource": "not-reported",
         "collectionIssue": null,
         "evidence": [
-          "a8914639810e0e5dc5be5df7e8ef87a5",
-          "504775b96b7641416fd541e579a76a0c"
+          "df429a83db9d75cd2e013a948cce0536",
+          "5cf95c3e430265e35b4ebd9ea3006aec"
         ],
         "paired": true
       },
       {
         "provider": "codex",
-        "session": "a5a24b971a09cb2101f22cbe4339be75",
-        "turn": "c8f576a0afb501a5ea42652790cd2a2b",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "fe60bf6009ac600e6dabb612f0bd83c9",
-        "call": "c45db1a0d139d80d1e4bae57ffa06fa0",
+        "session": "973ddbd42455e829607e03a92db704f6",
+        "turn": "566ac672d39efb02d4f2aac23649081b",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "4b59ca9ece79949eca2460bc05e43e83",
+        "call": "43a5cbf29ae69c4b079f668dc3de7eee",
         "tool": "Skill",
         "category": "other",
-        "fingerprint": "2c6a1b0cc58b5fe5ac23b52a932cd169",
+        "fingerprint": "933bdbf8bec8f87438cd15ceb4d9b3f4",
         "template": "other.Skill",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "c45db1a0d139d80d1e4bae57ffa06fa0",
+        "model": "other",
+        "id": "43a5cbf29ae69c4b079f668dc3de7eee",
         "startedAt": 1801396632.0,
         "endedAt": 1801396633.0,
         "outcome": "success",
@@ -1927,30 +2453,31 @@
         "durationSource": "hook-wall",
         "operation": "other",
         "outcomeSource": "structured-exit",
+        "modelSource": "not-reported",
         "collectionIssue": null,
         "evidence": [
-          "123f84945968a9fb271e91345f67b1db",
-          "dca7fc56ba37f1014e9fb88dc36cf62e"
+          "1e754b2e2c35eef7afaae3808c64f695",
+          "ee1c2ca1443d8a4a4c33a9b352ede09c"
         ],
         "paired": true
       },
       {
         "provider": "glm",
-        "session": "edccf4dd450adf66946d85d3c284b97e",
-        "turn": "e75b4db5f0ca0b0fed0e4569993cc692",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "a4e3ef87f0d632e2a8fc564638be64c1",
-        "call": "4660e88bd9cd1323fe747f9e80da76d0",
+        "session": "333ee5d14c175821a88bf77bddf5e4e0",
+        "turn": "3c70e205fa44ffb9ee0acfe4176b0732",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "1f12e9a2f59ba79479b96ddfe707f81c",
+        "call": "429ddd73e7e70086cbf4c431fa3e4ab2",
         "tool": "mcp__local-checks__verify",
         "category": "remote",
-        "fingerprint": "ee767db4157cf0dcaf324d4a878f9c65",
+        "fingerprint": "306ea2041b06d7e9f6489b2f722d4aa1",
         "template": "remote.mcp__local-checks__verify",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "4660e88bd9cd1323fe747f9e80da76d0",
+        "model": "demo-glm-flash",
+        "id": "429ddd73e7e70086cbf4c431fa3e4ab2",
         "startedAt": 1801396636.0,
         "endedAt": 1801396637.0,
         "outcome": "success",
@@ -1959,30 +2486,31 @@
         "durationSource": "hook-wall",
         "operation": "remote",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "fbda1812efcba5f6cf6169d92760234f",
-          "56f4feb868f841c9660973b6dc4a55bf"
+          "354d022279700f557cf601a710eb44d2",
+          "aea85e11add9e185cd04fbd0f636086c"
         ],
         "paired": true
       },
       {
         "provider": "codex",
-        "session": "a5a24b971a09cb2101f22cbe4339be75",
-        "turn": "c8f576a0afb501a5ea42652790cd2a2b",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "fe60bf6009ac600e6dabb612f0bd83c9",
-        "call": "d6a84333d9c46b285bedc52a693aacc8",
+        "session": "973ddbd42455e829607e03a92db704f6",
+        "turn": "566ac672d39efb02d4f2aac23649081b",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "4b59ca9ece79949eca2460bc05e43e83",
+        "call": "a2736c57932c5331f6975688a6f19f59",
         "tool": "mcp__local-checks__verify",
         "category": "remote",
-        "fingerprint": "ee767db4157cf0dcaf324d4a878f9c65",
+        "fingerprint": "306ea2041b06d7e9f6489b2f722d4aa1",
         "template": "remote.mcp__local-checks__verify",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
-        "model": "demo-model",
-        "id": "d6a84333d9c46b285bedc52a693aacc8",
+        "model": "demo-codex-flash",
+        "id": "a2736c57932c5331f6975688a6f19f59",
         "startedAt": 1801396636.0,
         "endedAt": 1801396637.0,
         "outcome": "success",
@@ -1991,30 +2519,31 @@
         "durationSource": "hook-wall",
         "operation": "remote",
         "outcomeSource": "structured-exit",
+        "modelSource": "call-start",
         "collectionIssue": null,
         "evidence": [
-          "e87ae583154834ae32a95413f9c68738",
-          "5c9bfccbf57e9ed677a38eed19041b3f"
+          "b34b8bcf5a8e1c5e2c65e32c05e703d6",
+          "ac215b7a924479fbe264908473bdd0ab"
         ],
         "paired": true
       },
       {
         "provider": "glm",
-        "session": "67b9f34cf28260a41a9df9c3bfa37e7c",
-        "turn": "1ff35df3ae0685ee91bde856f2dc87ff",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "96c6c41c2918888ba9867cc8cb735459",
-        "call": "5ac5bfdf3e5298416282d00ecefc4d41",
+        "session": "37cbac9364c77e59064598387dfee2bc",
+        "turn": "e6e428f25271ed353ebbb8f7c30a69ed",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "0e29f5f093b2cc8911c585b97dafe2a0",
+        "call": "1d30bfabc7bcc391c81809798d78abd9",
         "tool": "Bash",
         "category": "build",
-        "fingerprint": "00539ca39dd3123d7840b6253cee826b",
+        "fingerprint": "f8ba64d77d0ab6a39e12285a95683b0f",
         "template": "npm run build",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
         "model": "other",
-        "id": "5ac5bfdf3e5298416282d00ecefc4d41",
+        "id": "1d30bfabc7bcc391c81809798d78abd9",
         "startedAt": 1801396770.0,
         "endedAt": 1801396771.0,
         "outcome": "failed",
@@ -2023,30 +2552,31 @@
         "durationSource": "hook-wall",
         "operation": "build.npm-build",
         "outcomeSource": "structured-exit",
+        "modelSource": "not-reported",
         "collectionIssue": null,
         "evidence": [
-          "475654ebfb82535a3c68b4670cbc5f76",
-          "be1c8f059ee5191293130c335b11bdf1"
+          "e1d6bf44003246b79c572fcbfbfa59a7",
+          "ad1146b87af03ea72b49c21c7d04e9e4"
         ],
         "paired": true
       },
       {
         "provider": "glm",
-        "session": "67b9f34cf28260a41a9df9c3bfa37e7c",
-        "turn": "baa5e56204a7b46463b97019d008fdf2",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "96c6c41c2918888ba9867cc8cb735459",
-        "call": "c9071967507c27b1a3c0548e17f8e6a3",
+        "session": "37cbac9364c77e59064598387dfee2bc",
+        "turn": "e3828de0058ce0db9178050de4948b53",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "0e29f5f093b2cc8911c585b97dafe2a0",
+        "call": "7145631be2ed2596bfe6433db8c0c143",
         "tool": "Bash",
         "category": "build",
-        "fingerprint": "00539ca39dd3123d7840b6253cee826b",
+        "fingerprint": "f8ba64d77d0ab6a39e12285a95683b0f",
         "template": "npm run build",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
         "model": "other",
-        "id": "c9071967507c27b1a3c0548e17f8e6a3",
+        "id": "7145631be2ed2596bfe6433db8c0c143",
         "startedAt": 1801396773.0,
         "endedAt": 1801396774.0,
         "outcome": "failed",
@@ -2055,30 +2585,31 @@
         "durationSource": "hook-wall",
         "operation": "build.npm-build",
         "outcomeSource": "structured-exit",
+        "modelSource": "not-reported",
         "collectionIssue": null,
         "evidence": [
-          "ca916622469d0440d926f6f8cf91f3fc",
-          "bcf0d9bf0eed214b28b90bda9c7f3844"
+          "aa76f072c138d62df7446b38922e864e",
+          "2fbabe4e428f76cf1dcaac1f97abe88d"
         ],
         "paired": true
       },
       {
         "provider": "glm",
-        "session": "67b9f34cf28260a41a9df9c3bfa37e7c",
-        "turn": "9847b09bf26f60281fe09545cb00ea5b",
-        "project": "026dd309595e44af61b12c4e32767344",
-        "actor": "96c6c41c2918888ba9867cc8cb735459",
-        "call": "40afce97cd525bf0ba86ada925fd00bf",
+        "session": "37cbac9364c77e59064598387dfee2bc",
+        "turn": "8e7a45a7079a75071d950c56839805e2",
+        "project": "ea7763adb133f20a12a8612c5c333969",
+        "actor": "0e29f5f093b2cc8911c585b97dafe2a0",
+        "call": "fd8dd98c9c1fcefd497560b3eae87ca3",
         "tool": "Bash",
         "category": "build",
-        "fingerprint": "00539ca39dd3123d7840b6253cee826b",
+        "fingerprint": "f8ba64d77d0ab6a39e12285a95683b0f",
         "template": "npm run build",
         "resource": "",
         "revision": "",
         "source": "hook",
         "turn_source": "native",
         "model": "other",
-        "id": "40afce97cd525bf0ba86ada925fd00bf",
+        "id": "fd8dd98c9c1fcefd497560b3eae87ca3",
         "startedAt": 1801396776.0,
         "endedAt": 1801396777.0,
         "outcome": "failed",
@@ -2087,10 +2618,11 @@
         "durationSource": "hook-wall",
         "operation": "build.npm-build",
         "outcomeSource": "structured-exit",
+        "modelSource": "not-reported",
         "collectionIssue": null,
         "evidence": [
-          "90d8a2015e2fa8afcd0e9ba45be0777b",
-          "41be9eb9c5a4cea5630d28181f8f3387"
+          "0d7ada10a3a2309d2854bd12de934937",
+          "f7428c12d5d9dc63c6d136e1c17b3c21"
         ],
         "paired": true
       }
@@ -2252,14 +2784,14 @@
         ],
         "calls": 6,
         "turns": 6,
-        "projectId": "026dd309595e44af61b12c4e32767344",
+        "projectId": "ea7763adb133f20a12a8612c5c333969",
         "evidenceIds": [
-          "e640969f767545b2176e56e797f164e1",
-          "182f59da2af22d69e90aa733190d8446",
-          "d8aa4508d61a3541cea3698e4510026c",
-          "523ebed3ba3d3c0a5ca2c6e0107ac47e",
-          "1638d2191a9265ea80feddb2119e8c14",
-          "60db483fc90e4f757a785f8371beff41"
+          "b3242b1a87e285b6a072b3d05a3eaa1a",
+          "614ffa9ee2e438464c7064f5f271e3a7",
+          "8f31909ba3ba3ff1abfc5778fa03bf49",
+          "71693deddb02e50d319e4aed33c48c01",
+          "13d4de9cd31eaa6470867180d907311f",
+          "6796ad64921d48eed3628b4bce639bcf"
         ],
         "confidence": "low; same family, not equivalent task"
       },
@@ -2271,14 +2803,14 @@
         ],
         "calls": 6,
         "turns": 6,
-        "projectId": "026dd309595e44af61b12c4e32767344",
+        "projectId": "ea7763adb133f20a12a8612c5c333969",
         "evidenceIds": [
-          "04581a0e8458341f7266d8d49c5c60f9",
-          "05b7669f342768192d9135ba06473560",
-          "817a0d0119ed9285f8766978f65d1ca9",
-          "97eb5452a5d7126f5630b1798a1e0af0",
-          "505fe7f9469cc1d66517cf7b54760548",
-          "a303892476aee917e5bacc7f94721813"
+          "383b1aa817a614c8b67b56af62b7ff42",
+          "e6baa7887f8c3fdc4ab035ee52659abf",
+          "48f77730aa69ebc6f0f43a39a4519ead",
+          "339e921af296a576be6012d4226c74e5",
+          "eb6546c457a3c06a176a86c9436de4f8",
+          "8eed49f3598e4140a7caf1008cec543e"
         ],
         "confidence": "low; same family, not equivalent task"
       },
@@ -2290,14 +2822,14 @@
         ],
         "calls": 6,
         "turns": 6,
-        "projectId": "026dd309595e44af61b12c4e32767344",
+        "projectId": "ea7763adb133f20a12a8612c5c333969",
         "evidenceIds": [
-          "bcc88671d6f84d1bde744965268a62d7",
-          "7a61148449bce0dd14c4b86c06a8a107",
-          "a6ff8a899d1fe0224b88cd3773d29db7",
-          "cf8f4113cc1a3cc7723baf0f54e25265",
-          "83d91fd63979077819844eb386f54432",
-          "5b626d9edbe944373593ddca28c97dcf"
+          "f35f1a8be640af4dac6256e9b2bfa67a",
+          "fad0ef1cfae5d288e6a73ff03ee361ef",
+          "9b13af8bcc9c54a4007c6dc640d3a648",
+          "039b8c6db229fc840eeec6b2115483f9",
+          "7aebe06e38cc51f86ab4407c97df928a",
+          "4817ea373ea5fc895f2e7eb20b4cd10d"
         ],
         "confidence": "low; same family, not equivalent task"
       },
@@ -2309,18 +2841,435 @@
         ],
         "calls": 6,
         "turns": 6,
-        "projectId": "026dd309595e44af61b12c4e32767344",
+        "projectId": "ea7763adb133f20a12a8612c5c333969",
         "evidenceIds": [
-          "ab30e2c462df646f8245ea6c935a68c7",
-          "e35f57790b5f05f6a57b5afd35e7b74d",
-          "f3b34430bdebea79a5c1ad274413b200",
-          "837d998907afa97f52001ca030495eb7",
-          "4660e88bd9cd1323fe747f9e80da76d0",
-          "d6a84333d9c46b285bedc52a693aacc8"
+          "e95add02a2f55ff599e3e777e36007e6",
+          "a3b23f76a1f706136c413f184e1531b2",
+          "61ab909fbda43e84b9d85b3a1332c7fa",
+          "a93b23e7bed9bc6eeb6266a3ae6c998e",
+          "429ddd73e7e70086cbf4c431fa3e4ab2",
+          "a2736c57932c5331f6975688a6f19f59"
         ],
         "confidence": "low; same family, not equivalent task"
       }
     ],
+    "modelHistory": {
+      "segments": [
+        {
+          "provider": "glm",
+          "session": "fbf556fea303044294286937a53eae41",
+          "actor": "87f06b86a104bcdf9c4140dacd488954",
+          "model": "demo-glm-large",
+          "firstObservedAt": 1801396560.0,
+          "lastObservedAt": 1801396564.0,
+          "calls": 2,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "first-observed",
+          "previousObservedAt": null,
+          "evidenceIds": [
+            "b3242b1a87e285b6a072b3d05a3eaa1a",
+            "383b1aa817a614c8b67b56af62b7ff42"
+          ]
+        },
+        {
+          "provider": "codex",
+          "session": "5fc8f3c7d1eca6ef206113bd911ba384",
+          "actor": "c83abd81d10a2c2ff4612cefde97f436",
+          "model": "demo-codex-large",
+          "firstObservedAt": 1801396560.0,
+          "lastObservedAt": 1801396564.0,
+          "calls": 2,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "first-observed",
+          "previousObservedAt": null,
+          "evidenceIds": [
+            "614ffa9ee2e438464c7064f5f271e3a7",
+            "e6baa7887f8c3fdc4ab035ee52659abf"
+          ]
+        },
+        {
+          "provider": "glm",
+          "session": "fbf556fea303044294286937a53eae41",
+          "actor": "87f06b86a104bcdf9c4140dacd488954",
+          "model": "demo-glm-flash",
+          "firstObservedAt": 1801396568.0,
+          "lastObservedAt": 1801396568.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "reported-change",
+          "previousObservedAt": 1801396564.0,
+          "evidenceIds": [
+            "f35f1a8be640af4dac6256e9b2bfa67a"
+          ]
+        },
+        {
+          "provider": "codex",
+          "session": "5fc8f3c7d1eca6ef206113bd911ba384",
+          "actor": "c83abd81d10a2c2ff4612cefde97f436",
+          "model": "demo-codex-flash",
+          "firstObservedAt": 1801396568.0,
+          "lastObservedAt": 1801396568.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "reported-change",
+          "previousObservedAt": 1801396564.0,
+          "evidenceIds": [
+            "fad0ef1cfae5d288e6a73ff03ee361ef"
+          ]
+        },
+        {
+          "provider": "glm",
+          "session": "fbf556fea303044294286937a53eae41",
+          "actor": "87f06b86a104bcdf9c4140dacd488954",
+          "model": "other",
+          "firstObservedAt": 1801396572.0,
+          "lastObservedAt": 1801396572.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "unknown-gap",
+          "previousObservedAt": 1801396568.0,
+          "evidenceIds": [
+            "d921eb4e5e7b940f62665156e7e0343d"
+          ]
+        },
+        {
+          "provider": "codex",
+          "session": "5fc8f3c7d1eca6ef206113bd911ba384",
+          "actor": "c83abd81d10a2c2ff4612cefde97f436",
+          "model": "other",
+          "firstObservedAt": 1801396572.0,
+          "lastObservedAt": 1801396572.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "unknown-gap",
+          "previousObservedAt": 1801396568.0,
+          "evidenceIds": [
+            "2cfa5563ba985a6d241c11f095494f97"
+          ]
+        },
+        {
+          "provider": "glm",
+          "session": "fbf556fea303044294286937a53eae41",
+          "actor": "87f06b86a104bcdf9c4140dacd488954",
+          "model": "demo-glm-flash",
+          "firstObservedAt": 1801396576.0,
+          "lastObservedAt": 1801396576.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "after-unknown",
+          "previousObservedAt": 1801396572.0,
+          "evidenceIds": [
+            "e95add02a2f55ff599e3e777e36007e6"
+          ]
+        },
+        {
+          "provider": "codex",
+          "session": "5fc8f3c7d1eca6ef206113bd911ba384",
+          "actor": "c83abd81d10a2c2ff4612cefde97f436",
+          "model": "demo-codex-flash",
+          "firstObservedAt": 1801396576.0,
+          "lastObservedAt": 1801396576.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "after-unknown",
+          "previousObservedAt": 1801396572.0,
+          "evidenceIds": [
+            "a3b23f76a1f706136c413f184e1531b2"
+          ]
+        },
+        {
+          "provider": "glm",
+          "session": "da1715ff8a704e3b20bcafd3ccd81308",
+          "actor": "7e0b3d08aa6ea117979fe4c170801b22",
+          "model": "demo-glm-large",
+          "firstObservedAt": 1801396590.0,
+          "lastObservedAt": 1801396594.0,
+          "calls": 2,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "first-observed",
+          "previousObservedAt": null,
+          "evidenceIds": [
+            "8f31909ba3ba3ff1abfc5778fa03bf49",
+            "48f77730aa69ebc6f0f43a39a4519ead"
+          ]
+        },
+        {
+          "provider": "codex",
+          "session": "101c751e1daf0097a1924be0d9c7d64a",
+          "actor": "0836c38cbf664fd4a510cac850e5d864",
+          "model": "demo-codex-large",
+          "firstObservedAt": 1801396590.0,
+          "lastObservedAt": 1801396594.0,
+          "calls": 2,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "first-observed",
+          "previousObservedAt": null,
+          "evidenceIds": [
+            "71693deddb02e50d319e4aed33c48c01",
+            "339e921af296a576be6012d4226c74e5"
+          ]
+        },
+        {
+          "provider": "glm",
+          "session": "da1715ff8a704e3b20bcafd3ccd81308",
+          "actor": "7e0b3d08aa6ea117979fe4c170801b22",
+          "model": "demo-glm-flash",
+          "firstObservedAt": 1801396598.0,
+          "lastObservedAt": 1801396598.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "reported-change",
+          "previousObservedAt": 1801396594.0,
+          "evidenceIds": [
+            "9b13af8bcc9c54a4007c6dc640d3a648"
+          ]
+        },
+        {
+          "provider": "codex",
+          "session": "101c751e1daf0097a1924be0d9c7d64a",
+          "actor": "0836c38cbf664fd4a510cac850e5d864",
+          "model": "demo-codex-flash",
+          "firstObservedAt": 1801396598.0,
+          "lastObservedAt": 1801396598.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "reported-change",
+          "previousObservedAt": 1801396594.0,
+          "evidenceIds": [
+            "039b8c6db229fc840eeec6b2115483f9"
+          ]
+        },
+        {
+          "provider": "glm",
+          "session": "da1715ff8a704e3b20bcafd3ccd81308",
+          "actor": "7e0b3d08aa6ea117979fe4c170801b22",
+          "model": "other",
+          "firstObservedAt": 1801396602.0,
+          "lastObservedAt": 1801396602.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "unknown-gap",
+          "previousObservedAt": 1801396598.0,
+          "evidenceIds": [
+            "ab5b17f821a4db1ace5aebca705dcbd3"
+          ]
+        },
+        {
+          "provider": "codex",
+          "session": "101c751e1daf0097a1924be0d9c7d64a",
+          "actor": "0836c38cbf664fd4a510cac850e5d864",
+          "model": "other",
+          "firstObservedAt": 1801396602.0,
+          "lastObservedAt": 1801396602.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "unknown-gap",
+          "previousObservedAt": 1801396598.0,
+          "evidenceIds": [
+            "39e3f93183679469a6310699f6d32d92"
+          ]
+        },
+        {
+          "provider": "glm",
+          "session": "da1715ff8a704e3b20bcafd3ccd81308",
+          "actor": "7e0b3d08aa6ea117979fe4c170801b22",
+          "model": "demo-glm-flash",
+          "firstObservedAt": 1801396606.0,
+          "lastObservedAt": 1801396606.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "after-unknown",
+          "previousObservedAt": 1801396602.0,
+          "evidenceIds": [
+            "61ab909fbda43e84b9d85b3a1332c7fa"
+          ]
+        },
+        {
+          "provider": "codex",
+          "session": "101c751e1daf0097a1924be0d9c7d64a",
+          "actor": "0836c38cbf664fd4a510cac850e5d864",
+          "model": "demo-codex-flash",
+          "firstObservedAt": 1801396606.0,
+          "lastObservedAt": 1801396606.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "after-unknown",
+          "previousObservedAt": 1801396602.0,
+          "evidenceIds": [
+            "a93b23e7bed9bc6eeb6266a3ae6c998e"
+          ]
+        },
+        {
+          "provider": "glm",
+          "session": "333ee5d14c175821a88bf77bddf5e4e0",
+          "actor": "1f12e9a2f59ba79479b96ddfe707f81c",
+          "model": "demo-glm-large",
+          "firstObservedAt": 1801396620.0,
+          "lastObservedAt": 1801396624.0,
+          "calls": 2,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "first-observed",
+          "previousObservedAt": null,
+          "evidenceIds": [
+            "13d4de9cd31eaa6470867180d907311f",
+            "eb6546c457a3c06a176a86c9436de4f8"
+          ]
+        },
+        {
+          "provider": "codex",
+          "session": "973ddbd42455e829607e03a92db704f6",
+          "actor": "4b59ca9ece79949eca2460bc05e43e83",
+          "model": "demo-codex-large",
+          "firstObservedAt": 1801396620.0,
+          "lastObservedAt": 1801396624.0,
+          "calls": 2,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "first-observed",
+          "previousObservedAt": null,
+          "evidenceIds": [
+            "6796ad64921d48eed3628b4bce639bcf",
+            "8eed49f3598e4140a7caf1008cec543e"
+          ]
+        },
+        {
+          "provider": "glm",
+          "session": "333ee5d14c175821a88bf77bddf5e4e0",
+          "actor": "1f12e9a2f59ba79479b96ddfe707f81c",
+          "model": "demo-glm-flash",
+          "firstObservedAt": 1801396628.0,
+          "lastObservedAt": 1801396628.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "reported-change",
+          "previousObservedAt": 1801396624.0,
+          "evidenceIds": [
+            "7aebe06e38cc51f86ab4407c97df928a"
+          ]
+        },
+        {
+          "provider": "codex",
+          "session": "973ddbd42455e829607e03a92db704f6",
+          "actor": "4b59ca9ece79949eca2460bc05e43e83",
+          "model": "demo-codex-flash",
+          "firstObservedAt": 1801396628.0,
+          "lastObservedAt": 1801396628.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "reported-change",
+          "previousObservedAt": 1801396624.0,
+          "evidenceIds": [
+            "4817ea373ea5fc895f2e7eb20b4cd10d"
+          ]
+        },
+        {
+          "provider": "glm",
+          "session": "333ee5d14c175821a88bf77bddf5e4e0",
+          "actor": "1f12e9a2f59ba79479b96ddfe707f81c",
+          "model": "other",
+          "firstObservedAt": 1801396632.0,
+          "lastObservedAt": 1801396632.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "unknown-gap",
+          "previousObservedAt": 1801396628.0,
+          "evidenceIds": [
+            "89f27ca50fc9058f66b06dd0000ee58e"
+          ]
+        },
+        {
+          "provider": "codex",
+          "session": "973ddbd42455e829607e03a92db704f6",
+          "actor": "4b59ca9ece79949eca2460bc05e43e83",
+          "model": "other",
+          "firstObservedAt": 1801396632.0,
+          "lastObservedAt": 1801396632.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "unknown-gap",
+          "previousObservedAt": 1801396628.0,
+          "evidenceIds": [
+            "43a5cbf29ae69c4b079f668dc3de7eee"
+          ]
+        },
+        {
+          "provider": "glm",
+          "session": "333ee5d14c175821a88bf77bddf5e4e0",
+          "actor": "1f12e9a2f59ba79479b96ddfe707f81c",
+          "model": "demo-glm-flash",
+          "firstObservedAt": 1801396636.0,
+          "lastObservedAt": 1801396636.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "after-unknown",
+          "previousObservedAt": 1801396632.0,
+          "evidenceIds": [
+            "429ddd73e7e70086cbf4c431fa3e4ab2"
+          ]
+        },
+        {
+          "provider": "codex",
+          "session": "973ddbd42455e829607e03a92db704f6",
+          "actor": "4b59ca9ece79949eca2460bc05e43e83",
+          "model": "demo-codex-flash",
+          "firstObservedAt": 1801396636.0,
+          "lastObservedAt": 1801396636.0,
+          "calls": 1,
+          "unknownOutcomes": 0,
+          "failed": 0,
+          "transition": "after-unknown",
+          "previousObservedAt": 1801396632.0,
+          "evidenceIds": [
+            "a2736c57932c5331f6975688a6f19f59"
+          ]
+        },
+        {
+          "provider": "glm",
+          "session": "37cbac9364c77e59064598387dfee2bc",
+          "actor": "0e29f5f093b2cc8911c585b97dafe2a0",
+          "model": "other",
+          "firstObservedAt": 1801396770.0,
+          "lastObservedAt": 1801396776.0,
+          "calls": 3,
+          "unknownOutcomes": 0,
+          "failed": 3,
+          "transition": "first-observed",
+          "previousObservedAt": null,
+          "evidenceIds": [
+            "1d30bfabc7bcc391c81809798d78abd9",
+            "7145631be2ed2596bfe6433db8c0c143",
+            "fd8dd98c9c1fcefd497560b3eae87ca3"
+          ]
+        }
+      ],
+      "truncated": false,
+      "knownModelCalls": 24,
+      "unknownModelCalls": 9,
+      "reportedChanges": 6,
+      "coverage": "native call identifiers only; observation times, not exact UI switch times; unknowns never inherited"
+    },
     "quality": {
       "pairedCalls": 33,
       "knownOutcomes": 33,

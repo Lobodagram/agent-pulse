@@ -310,7 +310,8 @@ class Pulse:
         def finding_selected(_):
             if not finder.selection():return
             r=findings[int(finder.selection()[0])];calls=[c for c in report.get('recentCalls',[]) if c['id'] in r['evidenceIds']]
-            lines=[r['suggestionRu'] if self.language=='ru' else r['suggestion'],' → '.join(r['sequence']),' → '.join(r.get('operations',[])),r['inventoryStatus'],self.t('No per-tool token estimate.','Токены каждому инструменту не приписываются.'),'']+[f"{c['tool']} · {c['template']} · {c['outcome']} · {c['durationMs']} ms · {c.get('outcomeSource','legacy')}" for c in calls]
+            models=', '.join(r.get('models',[])) or self.t('unknown','неизвестно')
+            lines=[r['suggestionRu'] if self.language=='ru' else r['suggestion'],' → '.join(r['sequence']),' → '.join(r.get('operations',[])),r['inventoryStatus'],self.t('Models: ','Модели: ')+models+f" · {r.get('unknownModelCalls',0)} "+self.t('unknown calls','вызовов без модели'),self.t('No per-tool token estimate.','Токены каждому инструменту не приписываются.'),'']+[f"{c['tool']} · {c['template']} · {c['outcome']} · {c['durationMs']} ms · {c.get('outcomeSource','legacy')}\n  {c.get('model','other')} · {c.get('modelSource','not-reported')}" for c in calls]
             if not calls:lines.append(self.t('Use local MCP/CLI for evidence outside recent preview.','Примеры вне свежего списка доступны через локальный MCP/CLI.'))
             info.configure(state='normal');info.delete('1.0','end');info.insert('1.0','\n'.join(lines));info.configure(state='disabled')
         finder.bind('<<TreeviewSelect>>',finding_selected)
@@ -329,7 +330,20 @@ class Pulse:
                 j=Journal(self.state)
                 try:calls=j.calls(r['id'])[:500]
                 finally:j.close()
-            lines=[self.t('Wall times may overlap; they are not summed.','Времена могут пересекаться; они не суммируются.'),'']+[f"{c['category']} · {c['tool']} · {c['outcome']}\n  {c['template']}\n  {c['durationMs']} ms · {c['durationSource']}" for c in calls]
+            from model_evidence import model_history
+            history=model_history(calls)
+            unknown=self.t('Unknown model','Модель неизвестна')
+            transitions={'first-observed':'первое наблюдение','unknown-gap':'модель не передана','after-unknown':'после пропуска','timing-unverified':'порядок не подтверждён','overlapping-observations':'параллельные наблюдения','reported-change':'изменение в вызовах','same-reported-model':'та же модель'}
+            def model_name(m):return unknown if m in (None,'other') else m
+            def model_time(at):return datetime.fromtimestamp(at).strftime('%Y-%m-%d %H:%M:%S') if at is not None else '—'
+            lines=[self.t('Observed model history','История наблюдаемых моделей'),
+                   self.t('Times refer to calls, not exact UI switches. Unknowns are not inherited.','Время относится к вызовам, не к переключению в интерфейсе. Модель не угадывается.'),
+                   f"{history['knownModelCalls']} / {history['knownModelCalls']+history['unknownModelCalls']} · "+self.t('identified calls','вызовов с моделью')]
+            for s in history['segments']:
+                transition=transitions.get(s['transition'],s['transition']) if self.language=='ru' else s['transition']
+                lines.append(f"{model_name(s['model'])} · {s['calls']}\n  {model_time(s['firstObservedAt'])} → {model_time(s['lastObservedAt'])} · {transition}")
+            if history['truncated']:lines.append(self.t('Last 100 segments; export for more.','Последние 100 участков; продолжение — в экспорте.'))
+            lines += ['',self.t('Observed calls; wall times may overlap.','Наблюдаемые вызовы; времена могут пересекаться.'),'']+[f"{c['category']} · {c['tool']} · {c['outcome']}\n  {model_name(c.get('model'))} · {c.get('modelSource','not-reported')}\n  {c['template']}\n  {c['durationMs']} ms · {c['durationSource']}" for c in calls]
             detail.configure(state='normal');detail.delete('1.0','end');detail.insert('1.0','\n'.join(lines));detail.configure(state='disabled')
         tree.bind('<<TreeviewSelect>>',selected)
         def annotate():
@@ -353,7 +367,11 @@ class Pulse:
         if self.smoke:
             for index in range(4):book.select(index);w.update_idletasks()
             if findings:finder.selection_set('0');finding_selected(None)
-            if items:tree.selection_set('0');selected(None)
+            if items:
+                index=next((i for i,r in enumerate(items) if r.get('modelHistory',{}).get('reportedChanges',0)>0),0)
+                tree.selection_set(str(index));selected(None)
+                if any(r.get('modelHistory',{}).get('reportedChanges',0)>0 for r in items):
+                    assert 'demo-' in detail.get('1.0','end'),'Model history must be rendered from fixture'
     def settings(self):
         w=self.window(self.t('Agent Pulse · settings','Agent Pulse · настройки'))
         canvas=tk.Canvas(w,bg=BG,highlightthickness=0);scroll=ttk.Scrollbar(w,command=canvas.yview);canvas.configure(yscrollcommand=scroll.set);scroll.pack(side='right',fill='y');canvas.pack(fill='both',expand=True)

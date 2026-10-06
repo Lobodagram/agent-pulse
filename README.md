@@ -4,12 +4,16 @@
 
 A local tool for improving coding-agent workspaces: collect sanitized tool events, inspect repeated workflows and failures, and review evidence before automating a task or adding a skill/MCP. The desktop widget also shows reported tokens and subscription quotas.
 
-**0.5.2 public preview.** macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
+**0.6.0 public preview.** macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
 
 **Confirm collection first:** configured observers are not proof of observation. After setup, start a new native session, review hook trust when required, perform an ordinary task, and check Workflows for actual paired calls. See the [readiness audit](docs/AUDIT.md). Capabilities separates exact registered skill-file loads, explicit invocations and manual declarations. No observed use is not proof of non-use; command families are bounded static classifications, not semantic understanding of arbitrary code.
 
 ![Compact English widget — invented demo data](docs/screenshots/widget-en.png)
 ![Workflows — invented demo events](docs/screenshots/workflows-en.png)
+
+![Observed model history — invented demo events](docs/screenshots/models-en.png)
+
+[Model evidence and limitations](docs/MODELS.md). Per-call models and observed changes are shown only where native events report them; current UI selection never backfills history.
 
 ## What it does
 

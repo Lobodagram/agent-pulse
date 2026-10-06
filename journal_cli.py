@@ -5,6 +5,7 @@ from analytics import report, compare
 from journal import Journal, atomic_json
 from instrumentation import configure_hooks, scan_inventory
 from evidence_pack import evidence_pack
+from model_evidence import model_history
 
 def run(args):
     j=Journal(args.state)
@@ -18,7 +19,7 @@ def run(args):
             import re
             if not isinstance(args.session,str) or not re.fullmatch('[a-f0-9]{32}',args.session):raise ValueError('invalid_session')
             rows=j.calls(args.session)
-            return {'sessionId':args.session,'calls':rows[:500],'truncated':len(rows)>500,'coverage':'observed calls only'}
+            return {'sessionId':args.session,'calls':rows[:500],'truncated':len(rows)>500,'modelHistory':model_history(rows),'coverage':'observed calls only'}
         if args.action=='inventory':
             if not args.file or args.file.is_symlink() or args.file.stat().st_size>1024*1024:raise ValueError('invalid_inventory_file')
             j.import_inventory(json.loads(args.file.read_text()));return {'saved':True}

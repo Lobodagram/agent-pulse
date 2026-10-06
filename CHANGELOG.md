@@ -1,5 +1,11 @@
 # Changelog / Изменения
 
+## 0.6.0 · 2026-10-06
+
+- Per-call model sources, bounded observed model segments, unknown/conflicting identifiers and parallel-lane separation.
+- Sessions on Mac/Windows, CLI/MCP, workflow evidence and comparisons show model evidence; missing native model data remains unknown.
+- 130 unit tests include model changes, gaps, duplicates and overlapping calls; bilingual model guide and invented model-history screenshots.
+
 ## 0.5.2 · 2026-10-06
 
 - Focus/restore fixture starts on text-only Workflows before view construction, isolating window assertions from the hosted Intel Metal chart abort diagnosed in 0.5.1. Graphs checked on the development ARM64 Mac; physical Intel graph acceptance remains open. Earlier failed tags preserved without binaries.

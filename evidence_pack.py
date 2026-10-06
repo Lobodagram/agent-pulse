@@ -14,6 +14,7 @@ def evidence_pack(j,finding_id):
                       'nextAction':finding['action'],
                       'steps':['Check that the sampled calls solve the same task.',
                                'Review native coverage and unknown or incomplete outcomes.',
+                               'Check reported models, unknown model calls and changes before comparing work.',
                                'Confirm live availability and actual capability use.',
                                'Choose a small script, skill or typed MCP only after review.',
                                'Compare accepted results and rework on comparable before/after tasks.'],

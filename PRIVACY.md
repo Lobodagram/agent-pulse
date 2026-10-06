@@ -38,3 +38,5 @@ Work history remains continuous across account switches. The journal groups by p
 
 
 Optional local Codex daily tokens (0.3.1): off by default and independent of tool-pattern projection. When enabled, the native metadata API returns at most 30 recent session paths; only bounded token-count events under the native sessions root are projected. Raw records may contain conversation text but no message text, prompts, code or arguments are retained in this mode. The result is a partial device-wide UTC-day count, not a complete account bill or per-tool cost. It is never added to an account daily total. Shared general history and current account quotas remain separate.
+
+Model evidence retains only sanitized native top-level identifiers and conflict markers. Missing call models are never inferred from current UI, configuration, response text or session-start selection. Timelines describe observed calls, not exact UI switch times.

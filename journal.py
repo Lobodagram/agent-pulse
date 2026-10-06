@@ -121,6 +121,7 @@ class Journal:
         CREATE TABLE IF NOT EXISTS turn_usage(provider TEXT,session TEXT,turn TEXT,input REAL,cached_input REAL,
           output REAL,source TEXT,at REAL,PRIMARY KEY(provider,session,turn,source));
         CREATE TABLE IF NOT EXISTS call_metadata(event TEXT PRIMARY KEY, signature TEXT, outcome_source TEXT);
+        CREATE TABLE IF NOT EXISTS model_conflict(event TEXT PRIMARY KEY);
         CREATE TABLE IF NOT EXISTS capability_locator(provider TEXT,id TEXT,locator TEXT,PRIMARY KEY(provider,id,locator));
         CREATE TABLE IF NOT EXISTS capability_evidence(provider TEXT,session TEXT,turn TEXT,call TEXT,
           id TEXT,kind TEXT,evidence TEXT,at REAL,PRIMARY KEY(provider,session,call,id,evidence));
@@ -181,6 +182,15 @@ class Journal:
         values=(eid,provider,session,turn,project,actor,call,phase,at,now,tool,kind,fingerprint,template,resource,revision,status,code,duration,duration_source,safe_name(source),turn_source,safe_name(raw.get('model')))
         # Retry deliveries deduplicate. Hook and historical projection remain distinct; no claims of complete coverage.
         self.db.execute('INSERT OR IGNORE INTO observation VALUES ('+','.join('?' for _ in values)+')',values)
+        if istool:
+            reported_model=safe_name(raw.get('model'))
+            stored_model=self.db.execute('SELECT model FROM observation WHERE id=?',(eid,)).fetchone()['model']
+            conflicted=self.db.execute('SELECT 1 FROM model_conflict WHERE event=?',(eid,)).fetchone()
+            if not conflicted and reported_model!='other':
+                if stored_model=='other':self.db.execute('UPDATE observation SET model=? WHERE id=?',(reported_model,eid))
+                elif stored_model!=reported_model:
+                    self.db.execute('INSERT OR IGNORE INTO model_conflict VALUES (?)',(eid,))
+                    self.db.execute("UPDATE observation SET model='other' WHERE id=?",(eid,))
         p=profile(command) if command else None
         signature='unknown' if p and (not p['operations'] or any(o['family']=='unknown' for o in p['operations'])) else (
             ' '.join(o['category']+'.'+o['family']+(' '+p['operators'][i] if i<len(p['operators']) else '')
@@ -268,7 +278,7 @@ class Journal:
     def calls(self,session=None,days=30):
         args=[time.time()-days*86400];where='received>=?'
         if session:where+=' AND session=?';args.append(session)
-        rows=self.db.execute('SELECT observation.*,call_metadata.signature,call_metadata.outcome_source FROM observation LEFT JOIN call_metadata ON observation.id=call_metadata.event WHERE '+where+' ORDER BY received DESC LIMIT 20000',args).fetchall()
+        rows=self.db.execute('SELECT observation.*,call_metadata.signature,call_metadata.outcome_source,EXISTS(SELECT 1 FROM model_conflict WHERE event=observation.id) AS model_conflicted FROM observation LEFT JOIN call_metadata ON observation.id=call_metadata.event WHERE '+where+' ORDER BY received DESC LIMIT 20000',args).fetchall()
         boundaries={}
         for r in rows:
             if r['phase'] in {'Stop','Interrupt','SessionEnd'}:
@@ -281,6 +291,8 @@ class Journal:
         result=[]
         for parts in paired.values():
             start=parts.get('start');end=parts.get('finish');r=start or end
+            from model_evidence import call_model
+            model,model_source=call_model(start,end)
             status=end['outcome'] if end else 'pending'
             duration=end.get('duration_ms') if end else None;dsource=end['duration_source'] if end else 'unknown'
             if duration is None and start and end and end['at']>=start['at']:
@@ -289,6 +301,7 @@ class Journal:
                 'id':r['call'],'startedAt':start['at'] if start else None,'endedAt':end['at'] if end else None,
                 'outcome':status,'exitCode':end['exit_code'] if end else None,'durationMs':duration,'durationSource':dsource,
                 'operation':r['signature'] or 'legacy','outcomeSource':end['outcome_source'] or 'legacy' if end else 'not-finished',
+                'model':model,'modelSource':model_source,
                 'collectionIssue':('missing-finish-after-boundary' if boundaries.get((r['provider'],r['session'],r['actor']),0)>=r['at'] else
                                    'stale-unpaired' if time.time()-r['received']>600 else 'awaiting-finish') if not end else 'missing-start' if not start else None,
                 'evidence':[v['id'] for v in [start,end] if v], 'paired':bool(start and end)})
@@ -301,6 +314,7 @@ class Journal:
         self.db.execute('DELETE FROM live_turn WHERE turn NOT IN (SELECT DISTINCT turn FROM observation)')
         self.db.execute('DELETE FROM observation WHERE id IN (SELECT id FROM observation ORDER BY received DESC LIMIT -1 OFFSET ?)',(MAX_EVENTS,))
         self.db.execute('DELETE FROM call_metadata WHERE event NOT IN (SELECT id FROM observation)')
+        self.db.execute('DELETE FROM model_conflict WHERE event NOT IN (SELECT id FROM observation)')
         self.db.execute('DELETE FROM capability_evidence WHERE at<? OR session NOT IN (SELECT session FROM observation)',(cutoff,))
         self.db.execute('DELETE FROM capability_evidence WHERE rowid IN (SELECT rowid FROM capability_evidence ORDER BY at DESC LIMIT -1 OFFSET ?)',(MAX_EVENTS,))
         self.db.commit()

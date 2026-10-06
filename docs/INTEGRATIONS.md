@@ -21,3 +21,5 @@ Official sources / Официальные источники:
 - [Codex CLI configuration](https://developers.openai.com/codex/config-reference/)
 - [Claude Code status line](https://code.claude.com/docs/en/statusline)
 - [ZCode plugin contract](https://zcode.z.ai/en/docs/plugin)
+
+Next adapter proposal: [English](CLIENT_ADAPTERS.md) / [Русский](CLIENT_ADAPTERS.ru.md). Reviewed native model-switch and OAuth quota candidates; no new plugin installed.
