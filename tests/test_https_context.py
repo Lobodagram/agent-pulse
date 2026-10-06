@@ -14,7 +14,7 @@ class HTTPSContextTests(unittest.TestCase):
         context=Mock()
         with patch('providers.ssl.create_default_context',return_value=context), patch('providers.sys.platform','darwin'), patch('providers.sys.frozen',True,create=True), patch('providers.Path.is_file',return_value=True):
             self.assertIs(providers.verified_http_context(),context)
-        context.load_verify_locations.assert_called_once_with(cafile='/etc/ssl/cert.pem')
+        context.load_verify_locations.assert_called_once_with(cafile=str(providers.Path('/etc/ssl/cert.pem')))
 
     def test_missing_roots_and_other_platforms_keep_default_trust(self):
         for platform,frozen,present in [('darwin',True,False),('win32',True,True),('darwin',False,True)]:
