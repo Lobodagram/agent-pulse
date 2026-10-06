@@ -41,7 +41,13 @@ jobs:
         run: |
           python -m PyInstaller --clean --noconfirm --onefile --windowed --name AgentPulse --paths . windows/agent_pulse.py
           python windows/agent_pulse.py --fixture examples/demo.json --smoke
-          Start-Process -FilePath dist/AgentPulse.exe -ArgumentList '--fixture','examples/demo.json','--smoke' -Wait -PassThru | ForEach-Object { if ($_.ExitCode -ne 0) { throw 'Packaged Windows smoke failed' } }
+          $demo = (Resolve-Path examples/demo.json).Path
+          $smoke = Start-Process -FilePath dist/AgentPulse.exe -ArgumentList '--fixture',"`"$demo`"",'--smoke' -Wait -PassThru
+          if ($smoke.ExitCode -ne 0) {
+            python -m PyInstaller --clean --noconfirm --onefile --console --name AgentPulseDebug --paths . windows/agent_pulse.py
+            & ./dist/AgentPulseDebug.exe --fixture $demo --smoke
+            throw 'Packaged Windows smoke failed; diagnostic output above'
+          }
           python scripts/runtime_notices.py dist/Licenses
           Compress-Archive -Path dist/AgentPulse.exe,dist/Licenses,LICENSE,NOTICE,README.md,README.ru.md -DestinationPath 'dist/agent-pulse-${{ matrix.artifact }}.zip'
       - uses: actions/upload-artifact@v4
