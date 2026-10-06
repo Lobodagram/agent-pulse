@@ -4,6 +4,8 @@ Third peer audit verified against canonical 0.7.1. A global finding list cannot 
 
 Local fixture benchmark: 19,980 calls and 30 distinct completed review windows. Full cards and review results equal the previous committed implementation. Recheck SQL statements decrease from 61 to 1; median of three runs 79.63 → 75.37 ms on this Mac, peak traced allocation 155,656 → 135,774 bytes. These are fixture-only review measurements, not whole-app speed, native collection completeness or subscription savings. Distinct windows still require distinct detection passes.
 
+The first downloaded0.7.2 frozen hook timed out at2seconds (cause unknown). Fresh copied-path diagnostics also exceeded that deadline on prior0.7.1 (3.4058s);0.7.2 measured0.3578s and later downloaded/installed strict tests passed. OS caches were not reset. Cold-start reliability is still open; native timeout/trust settings unchanged.
+
 Five added regressions cover all pattern kinds, ranking/overlap/counts, top-30, unknowns, provider/project/window scope and no inventory/capability queries in the summary path. Engineering hygiene improves; effectiveness against the core analytics goal stays **7/10** pending representative accepted tasks and observational follow-up. Signing, slow-device hook starts and physical platform acceptance remain open.
 
 Общий список находок нельзя подставлять вместо отдельных окон сравнения. Облегчённый расчёт сохраняет прежние результаты; замер на синтетическом журнале не доказывает экономию подписки или полноту сбора реальных событий.

@@ -2,7 +2,13 @@
 
 Five focused regressions pass for equivalent lightweight/full findings, all five pattern kinds, the top-30 cap, pending/unknown calls and separate provider/project/half-open time windows. The previous committed full finding and review outputs were independently compared in a private invented fixture: 19,980 calls / 30 distinct completed review windows, exact equality. No production telemetry was injected; no peer client was started or modified.
 
-Local benchmark scope and remaining acceptance gates are in [AUDIT.md](AUDIT.md). Build/package/platform checks will be recorded after delivery; source tests alone are not native client acceptance.
+Local benchmark scope and remaining acceptance gates are in [AUDIT.md](AUDIT.md). [Source Checks37519568327](https://github.com/Lobodagram/agent-pulse/actions/runs/37519568327) and [tagged packages37519855463](https://github.com/Lobodagram/agent-pulse/actions/runs/37519855463) passed all targets at0cf6317a650e3233d2ae9ebd58cf0ba39ef48a33.166 tests, isolated runtime-wheel/CLI/hook/MCP and source Mac strict two-second helper/15 widgets/EN-RU model fixtures passed. All110 public files verified by blob hash/size/mode. MIT and bilingual preview release published; tag preserved.
+
+All three [release archives](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.7.2) downloaded back and matched SHA256SUMS/runtime/notices/path checks. Mac versions match0.7.2; Windows binary execution is covered by CI, not local physical acceptance.
+
+Downloaded ARM64 SHA256/path/notices/signature and15 widget/EN-RU model checks passed, renders inspected. **The first downloaded frozen-hook test timed out at2seconds.** Cause is unknown. A diagnostic at newly copied paths measured prior0.7.1 at3.4058s and0.7.2 at0.3578s, without resetting OS caches. Subsequent downloaded and installed0.7.2 strict hook/journal/MCP tests passed. This does not prove safe cold starts on all machines; deadline remains an open risk and native timeouts/trust were not changed. Installed0.7.2/build18: one instance, configuration stable and previous0.7.1 preserved. Peer was not launched or configured.
+
+Source tests alone are not native client acceptance. Physical Windows DPI/Intel charts/Spaces/fullscreen/multiple displays/sleep-wake, signing/notarization and real accepted before/after tasks remain open.
 
 ## 0.7.1 delivered packages · 2026-10-06
 
