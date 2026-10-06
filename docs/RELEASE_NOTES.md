@@ -1,4 +1,4 @@
-Agent Pulse v0.3.1 — Smaller widget / Маленькое табло
+Agent Pulse v0.3.2 — Smaller widget / Маленькое табло
 
 80/90/100% widget sizes, continuous scaling and corner grip. Mac menu-bar-only mode with compact first-two-client values and click popover; icon-only saves space beside the camera. Windows offers smaller floating-widget sizes and system tray: hover counters, click to expand/collapse, right-click actions, Explorer restart recovery and visible fallback.
 
@@ -12,3 +12,8 @@ Python bundled. Mac 14+ ARM64/Intel: ad-hoc signed, not notarized. Windows 10/11
 
 
 Explicit × exit, −/⌄ collapse, one production instance on both desktops. Явные кнопки выхода и сворачивания, защита от повторных экземпляров.
+
+
+0.3.2 fixes Windows 80% clipping with two quota-bearing clients. A dedicated hosted layout regression verifies this alongside normal resizing and tray behavior.
+
+0.3.2 исправляет обрезание полей Windows при 80% и двух клиентах с квотами. Добавлена отдельная проверка этого сценария вместе с размерами и треем.

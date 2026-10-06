@@ -1,3 +1,7 @@
+## 0.3.2 · 2026-10-06
+
+- Fix clipped Windows fields at 80% when both visible clients report quotas. Add a UTF-8 two-quota-client layout regression to hosted Windows checks.
+
 ## 0.3.1 · 2026-10-06
 
 - Windows native tray: hover counters, click expand/collapse, context menu, Explorer recovery and visible fallback.

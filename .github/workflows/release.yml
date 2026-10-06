@@ -47,6 +47,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Frozen collector failed" }
           python -m PyInstaller --clean --noconfirm --onefile --windowed --name AgentPulse --paths . windows/agent_pulse.py
           python windows/agent_pulse.py --fixture examples/demo.json --smoke
+          python -c "import json,pathlib; p=pathlib.Path('.build'); p.mkdir(exist_ok=True); d=json.loads(pathlib.Path('examples/demo.json').read_text(encoding='utf-8')); d['providers'][1]['quotas']=d['providers'][0]['quotas']; (p/'two-quotas.json').write_text(json.dumps(d),encoding='utf-8')"
+          python windows/agent_pulse.py --fixture .build/two-quotas.json --smoke
           $demo = (Resolve-Path examples/demo.json).Path
           $smoke = Start-Process -FilePath dist/AgentPulse.exe -ArgumentList '--fixture',"`"$demo`"",'--smoke' -Wait -PassThru
           if ($smoke.ExitCode -ne 0) {
@@ -54,6 +56,9 @@ jobs:
             & ./dist/AgentPulseDebug.exe --fixture $demo --smoke
             throw 'Packaged Windows smoke failed; diagnostic output above'
           }
+          $quotaDemo = (Resolve-Path .build/two-quotas.json).Path
+          $quotaSmoke = Start-Process -FilePath dist/AgentPulse.exe -ArgumentList '--fixture',"`"$quotaDemo`"",'--smoke' -Wait -PassThru
+          if ($quotaSmoke.ExitCode -ne 0) { throw 'Packaged Windows two-quota layout smoke failed' }
           python scripts/runtime_notices.py dist/Licenses
           Compress-Archive -Path dist/AgentPulse.exe,dist/pulse-collector.exe,dist/Licenses,LICENSE,NOTICE,README.md,README.ru.md -DestinationPath 'dist/agent-pulse-${{ matrix.artifact }}.zip'
       - uses: actions/upload-artifact@v4

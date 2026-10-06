@@ -25,13 +25,13 @@ class Pulse:
     def __init__(self,root,fixture=None,smoke=False):
         self.root=root;self.state=state_directory();self.fixture=fixture;self.smoke=smoke;self.data={};self.loading=False;self.page=0;self.pending=queue.Queue();self.language='en';self.auth_revision=0;self.auth_marks={};self.reading_limits=False
         root.title('Agent Pulse');root.geometry('400x310+100+100');root.configure(bg=BG);root.overrideredirect(True);root.attributes('-topmost',True)
-        header=tk.Frame(root,bg=BG);header.pack(fill='x',padx=14,pady=(12,6))
+        header=tk.Frame(root,bg=BG);header.pack(fill='x',padx=14,pady=(8,4))
         title=tk.Label(header,text='● AGENT PULSE'+(' · DEMO' if fixture else ''),bg=BG,fg=MINT,font=('Segoe UI',10,'bold'));title.pack(side='left')
         title.bind('<Button-1>',self.begin_drag);title.bind('<B1-Motion>',self.drag)
         for text,command in [('×',self.quit),('⌄',self.collapse),('⚙',self.settings),('▥',self.analysis),('↻',self.refresh)]:
             tk.Button(header,text=text,command=command,bg=BG,fg=FG,bd=0,width=2).pack(side='right')
         self.content=tk.Frame(root,bg=BG);self.content.pack(fill='both',expand=True,padx=16)
-        self.footer=tk.Frame(root,bg=BG);self.footer.pack(fill='x',padx=16,pady=8)
+        self.footer=tk.Frame(root,bg=BG);self.footer.pack(fill='x',padx=16,pady=6)
         tk.Button(self.footer,text='‹',command=lambda:self.change_page(-1),bg=BG,fg=MINT,bd=0).pack(side='left')
         self.page_label=tk.Label(self.footer,bg=BG,fg=QUIET);self.page_label.pack(side='left')
         tk.Button(self.footer,text='›',command=lambda:self.change_page(1),bg=BG,fg=MINT,bd=0).pack(side='left')
@@ -179,7 +179,7 @@ class Pulse:
                     for size in (.8,.9,1):
                         self.set_scale(size,save=False);self.root.update_idletasks()
                         assert self.root.winfo_width()==round(400*size)
-                        assert self.content.winfo_reqheight()<=self.content.winfo_height(), 'Widget fields clipped at selected size'
+                        assert self.content.winfo_reqheight()<=self.content.winfo_height(), f'Widget fields clipped at {size}: requested {self.content.winfo_reqheight()}, available {self.content.winfo_height()}'
                     if self.set_display_mode('tray',save=False):
                         assert self.root.state()=='withdrawn'
                         self.tray.user.SendMessageW(self.tray.hwnd,self.tray.MESSAGE,1,0x202)
@@ -199,7 +199,7 @@ class Pulse:
         for c in self.content.winfo_children():c.destroy()
         allp=self.data.get('providers',[]);pages=max(1,(len(allp)+1)//2);self.page%=pages;self.page_label.config(text=f'{self.page+1}/{pages}')
         for p in allp[self.page*2:self.page*2+2]:
-            tk.Label(self.content,text=p['name']+' · '+p['status'],bg=BG,fg=QUIET,font=('Segoe UI',10,'bold'),anchor='w').pack(fill='x',pady=(8,2))
+            tk.Label(self.content,text=p['name']+' · '+p['status'],bg=BG,fg=QUIET,font=('Segoe UI',10,'bold'),anchor='w').pack(fill='x',pady=(3,1))
             q=p.get('quotas',[])[:2]
             if q:
                 text='  '.join(('—' if x.get('remainingPercent') is None else f"{int(x['remainingPercent'])}%")+' '+(self.t('week','неделя') if (x.get('durationMinutes') or 0)>=10080 else self.t('window','окно')) for x in q)

@@ -89,3 +89,12 @@ Windows implements its own Win32 notification icon using Shell_NotifyIconW, no g
 
 
 The Mac native fixture also verifies a second production launch exits while the existing fixture instance completes. Explicit quit/collapse controls and cleanup of fixture processes on failure prevent leftover test windows. Windows smoke additionally exercises session-local named-mutex lifecycle; its final hosted result follows below.
+
+
+## v0.3.1 published evidence and v0.3.2 correction
+
+[Checks 37441098618](https://github.com/Lobodagram/agent-pulse/actions/runs/37441098618) and [pre-release packages 37441176093](https://github.com/Lobodagram/agent-pulse/actions/runs/37441176093) passed at 871638ab47a4ddb7523c768a38bc39488d9e536c. [Tagged publication 37441584980](https://github.com/Lobodagram/agent-pulse/actions/runs/37441584980) passed all three packages and upload. All three v0.3.1 archives downloaded and matched SHA256; downloaded ARM64 signature and frozen hook/journal/MCP smoke passed. Windows source smoke reported actual tray registration, callback, collapse and restore; the native mutex lifecycle assertions passed. Mac source second-instance guard passed. Leftover development fixtures were closed; the original installed widget was retained while release delivery was verified.
+
+An additional two-quota-client fixture first failed because the Windows test generator used the locale encoding; explicit UTF-8 repaired the test. The real layout regression [37442089212](https://github.com/Lobodagram/agent-pulse/actions/runs/37442089212) then found clipped fields at 80% on Windows. v0.3.2 reduces vertical padding and adds this case to source and packaged checks. The v0.3.1 tag/assets remain immutable; this is a separate patch release, not rewritten evidence. Final v0.3.2 outcomes follow below.
+
+Базовые проверки и публикация v0.3.1 прошли, скачанные архивы совпали по SHA256. Дополнительная проверка Windows с двумя клиентами, у которых есть квоты, обнаружила обрезание при 80%. Исправление и этот тест входят в отдельный v0.3.2; старые файлы не подменяются.
