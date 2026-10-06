@@ -18,6 +18,6 @@ with tempfile.TemporaryDirectory() as tmp:
     requests=[{'jsonrpc':'2.0','id':1,'method':'initialize','params':{}},{'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'pulse_report','arguments':{}}}]
     r=subprocess.run(base+['mcp'],input=('\n'.join(json.dumps(x) for x in requests)+'\n').encode(),capture_output=True,timeout=20,check=True)
     responses=[json.loads(x) for x in r.stdout.splitlines()]
-    assert responses[0]['result']['serverInfo']['version']=='0.3.2'
+    assert responses[0]['result']['serverInfo']['version']=='0.3.3'
     assert json.loads(responses[1]['result']['content'][0]['text'])['calls']==1
 print(json.dumps({'frozenHookJournalMcp':'passed','modelsCalled':0,'syntheticDataOnly':True}))

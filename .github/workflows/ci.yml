@@ -23,7 +23,7 @@ jobs:
           python windows/agent_pulse.py --fixture examples/demo.json --smoke
           python -c "import json,pathlib; p=pathlib.Path('.build'); p.mkdir(exist_ok=True); d=json.loads(pathlib.Path('examples/demo.json').read_text(encoding='utf-8')); d['providers'][1]['quotas']=d['providers'][0]['quotas']; (p/'two-quotas.json').write_text(json.dumps(d),encoding='utf-8')"
           python windows/agent_pulse.py --fixture .build/two-quotas.json --smoke
-          python -c "import sys; sys.path.insert(0,'windows'); import tkinter as tk; from agent_pulse import Pulse; r=tk.Tk(); p=Pulse(r,'.build/two-quotas.json',True); p.language='ru'; r.mainloop(); assert p.data and not p.smoke_error,p.smoke_error"
+          python windows/agent_pulse.py --fixture .build/two-quotas.json --smoke --language ru
       - if: runner.os == 'macOS'
         run: |
           ./build.sh

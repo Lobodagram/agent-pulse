@@ -195,7 +195,7 @@ def collect_codex(day, config=None, read_patterns=False, quota_only=False, direc
     try:
         # Standalone metadata-only process; no thread/turn create/resume or MCP invocation.
         rpc = RPC([binary, '-c', 'analytics.enabled=false', 'app-server', '--stdio'])
-        rpc.call('initialize', {'clientInfo':{'name':'agent-pulse','version':'0.3.2'},'capabilities':{}})
+        rpc.call('initialize', {'clientInfo':{'name':'agent-pulse','version':'0.3.3'},'capabilities':{}})
         rpc.send({'method':'initialized'})
         try:
             limits=rpc.call('account/rateLimits/read')

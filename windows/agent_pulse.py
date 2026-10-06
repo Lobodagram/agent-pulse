@@ -22,8 +22,8 @@ from platform_support import state_directory
 BG='#151a1d';FG='#f2f6f4';MINT='#a4e8cd';QUIET='#a6b4b0'
 
 class Pulse:
-    def __init__(self,root,fixture=None,smoke=False):
-        self.root=root;self.state=state_directory();self.fixture=fixture;self.smoke=smoke;self.data={};self.loading=False;self.page=0;self.pending=queue.Queue();self.language='en';self.auth_revision=0;self.auth_marks={};self.reading_limits=False
+    def __init__(self,root,fixture=None,smoke=False,language='en'):
+        self.root=root;self.state=state_directory();self.fixture=fixture;self.smoke=smoke;self.data={};self.loading=False;self.page=0;self.pending=queue.Queue();self.language=language;self.auth_revision=0;self.auth_marks={};self.reading_limits=False
         root.title('Agent Pulse');root.geometry('400x310+100+100');root.configure(bg=BG);root.overrideredirect(True);root.attributes('-topmost',True)
         header=tk.Frame(root,bg=BG);header.pack(fill='x',padx=14,pady=(8,4))
         title=tk.Label(header,text='● AGENT PULSE'+(' · DEMO' if fixture else ''),bg=BG,fg=MINT,font=('Segoe UI',10,'bold'));title.pack(side='left')
@@ -211,8 +211,9 @@ class Pulse:
             tk.Label(self.content,text=text,bg=BG,fg=MINT,font=('Segoe UI',14),anchor='w').pack(fill='x')
             if q:
                 tokens=p.get('todayTokens');resets=[datetime.fromtimestamp(x['resetsAt']).strftime('%d %b %H:%M') for x in q if isinstance(x.get('resetsAt'),(int,float))]
-                line=self.t('Today · UTC: ','Сегодня · UTC: ')+(self.t('awaiting report','жду отчёт') if tokens is None and p.get('todayTokenStatus')=='account-day-pending' else self.t('not reported','не передано') if tokens is None else f'{tokens:,.0f}'+(self.t(' · partial',' · частично') if p.get('todayTokenCoverage')=='partial-local' else ''))+' · '+self.t('reset: ','сброс: ')+(' / '.join(resets) or '—')
+                line=self.t('Today · UTC: ','Сегодня · UTC: ')+(self.t('awaiting report','жду отчёт') if tokens is None and p.get('todayTokenStatus')=='account-day-pending' else self.t('not reported','не передано') if tokens is None else f'{tokens:,.0f}'+(self.t(' · partial',' · частично') if p.get('todayTokenCoverage')=='partial-local' else ''))
                 tk.Label(self.content,text=line,bg=BG,fg=QUIET,font=('Segoe UI',8),anchor='w',wraplength=365).pack(fill='x')
+                tk.Label(self.content,text=self.t('Reset: ','Сброс: ')+(' / '.join(resets) or '—'),bg=BG,fg=QUIET,font=('Segoe UI',8),anchor='w',wraplength=365).pack(fill='x')
             if q:
                 at=p.get('quotaObservedAt',p.get('observedAt'))
                 tk.Label(self.content,text=self.t('Limit read: ','Лимит получен: ')+(datetime.fromtimestamp(at).strftime('%H:%M:%S') if at else '—'),bg=BG,fg=QUIET,font=('Segoe UI',8),anchor='w').pack(fill='x')
@@ -344,10 +345,10 @@ class Pulse:
             ttk.Button(row,text=self.t('Save','Сохранить'),command=save).pack(side='left')
 
 def main():
-    a=argparse.ArgumentParser();a.add_argument('--fixture');a.add_argument('--smoke',action='store_true');args=a.parse_args()
+    a=argparse.ArgumentParser();a.add_argument('--fixture');a.add_argument('--smoke',action='store_true');a.add_argument('--language',choices=['en','ru'],default='en');args=a.parse_args()
     instance=Instance('Local\\AgentPulseFixture'+str(os.getpid())) if args.fixture else Instance()
     if not instance.owns:instance.close();return
-    root=tk.Tk();app=Pulse(root,args.fixture,args.smoke)
+    root=tk.Tk();app=Pulse(root,args.fixture,args.smoke,args.language)
     try:root.mainloop()
     finally:
         if app.tray:app.tray.close()

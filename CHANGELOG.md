@@ -1,3 +1,7 @@
+## 0.3.3 · 2026-10-06
+
+- Keep Windows today tokens and quota resets on separate short rows so Russian two-client content fits at 80%. Test English/Russian source and packaged layouts. Windows supports `--language en|ru`.
+
 ## 0.3.2 · 2026-10-06
 
 - Fix clipped Windows fields at 80% when both visible clients report quotas. Add a UTF-8 two-quota-client layout regression to hosted Windows checks.
