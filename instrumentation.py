@@ -16,7 +16,7 @@ def command_argv(provider,state):
         exe=Path(sys.executable)
         if exe.name.lower()=='agentpulse.exe':exe=exe.with_name('pulse-collector.exe')
         return [str(exe),'--state',str(state),'hook','--provider',provider]
-    return [sys.executable,str(Path(__file__).parent/'scripts/hook_bridge.py'),'--provider',provider,'--state',str(state)]
+    return [sys.executable,str(Path(__file__).parent/'hook_bridge.py'),'--provider',provider,'--state',str(state)]
 
 def is_ours(h):return isinstance(h,dict) and h.get('agentPulseObserver') is True
 

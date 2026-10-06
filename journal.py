@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 import hashlib
 import hmac
 import json
-import math
 import os
 from pathlib import Path
 import re
@@ -20,13 +19,7 @@ EVENTS = {'SessionStart','UserPromptSubmit','PreToolUse','PostToolUse','PostTool
 PROVIDERS = {'codex','glm','claude','kimi','qwen','gemini','cursor','copilot','windsurf','deepseek','openrouter'}
 CATEGORIES = {'read','search','edit','test','build','inspect','environment','remote','delegate','shell','other','lifecycle'}
 
-def number(v):
-    return v if isinstance(v,(int,float)) and not isinstance(v,bool) and math.isfinite(v) and v>=0 else None
-
-def safe_name(v):
-    if not isinstance(v,str) or not re.fullmatch(r'[A-Za-z][A-Za-z0-9_.:-]{0,100}',v):return 'other'
-    if re.search(r'(?i)(bcm_|sk-|ghp_|github_pat_|hf_|bearer|token|password|secret)',v):return 'other'
-    return v
+from sanitizers import number, safe_name
 
 def private_dir(path):
     path=Path(path)
@@ -147,6 +140,15 @@ class Journal:
     def digest(self,label,value):
         body=json.dumps(value,sort_keys=True,ensure_ascii=False,separators=(',',':'),default=str)
         return hmac.new(self.key,(label+'\0'+body).encode(),hashlib.sha256).hexdigest()[:32]
+    def digest_sequence(self,label,values):
+        # Same canonical JSON/HMAC as digest(label, values), bounded temporary text.
+        digest=hmac.new(self.key,(label+'\0[').encode(),hashlib.sha256)
+        for start in range(0,len(values),256):
+            if start:digest.update(b',')
+            chunk=json.dumps(values[start:start+256],sort_keys=True,ensure_ascii=False,separators=(',',':'),default=str)
+            digest.update(chunk[1:-1].encode())
+        digest.update(b']')
+        return digest.hexdigest()[:32]
     def reject(self,provider):
         if provider not in PROVIDERS:return
         self.db.execute('INSERT INTO health(provider,rejected) VALUES (?,1) ON CONFLICT(provider) DO UPDATE SET rejected=rejected+1',(provider,));self.db.commit()

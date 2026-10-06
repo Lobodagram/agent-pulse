@@ -1,3 +1,11 @@
+## 0.7.1 audit follow-up · 2026-10-06
+
+161 local tests and isolated wheel build/install passed. Shared strict filters preserve finite nonnegative numbers and the journal's credential/path-label restrictions; collector no longer has weaker independent copies. One literal `pulse_version.__version__` drives dynamic wheel metadata, MCP and Mac bundle; package CI checks the tag against it. Wheel contains the runtime hook bridge and both CLI entries, not developer scripts. The source compatibility hook path remains usable; no existing native hook configuration is rewritten. Linux/headless instructions added.
+
+Snapshot HMAC covers the same canonical full call data in 256-call chunks. Old digest/cursor compatibility, empty/boundary chunks and old-row mutation detection are tested; no count/max/sum approximation. A fixture-only 20,000-call benchmark on one Mac measured approximately 23.9 MB versus 0.31 MB temporary hashing peak and 26.5 versus 25.4 ms median. This excludes journal projection/UI and is not a Windows or subscription-saving benchmark. Hosted CI and downloaded-package/native acceptance are separate delivery gates, added when verified.
+
+161 тест и изолированная установка wheel прошли. Фильтры и источник версии объединены, wheel очищен с сохранением рабочего обработчика. Хеширование порциями сохраняет прежнюю проверку данных и курсоры. Замер относится только к вымышленному примеру и шагу хеширования на одном Mac. Полный сбор, доказанная экономия, подпись разработчика и физическая приёмка остаются отдельными критериями.
+
 ## 0.7.0 delivered verification · 2026-10-06
 
 157 Python tests pass. [Source Checks 37505993079](https://github.com/Lobodagram/agent-pulse/actions/runs/37505993079) passed Linux/macOS/Windows; [tagged package/publication 37506293357](https://github.com/Lobodagram/agent-pulse/actions/runs/37506293357) passed Mac ARM64/Intel and Windows x64 at 04ae1c35bf3fdbdf0472cb10f66458dba60903ac. The tag preserves the tested code; subsequent main-only evidence/screenshots updates do not replace it.

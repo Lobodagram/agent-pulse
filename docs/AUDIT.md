@@ -1,3 +1,7 @@
+## 0.7.1 audit hygiene · 2026-10-06
+
+Shared strict sanitizers, canonical version and isolated runtime-only wheel checks close drift/package hygiene findings. Chunked hashing preserves exact snapshot integrity and previous cursors while reducing temporary allocation in a fixture benchmark. README spacing and Linux/headless guidance cleaned. Main-goal assessment stays 7/10 pending representative accepted effect evidence and stronger native outcomes/model coverage. Source quality and analytics effectiveness are separate judgements.
+
 ## 0.7.0 improvement-loop update · 2026-10-06
 
 Manual finding decisions and equal-window rechecks, strict registered shell-read attribution, namespace counters, human Markdown packs and consolidated source/handoff checks are implemented. Mechanics tests pass (157), including provider scopes, reader false positives, partial outcomes, recheck absence/unknowns, CLI export and metadata validation. These additions improve the route from evidence to a reviewed change. Main-goal readiness remains 7/10 until comparable accepted real tasks demonstrate effectiveness and native client/model coverage is strengthened. A newly created shared helper/skill is an experiment, not proof of savings. Native Mac fixture/package checks and platform CI are separate gates; see QA for final delivery evidence. Prior assessments below are historical.

@@ -1,4 +1,13 @@
-# Changelog / Изменения
+# Changelog
+
+## 0.7.1 — 2026-10-06
+
+- Unified numeric/name projections with the journal's stricter credential/path boundaries.
+- Single literal version source drives wheel metadata, MCP and Mac bundle.
+- Wheel excludes developer scripts; runtime hook and compatibility source entry remain.
+- Chunked canonical snapshot hashing retains exact old digest and cursor compatibility.
+- Isolated installed-wheel checks added to all source CI targets; Linux/headless instructions and README spacing.
+ / Изменения
 
 ## 0.7.0 — reviewed improvement loop
 

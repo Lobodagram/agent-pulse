@@ -6,7 +6,9 @@
 
 A local tool for improving coding-agent workspaces: collect sanitized tool events, inspect repeated workflows and failures, and review evidence before automating a task or adding a skill/MCP. The desktop widget also shows reported tokens and subscription quotas.
 
-**0.7.0 public preview.** macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
+[Linux/headless runtime](docs/HEADLESS.md) · Runtime wheel: Python 3.11+
+
+**0.7.1 public preview.** macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
 
 **Confirm collection first:** configured observers are not proof of observation. After setup, start a new native session, review hook trust when required, perform an ordinary task, and check Workflows for actual paired calls. See the [readiness audit](docs/AUDIT.md). Capabilities separates exact registered skill-file loads, explicit invocations and manual declarations. No observed use is not proof of non-use; command families are bounded static classifications, not semantic understanding of arbitrary code.
 
@@ -69,12 +71,9 @@ Optional Codex event analysis is **off by default**. When enabled, it transientl
 
 The project is independent of OpenAI, Z.ai, Anthropic, Moonshot, Alibaba and other named vendors. Names identify compatible clients; no affiliation or endorsement is implied.
 
-
 Account changes: on desktop, selected supported clients' authentication/config file metadata only is checked every five seconds (no credential file contents). A change clears displayed previous values and requests a fresh read. Codex additionally verifies a native account identifier, stored only as a keyed hash, and isolates current account quota cache; previous manual billing date is cleared on a verified account switch. Failed/unknown-identity Codex reads never reuse previous-account quotas. Async replies captured before a switch are discarded. This is best-effort client-specific detection, not instant universal IDE account discovery: keychain-only logins or clients without a supported signal may require the normal minute poll/manual refresh. ZCode local usage is client history, not an automatically account-separated paid-plan total.
 
-
 Work history remains continuous across account switches. The journal groups by provider/task, not login. Known Codex daily account reports are stored per hashed account/day, updated (not incremented) on each read, then summed for general daily history. Switching back does not count the same account twice. Earlier unscoped rows remain stored; if they overlap a known-account day, they are not added because identity/overlap cannot be verified. Therefore totals cover observed accounts only, not every account ever used. Current quotas and manual billing dates remain account-specific; GLM local aggregates remain client history.
-
 
 ### Smaller widget and menu bar
 
@@ -87,7 +86,6 @@ A missing Codex daily bucket means **awaiting report**, not zero. Enable **Local
 ![Menu bar, invented counters](docs/screenshots/menu-bar-demo.png)
 
 ![Active-app setting — invented demo account data](docs/screenshots/settings-active-en.png)
-
 
 The **− / ⌄** button collapses into the menu bar/compact strip; **×** quits Agent Pulse. Reopening a production app does not create another instance. Test fixtures are isolated and automatically closed.
 

@@ -28,7 +28,7 @@ def session_page(j,session,cursor=None,limit=500):
     rows=sorted(j.calls(session,as_of=at,through_rowid=watermark),key=lambda c:(c['startedAt'] or c['endedAt'] or 0,c['id']))
     # Retention, late finishes, reconciled models or conflicts may mutate old rows.
     # Reject continuation rather than silently shifting a prior page's evidence.
-    observed=j.digest('session-page-snapshot',rows)
+    observed=j.digest_sequence('session-page-snapshot',rows)
     if snapshot is not None and not hmac.compare_digest(snapshot,observed):raise ValueError('snapshot_changed_reopen')
     snapshot=observed
     page=rows[offset:offset+limit];end=offset+len(page);more=end<len(rows)

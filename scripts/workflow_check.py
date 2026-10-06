@@ -11,7 +11,6 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
-import tomllib
 import urllib.parse
 import zipfile
 
@@ -19,6 +18,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from scripts.public_export import export
 from journal import atomic_json
+from pulse_version import __version__
 
 def archives(directory,version):
     names=['agent-pulse-macos-arm64.zip','agent-pulse-macos-x64.zip','agent-pulse-windows-x64.zip']
@@ -45,7 +45,7 @@ def archives(directory,version):
     return results
 
 def source_check():
-    checks={};version=tomllib.loads((ROOT/'pyproject.toml').read_text(encoding='utf-8'))['project']['version']
+    checks={};version=__version__
     with tempfile.TemporaryDirectory() as tmp:
         tree=Path(tmp)/'public';manifest=export(tree);files=[tree/f for f in manifest['files']]
         for f in files:

@@ -3,6 +3,7 @@
 import argparse
 import json
 import sys
+from pulse_version import __version__
 from journal import Journal, MAX_INPUT
 from analytics import report, compare
 from platform_support import state_directory
@@ -18,7 +19,7 @@ TOOLS=[
 
 def dispatch(request,state):
     method=request.get('method');params=request.get('params') or {}
-    if method=='initialize':return {'protocolVersion':'2024-11-05','capabilities':{'tools':{}},'serverInfo':{'name':'agent-pulse-local','version':'0.7.0'}}
+    if method=='initialize':return {'protocolVersion':'2024-11-05','capabilities':{'tools':{}},'serverInfo':{'name':'agent-pulse-local','version':__version__}}
     if method=='ping':return {}
     if method=='tools/list':return {'tools':TOOLS}
     if method!='tools/call':raise ValueError('method_not_allowed')

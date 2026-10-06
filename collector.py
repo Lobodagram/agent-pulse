@@ -15,7 +15,6 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
-import math
 import os
 from pathlib import Path
 import re
@@ -33,6 +32,7 @@ import analytics
 import journal_cli
 import instrumentation
 import mcp_server
+from pulse_version import __version__
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_STATE = state_directory()
@@ -127,17 +127,7 @@ class RPC:
         for stream in [self.p.stdin, self.p.stdout]: stream.close()
 
 
-def number(value):
-    return value if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value >= 0 else None
-
-
-def safe_name(value):
-    if not isinstance(value, str) or not re.fullmatch(r'[A-Za-z][A-Za-z0-9_.:/-]{0,100}', value):
-        return 'other'
-    if re.search(r'(?i)(bcm_|sk-|ghp_|github_pat_|hf_|bearer|token=)', value):
-        return 'other'
-    return value
-
+from sanitizers import number, safe_name
 
 def quota_windows(raw):
     buckets = raw.get('rateLimitsByLimitId')
@@ -201,7 +191,7 @@ def collect_codex(day, config=None, read_patterns=False, quota_only=False, direc
     try:
         # Standalone metadata-only process; no thread/turn create/resume or MCP invocation.
         rpc = RPC([binary, '-c', 'analytics.enabled=false', 'app-server', '--stdio'])
-        rpc.call('initialize', {'clientInfo':{'name':'agent-pulse','version':'0.4.0'},'capabilities':{}})
+        rpc.call('initialize', {'clientInfo':{'name':'agent-pulse','version':__version__},'capabilities':{}})
         rpc.send({'method':'initialized'})
         try:
             limits=rpc.call('account/rateLimits/read')
