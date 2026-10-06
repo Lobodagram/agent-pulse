@@ -1,5 +1,9 @@
 # Changelog / Изменения
 
+## 0.5.1 · 2026-10-06
+
+- Native fixture checks launch their executable directly and wait for explicit app readiness before testing the second-instance guard. This avoids an Intel LaunchServices process-ID failure; assertions remain enforced and failures include stderr. 0.5.0 tag preserved, with no published binary assets.
+
 ## 0.5.0 · 2026-10-06
 
 - Strict result provenance, structured exits, running-process states, conflicting-delivery reconciliation and collection gaps.

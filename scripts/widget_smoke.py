@@ -17,7 +17,9 @@ with tempfile.TemporaryDirectory() as tmp:
         if mode=='pending':data['providers'][0].update(todayTokens=None,todayTokenStatus='account-day-pending')
         demo.write_text(json.dumps(data))
         view='menu-bar' if mode in ('menu-next','menu-timer','menu-active','menu-fallback') else 'expanded' if mode=='expanded-two-quotas' else mode if mode not in ('two-quotas','pending','compact-en','single-instance') else 'compact'
-        args=['open','-n','-W',str(bundle),'--args','--fixture',str(demo),'--language','en' if mode=='compact-en' else 'ru','--scale','.8','--view',view,'--snapshot',str(out)]
+        ready=Path(tmp)/(mode+'.ready')
+        executable=bundle/'Contents/MacOS/AgentPulse'
+        args=[str(executable),'--fixture',str(demo),'--language','en' if mode=='compact-en' else 'ru','--scale','.8','--view',view,'--snapshot',str(out),'--ready-file',str(ready)]
         if mode.startswith('menu'):args.append('--menu-only')
         if mode=='menu-next':args+=['--status-page','1']
         if mode=='menu-timer':args.append('--rotation-check')
@@ -25,12 +27,18 @@ with tempfile.TemporaryDirectory() as tmp:
         if mode=='menu-fallback':args+=['--active-app','unknown.app','--status-page','1']
         try:
             if mode=='single-instance':
-                args.remove('-W');subprocess.run(args,check=True,timeout=10)
-                subprocess.run(['open','-n','-W',str(bundle)],check=True,timeout=10)
+                first=subprocess.Popen(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
                 until=time.monotonic()+10
-                while not out.with_suffix('.png.json').exists() and time.monotonic()<until:time.sleep(.05)
+                while not ready.exists() and first.poll() is None and time.monotonic()<until:time.sleep(.02)
+                assert ready.exists(),'Fixture did not initialize'
+                subprocess.run([str(executable)],check=True,timeout=10,capture_output=True,text=True)
+                stdout,stderr=first.communicate(timeout=15)
+                assert first.returncode==0,(mode,first.returncode,stderr[-4000:])
                 assert out.with_suffix('.png.json').exists(),'First instance must finish its own fixture capture'
-            else:subprocess.run(args,check=True,timeout=20)
+            else:
+                result=subprocess.run(args,timeout=20,capture_output=True,text=True)
+                assert result.returncode==0,(mode,result.returncode,result.stderr[-4000:])
+                assert out.with_suffix('.png.json').exists(),(mode,'missing report',result.stderr[-4000:])
         finally:
             expected=(bundle/'Contents/MacOS/AgentPulse').resolve()
             for row in subprocess.check_output(['ps','-axo','pid=,comm='],text=True).splitlines():

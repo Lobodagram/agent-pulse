@@ -1,5 +1,9 @@
 # Verification — 2026-10-06 / Проверка
 
+## 0.5.1 launch-check correction
+
+[0.5.0 package run](https://github.com/Lobodagram/agent-pulse/actions/runs/37472877086) passed ARM64 and Windows, but Intel failed twice without a final window-focus report; the second attempt logged a LaunchServices GetProcessPID error. Publication was skipped. The old tag is preserved without binary assets. 0.5.1 directly launches the fixture executable, waits for explicit readiness before checking the second-instance guard and reports stderr on failure; all window assertions remain enforced.
+
 ## 0.5.0 local verification
 
 115 unit tests pass. Fourteen invented labeled mechanics cases pass (5 expected positive kinds, 0 false positives/misses within this suite only). Mac 15-case own-widget checks pass, including restoring minimized Analytics, hidden Settings, application focus and active-Space/floating placement flags. Real multi-display/fullscreen/DPI and sustained native outcomes remain incomplete.

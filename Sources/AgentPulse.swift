@@ -691,6 +691,9 @@ final class FloatingPanel: NSPanel {
         if store.displayMode != "menu" { panel.orderFrontRegardless() }
         updateStatus()
         handleSnapshotArguments()
+        if store.isFixture, let i = CommandLine.arguments.firstIndex(of: "--ready-file"), i+1 < CommandLine.arguments.count {
+            try? Data("ready".utf8).write(to: URL(fileURLWithPath: CommandLine.arguments[i+1]), options: .atomic)
+        }
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         panel?.orderFrontRegardless()
