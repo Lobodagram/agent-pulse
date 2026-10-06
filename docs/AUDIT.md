@@ -1,10 +1,12 @@
 # Analytics readiness audit · 2026-10-06
 
-## 0.5.0 update
+## 0.5.2 update
 
 **7/10 against the primary analytics goal**: collection 6, bounded mechanics 8, capability attribution 6, effect evaluation 5, privacy 8, delivery 8. Engineering judgements, not certification. Representative reviewed real repeated tasks, completed ZCode shell outcomes and physical Windows acceptance remain missing. Synthetic precision is not production accuracy.
 
 115 tests and 14 invented labeled mechanics cases cover operation distinctions, strict outcomes, parallel/nested barriers, registered capability evidence, provider isolation, retention and review packs. [OpenAI native payload code](https://github.com/openai/codex/blob/main/codex-rs/core/src/tools/context.rs) can deliver stdout-only shell hook responses; those deliberately remain unknown. See [current evidence contracts](EVIDENCE.md).
+
+Source/tag 0.5.2 and three platform packages are verified in [QA](QA.md). Physical Intel chart rendering remains unverified; hosted focus checks use text-only Workflows.
 
 The 0.4.1 sections below are historical. Generic compound grouping and absent capability attribution are superseded by bounded families and registered evidence. Semantic code interpretation and universal non-use proof remain unavailable.
 

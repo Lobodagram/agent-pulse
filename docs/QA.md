@@ -1,5 +1,16 @@
 # Verification — 2026-10-06 / Проверка
 
+## Delivered 0.5.2 - 2026-10-06
+
+[Source Checks 37475778755](https://github.com/Lobodagram/agent-pulse/actions/runs/37475778755) and [tagged packages 37476184197](https://github.com/Lobodagram/agent-pulse/actions/runs/37476184197) passed all targets at dc559877ff17b8844470abff7abbcf4810aa9f13. 115 unit tests; 14 invented labeled mechanics cases. Native Mac 15-case matrix retains focus/restore/placement and second-instance assertions; window-focus starts on text-only Workflows to isolate the hosted Intel Metal issue. Windows source/frozen EN/RU, tray and layout checks pass. Synthetic mechanics do not prove full native collection or real-task semantic precision.
+
+All three [release archives](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.5.2) downloaded back and matched SHA256SUMS; runtime and notices present. Downloaded ARM64 passed strict/deep signature, two-second frozen hook/journal/MCP and all 15 own-widget cases. 0.5.2 installed with 0.4.1 preserved; one production instance, duplicate launch does not add another, config stable across duplicate launch. Initial replacement launch was not observed; a later direct launch was verified. Installed live CUA clicks remain unverified because its cached app identity resolves the old prototype; isolated own-window native interaction/fixture acceptance passed. No new permissions, native trust bypass or model calls during this delivery.
+
+Real local receipt continues, with partial outcomes; no synthetic events inserted. Existing reviewed skill entries were linked locally by HMAC to their common source files; reading, explicit successful invocation and declaration remain distinct. Public tree excludes private history/account/company data. Physical Intel charts, Windows DPI/live clients, multiple displays/Spaces/fullscreen/sleep-wake and a reviewed accepted real repeated-task dataset remain open. Assessment: 7/10 against primary analytics goal, not a claim of complete agent traces or guaranteed savings. Original source MIT; earlier tags preserved without binary assets where packaging failed.
+
+Earlier sections describe the diagnostic iterations.
+
+
 ## 0.5.2 GPU-independent focus check
 
 [0.5.1 package run](https://github.com/Lobodagram/agent-pulse/actions/runs/37474830760) passed ARM64/Windows and exposed an Intel abort in MTLLoader: Target device architecture is nil, during window-focus. 0.5.2 selects text-only Workflows before constructing the focus-test view; focus, restore, placement and duplicate-instance assertions are unchanged. Charts were rendered/inspected on the ARM64 development Mac; physical Intel chart acceptance remains open. Earlier failed tags have no binary assets.
