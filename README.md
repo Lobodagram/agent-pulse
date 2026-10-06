@@ -1,13 +1,13 @@
 # Agent Pulse
 
-[Русский](README.ru.md) · [Downloads](https://github.com/Lobodagram/agent-pulse/releases) · [Provider setup](docs/PROVIDERS.md)
+[Русский](README.ru.md) · [Downloads](https://github.com/Lobodagram/agent-pulse/releases) · [Provider setup](docs/PROVIDERS.md) · [Workflow analytics](docs/ANALYTICS.md)
 
 A small, local desktop dashboard for understanding your coding agents: remaining subscription quotas, reported tokens, reset times, manually entered billing dates and repeated tool calls. It sits above your windows without occupying your editor.
 
-**0.2.2 public preview.** macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not magically expose its private billing API.
+**0.3.0 public preview.** macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not magically expose its private billing API.
 
 ![Compact English widget — invented demo data](docs/screenshots/widget-en.png)
-![Analytics — invented demo data](docs/screenshots/analytics-en.png)
+![Workflows — invented demo events](docs/screenshots/workflows-en.png)
 
 ## What it does
 
@@ -15,8 +15,13 @@ A small, local desktop dashboard for understanding your coding agents: remaining
 - Show native remaining quota percentages and reset dates when a provider reports them.
 - Keep reported daily tokens and local history, with explicit missing/stale/partial coverage.
 - Record renewal or expiry dates locally, manually; these are separate from quota reset times.
-- Review repeated tool categories to decide whether an existing workflow, skill, local tool or MCP would help.
-- Switch between English and Russian. macOS: menu bar, compact/detail view and charts. Windows preview: floating widget, scrollable history and settings.
+- Opt into silent local Codex, ZCode or Claude hooks: pair tool starts/completions, outcomes, wall durations and task boundaries without saving raw payloads.
+- Discover repeated 2–4 step workflows across at least three observed turns; inspect repeated identical inputs, failing retries and file-metadata repetition.
+- Inspect sanitized session timelines and evidence behind each finding; manually label accepted/failed/rework outcomes and compare variants.
+- Import or explicitly scan skill/MCP names; configured, available and unknown are distinct. Category matching does not prove a missing capability.
+- Offer bounded evidence to your agent through an optional local read-only stdio MCP. Analysis itself calls no model.
+- Refresh Codex quota reads every minute, counters every five minutes; show quota-source timestamps. Independent client reads can still briefly differ.
+- Switch between English and Russian. macOS: menu bar, compact/detail view and charts. Windows preview: floating widget, tabbed workflows/sessions/comparison and settings.
 - Run without model calls, prompts, telemetry uploads, browser credential scraping or corporate integrations.
 
 ## Honest provider coverage
@@ -40,13 +45,13 @@ Download the matching zip from [Releases](https://github.com/Lobodagram/agent-pu
 
 **Windows 10/11 x64:** unzip into a folder you own and run `AgentPulse.exe`. No installer/admin permission needed. The executable is unsigned; SmartScreen reputation may be absent. This preview has a close button; no tray/startup integration yet. Do not run a download you do not trust.
 
-Open Settings, choose clients, configure optional adapters using the provider guide and enter billing dates if desired. Selecting import-only clients shows **unavailable** until you supply metrics. No dates are guessed from subscription names.
+Open Settings, choose clients, enable event observers separately if desired, configure optional adapters using the provider guide and enter billing dates if desired. Selecting import-only clients shows **unavailable** until you supply metrics. No dates are guessed from subscription names.
 
-For a source checkout, see [building](docs/BUILDING.md). Python 3.10+ is required for development; Python 3.12 is used for releases. macOS source builds need Xcode Command Line Tools. Linux can run the collector and tests; no Linux desktop package is promised.
+For a source checkout, see [building](docs/BUILDING.md). Python 3.11+ is required for development; Python 3.12 is used for releases. macOS source builds need Xcode Command Line Tools. Linux can run the collector and tests; no Linux desktop package is promised.
 
 ## Privacy
 
-Own state lives at `~/Library/Application Support/AgentPulse` on macOS, `%LOCALAPPDATA%\AgentPulse` on Windows and `$XDG_STATE_HOME/agent-pulse` (or `~/.local/state/agent-pulse`) for the Linux collector. It includes counters, sanitized tool names, manual dates and local configuration. Nothing is synchronized by this project.
+Own state lives at `~/Library/Application Support/AgentPulse` on macOS, `%LOCALAPPDATA%\AgentPulse` on Windows and `$XDG_STATE_HOME/agent-pulse` (or `~/.local/state/agent-pulse`) for the Linux collector. It includes counters, manual dates, local configuration and a private journal of sanitized metadata and keyed hashes. Nothing is synchronized by this project.
 
 Optional Codex event analysis is **off by default**. When enabled, it transiently parses bounded recent event files returned by native metadata and retains only counters/categories. It does not copy conversation text into telemetry. Native clients handle their own authentication and may have their own network/telemetry behavior. Kimi sends its opted-in key only to its official quota endpoint; Qwen uses an explicitly configured loopback address. Details: [PRIVACY.md](PRIVACY.md).
 
@@ -57,3 +62,9 @@ Optional Codex event analysis is **off by default**. When enabled, it transientl
 The code is under [PolyForm Noncommercial 1.0.0](LICENSE). Noncommercial personal use, changes and redistribution are permitted subject to its terms; the standard license also permits the noncommercial organizations it describes. Keep the license and Required Notice. [Commercial licensing](COMMERCIAL_LICENSE.md) · [Contributing](CONTRIBUTING.md).
 
 The project is independent of OpenAI, Z.ai, Anthropic, Moonshot, Alibaba and other named vendors. Names identify compatible clients; no affiliation or endorsement is implied.
+
+
+Account changes: on desktop, selected supported clients' authentication/config file metadata only is checked every five seconds (no credential file contents). A change clears displayed previous values and requests a fresh read. Codex additionally verifies a native account identifier, stored only as a keyed hash, and isolates current account quota cache; previous manual billing date is cleared on a verified account switch. Failed/unknown-identity Codex reads never reuse previous-account quotas. Async replies captured before a switch are discarded. This is best-effort client-specific detection, not instant universal IDE account discovery: keychain-only logins or clients without a supported signal may require the normal minute poll/manual refresh. ZCode local usage is client history, not an automatically account-separated paid-plan total.
+
+
+Work history remains continuous across account switches. The journal groups by provider/task, not login. Known Codex daily account reports are stored per hashed account/day, updated (not incremented) on each read, then summed for general daily history. Switching back does not count the same account twice. Earlier unscoped rows remain stored; if they overlap a known-account day, they are not added because identity/overlap cannot be verified. Therefore totals cover observed accounts only, not every account ever used. Current quotas and manual billing dates remain account-specific; GLM local aggregates remain client history.

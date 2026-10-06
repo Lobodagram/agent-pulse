@@ -110,3 +110,66 @@ class StoreTests(unittest.TestCase):
         self.store.persist_local_tokens();self.assertEqual(self.store.history()[0]['tokens'],100)
 
 if __name__=='__main__':unittest.main()
+
+import collector
+class QuotaRegressionTests(unittest.TestCase):
+    def test_main_quota_bucket_precedes_other_models(self):
+        raw={'rateLimitsByLimitId':{'other':{'primary':{'usedPercent':2,'windowDurationMins':300}},'codex':{'primary':{'usedPercent':93,'windowDurationMins':300},'secondary':{'usedPercent':50,'windowDurationMins':10080}}}}
+        result=collector.quota_windows(raw)
+        self.assertEqual([x['bucket'] for x in result[:2]],['codex','codex']);self.assertEqual(result[0]['remainingPercent'],7)
+
+    def test_fast_limits_does_not_request_tokens_or_threads(self):
+        calls=[]
+        class FakeRPC:
+            def __init__(self,*args,**kwargs):pass
+            def call(self,method,params=None):
+                calls.append(method)
+                return {'accountId':'synthetic','rateLimits':{'primary':{'usedPercent':93,'windowDurationMins':300}}} if method=='account/rateLimits/read' else {}
+            def send(self,*args):pass
+            def close(self):pass
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp, patch.object(collector,'RPC',FakeRPC):result,_=collector.collect_codex('2026-10-06',quota_only=True,directory=tmp)
+        self.assertEqual(result['status'],'ready');self.assertIsNotNone(result['quotaObservedAt'])
+        self.assertEqual(calls,['initialize','account/rateLimits/read'])
+
+    def test_account_switch_preserves_general_history_and_clears_date(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store=collector.Store(tmp)
+            try:
+                base={'id':'codex','accountScope':'a','daily':[{'date':'2026-10-06','tokens':120}],'status':'ready'}
+                store.persist(base);store.set_subscription('codex','2026-12-01','renewal')
+                store.persist(dict(base,accountScope='b',daily=[]))
+                self.assertEqual(store.history()[0]['tokens'],120);self.assertNotIn('codex',store.settings());self.assertEqual(store.latest('codex')['accountScope'],'b')
+            finally:store.db.close()
+
+    def test_failed_read_does_not_show_previous_account_limits(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            store=collector.Store(tmp)
+            store.persist({'id':'codex','name':'Codex','accountScope':'previous','status':'ready','daily':[{'date':'2026-10-06','tokens':100}],'quotas':[{'remainingPercent':8}],'sourceStatus':[]});store.db.close()
+            import providers
+            providers.atomic_json(Path(tmp)/'config.json',{'enabledProviders':['codex'],'localPatterns':False})
+            unavailable={'id':'codex','name':'Codex','status':'unavailable','quotas':[],'daily':[],'sourceStatus':['native_unavailable']}
+            with patch.object(collector,'collect_codex',return_value=(unavailable,[])):result=collector.snapshot(tmp)
+            self.assertEqual(result['providers'][0]['quotas'],[]);self.assertEqual(result['history'][0]['tokens'],100);self.assertEqual(result['providers'][0]['status'],'unavailable')
+
+    def test_account_history_sums_and_upserts_without_double_count(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store=collector.Store(tmp)
+            try:
+                base={'id':'codex','accountScope':'a','daily':[{'date':'2026-10-06','tokens':120}],'status':'ready'}
+                store.persist(base);store.persist(base)
+                store.persist(dict(base,accountScope='b',daily=[{'date':'2026-10-06','tokens':30}]))
+                self.assertEqual(store.history()[0]['tokens'],150)
+                store.persist(dict(base,daily=[{'date':'2026-10-06','tokens':125}]))
+                self.assertEqual(store.history()[0]['tokens'],155)
+            finally:store.db.close()
+
+    def test_manual_billing_restored_for_returning_account(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store=collector.Store(tmp)
+            try:
+                base={'id':'codex','accountScope':'a','daily':[],'status':'ready'}
+                store.persist(base);store.set_subscription('codex','2026-12-01','renewal');store.persist(dict(base,accountScope='b'));self.assertNotIn('codex',store.settings())
+                store.persist(base);self.assertEqual(store.settings()['codex']['date'],'2026-12-01')
+            finally:store.db.close()

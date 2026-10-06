@@ -22,10 +22,15 @@ import subprocess
 import time
 from platform_support import state_directory, find_node, zcode_paths
 import providers as adapters
+import journal
+import analytics
+import journal_cli
+import instrumentation
+import mcp_server
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_STATE = state_directory()
-METHODS = {'initialize', 'account/rateLimits/read', 'account/usage/read', 'thread/list', 'usage/stats'}
+METHODS = {'initialize', 'account/rateLimits/read', 'account/read', 'account/usage/read', 'thread/list', 'usage/stats'}
 TIMEZONE = 'UTC'
 
 
@@ -134,7 +139,7 @@ def quota_windows(raw):
         legacy = raw.get('rateLimits')
         buckets = {legacy.get('limitId') or 'codex': legacy} if isinstance(legacy, dict) else {}
     result = []
-    for ident, bucket in buckets.items():
+    for ident, bucket in sorted(buckets.items(),key=lambda item:(item[0]!='codex',item[0])):
         if not isinstance(bucket, dict): continue
         for key in ['primary', 'secondary']:
             window = bucket.get(key)
@@ -181,7 +186,7 @@ def zcode_usage(raw, day):
             'tokenCoverage':'local ZCode records · 7 days'}
 
 
-def collect_codex(day, config=None, read_patterns=False):
+def collect_codex(day, config=None, read_patterns=False, quota_only=False, directory=None):
     binary = (config or {}).get('codexCli') or shutil.which('codex') or '/opt/homebrew/bin/codex'
     rpc = None
     base={'id':'codex','name':'Codex','status':'unavailable','quotas':[],'daily':[],
@@ -189,15 +194,30 @@ def collect_codex(day, config=None, read_patterns=False):
     try:
         # Standalone metadata-only process; no thread/turn create/resume or MCP invocation.
         rpc = RPC([binary, '-c', 'analytics.enabled=false', 'app-server', '--stdio'])
-        rpc.call('initialize', {'clientInfo':{'name':'agent-pulse','version':'0.2.2'},'capabilities':{}})
+        rpc.call('initialize', {'clientInfo':{'name':'agent-pulse','version':'0.3.0'},'capabilities':{}})
         rpc.send({'method':'initialized'})
         try:
             limits=rpc.call('account/rateLimits/read')
             base['quotas']=quota_windows(limits)
             credits=limits.get('rateLimitResetCredits')
             if isinstance(credits,dict):base['resetCredits']=number(credits.get('availableCount'))
-            base['sourceStatus'].append('limits_ok')
+            base['sourceStatus'].append('limits_ok');base['quotaObservedAt']=int(time.time())
+            aid=limits.get('accountId')
+            if not isinstance(aid,str) or not aid:
+                try:
+                    account=rpc.call('account/read',{'refreshToken':False}).get('account') or {}
+                    aid=account.get('id') or account.get('email')
+                except Unavailable:aid=None
+            if isinstance(aid,str) and aid:
+                j=journal.Journal(directory or DEFAULT_STATE)
+                try:base['accountScope']=j.digest('account',['codex',aid])
+                finally:j.close()
+            else:base['accountScope']=None
+            base['accountCoverage']='native identity hashed' if base.get('accountScope') else 'identity unknown; no account cache fallback'
         except Unavailable as e:base['sourceStatus'].append(str(e))
+        if quota_only:
+            base['status']='ready' if 'limits_ok' in base['sourceStatus'] else 'unavailable'
+            return base,[]
         try:
             base.update(codex_usage(rpc.call('account/usage/read'),day))
             base['sourceStatus'].append('tokens_ok')
@@ -260,6 +280,7 @@ class Store:
         os.chmod(db,0o600)
         self.db.executescript('''
         CREATE TABLE IF NOT EXISTS daily(provider TEXT,date TEXT,tokens INTEGER,source TEXT,PRIMARY KEY(provider,date));
+        CREATE TABLE IF NOT EXISTS account_daily(provider TEXT,scope TEXT,date TEXT,tokens INTEGER,source TEXT,PRIMARY KEY(provider,scope,date));
         CREATE TABLE IF NOT EXISTS samples(provider TEXT,at INTEGER,data TEXT,PRIMARY KEY(provider,at));
         CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY,provider TEXT,at INTEGER,name TEXT,failed INTEGER);
         CREATE TABLE IF NOT EXISTS token_events(id TEXT PRIMARY KEY,date TEXT,tokens INTEGER);
@@ -285,18 +306,36 @@ class Store:
         if date:
             if not re.fullmatch(r'\d{4}-\d{2}-\d{2}',date):raise ValueError('Use YYYY-MM-DD')
             datetime.strptime(date,'%Y-%m-%d')
-        self.db.execute('INSERT OR REPLACE INTO settings VALUES (?,?)',(provider,json.dumps({'date':date or None,'kind':kind,'source':'manual'})))
+        value=json.dumps({'date':date or None,'kind':kind,'source':'manual'})
+        self.db.execute('INSERT OR REPLACE INTO settings VALUES (?,?)',(provider,value))
+        scope=self.db.execute('SELECT value FROM settings WHERE key=?',('_account_'+provider,)).fetchone()
+        if scope:self.db.execute('INSERT OR REPLACE INTO settings VALUES (?,?)',('_billing_'+provider+'_'+json.loads(scope[0]),value))
         self.db.commit()
 
     def persist(self,provider):
         pid=provider['id'];stamp=int(time.time())
+        scope=provider.get('accountScope')
+        if isinstance(scope,str):
+            old=self.db.execute('SELECT value FROM settings WHERE key=?',('_account_'+pid,)).fetchone()
+            if not old or json.loads(old[0])!=scope:
+                self.db.execute('DELETE FROM samples WHERE provider=?',(pid,))
+                if old:
+                    billing=self.db.execute('SELECT value FROM settings WHERE key=?',(pid,)).fetchone()
+                    if billing:self.db.execute('INSERT OR REPLACE INTO settings VALUES (?,?)',('_billing_'+pid+'_'+json.loads(old[0]),billing[0]))
+                    self.db.execute('DELETE FROM settings WHERE key=?',(pid,))
+                    saved=self.db.execute('SELECT value FROM settings WHERE key=?',('_billing_'+pid+'_'+scope,)).fetchone()
+                    if saved:self.db.execute('INSERT OR REPLACE INTO settings VALUES (?,?)',(pid,saved[0]))
+            self.db.execute('INSERT OR REPLACE INTO settings VALUES (?,?)',('_account_'+pid,json.dumps(scope)))
         for row in provider.get('daily',[]):
             if row['tokens'] is not None:
-                self.db.execute('INSERT OR REPLACE INTO daily VALUES (?,?,?,?)',(pid,row['date'],row['tokens'],provider.get('tokenSource','reported')))
+                if isinstance(scope,str):
+                    self.db.execute('INSERT OR REPLACE INTO account_daily VALUES (?,?,?,?,?)',(pid,scope,row['date'],row['tokens'],provider.get('tokenSource','reported')))
+                else:self.db.execute('INSERT OR REPLACE INTO daily VALUES (?,?,?,?)',(pid,row['date'],row['tokens'],provider.get('tokenSource','reported')))
         self.db.execute('INSERT OR REPLACE INTO samples VALUES (?,?,?)',(pid,stamp,json.dumps(provider)))
         self.db.execute('DELETE FROM samples WHERE at<?',(stamp-90*86400,))
         self.db.execute('DELETE FROM events WHERE at<?',(stamp-30*86400,))
         self.db.execute('DELETE FROM token_events WHERE date<?',((datetime.now()-timedelta(days=30)).strftime('%Y-%m-%d'),))
+        self.db.execute('DELETE FROM account_daily WHERE date<?',((datetime.now()-timedelta(days=180)).strftime('%Y-%m-%d'),))
         self.db.execute('DELETE FROM daily WHERE date<?',((datetime.now()-timedelta(days=180)).strftime('%Y-%m-%d'),))
         self.db.commit()
 
@@ -366,8 +405,12 @@ class Store:
         self.db.commit()
 
     def history(self):
-        since=(datetime.now()-timedelta(days=30)).strftime('%Y-%m-%d')
-        return [{'provider':p,'date':d,'tokens':t} for p,d,t in self.db.execute('SELECT provider,date,tokens FROM daily WHERE date>=? ORDER BY date',(since,))]
+        # Native account totals are upserted per account/day, then summed across known accounts.
+        # Legacy unscoped rows remain stored, but cannot be added to an overlapping day safely.
+        rows=[dict(provider=p,date=d,tokens=t,coverage='legacy-or-local') for p,d,t in self.db.execute("SELECT provider,date,tokens FROM daily WHERE date>=date('now','-30 days') ORDER BY date")]
+        known=[dict(provider=p,date=d,tokens=t,coverage='known-account-sum') for p,d,t in self.db.execute("SELECT provider,date,sum(tokens) FROM account_daily WHERE date>=date('now','-30 days') GROUP BY provider,date")]
+        covered={(r['provider'],r['date']) for r in known}
+        return sorted([r for r in rows if (r['provider'],r['date']) not in covered]+known,key=lambda r:(r['date'],r['provider']))
 
     def patterns(self,glm_tools):
         cutoff=int(time.time())-7*86400
@@ -454,7 +497,7 @@ def snapshot(directory, collect_patterns=None):
     day=datetime.now(timezone.utc).strftime('%Y-%m-%d');store=Store(directory)
     items=[];threads=[]
     def fetch(ident):
-        if ident=='codex': return collect_codex(day,config,collect_patterns)
+        if ident=='codex': return collect_codex(day,config,collect_patterns,directory=directory)
         if ident=='glm': return collect_glm(day,config),[]
         return adapters.collect_extra(ident,directory,config),[]
     with ThreadPoolExecutor(max_workers=4) as pool:
@@ -465,6 +508,8 @@ def snapshot(directory, collect_patterns=None):
             item.setdefault('observedAt',int(time.time()));item['measurementDay']=day;store.persist(item)
         elif item['status']=='unavailable':
             cached=store.latest(item['id'])
+            # Never reuse an account-specific Codex cache when current identity is unknown/mismatched.
+            if item['id']=='codex' and (not item.get('accountScope') or not cached or cached.get('accountScope')!=item['accountScope']):cached=None
             if cached:
                 errors=item.get('sourceStatus',[]);item.update(cached);item['sourceStatus']=errors+['cached_previous_read']
                 if item.get('measurementDay')!=day:item['todayTokens']=None
@@ -476,14 +521,17 @@ def snapshot(directory, collect_patterns=None):
         if codex.get('todayTokens') is None:
             codex['todayTokens']=store.local_tokens(day);codex['todayTokenCoverage']='partial-local'
         else:codex['todayTokenCoverage']='account-reported'
+    j=journal.Journal(directory)
+    try:deep=analytics.report(j,enabled)
+    finally:j.close()
     settings=store.settings()
     for item in items:
-        item['subscription']=settings.get(item['id'],{'date':None,'kind':'renewal','source':'manual'})
-    result={'generatedAt':int(time.time()),'providers':items,'catalog':adapters.CATALOG,'localPatterns':bool(collect_patterns),
+        item['subscription']=settings.get(item['id'],{'date':None,'kind':'renewal','source':'manual'}) if item['id']!='codex' or item.get('accountScope') else {'date':None,'kind':'renewal','source':'manual'}
+    result={'analytics':deep,'generatedAt':int(time.time()),'providers':items,'catalog':adapters.CATALOG,'localPatterns':bool(collect_patterns),
             'history':[x for x in store.history() if x['provider'] in enabled],
             'patterns':[x for x in store.patterns([t for p in items for t in p.get('tools',[])]) if x['provider'] in enabled and (x['provider']!='codex' or collect_patterns)],
             'patternCoverage':'Tool categories, partial local records; no per-tool token attribution',
-            'privacy':'Local counters only; no prompts/results/code saved or uploaded'}
+            'privacy':'Local counters and sanitized journal metadata only; no raw payloads/code saved or uploaded'}
     store.db.close()
     return result
 
@@ -494,13 +542,36 @@ def main():
     s=sub.add_parser('snapshot');s.add_argument('--no-patterns',action='store_true')
     q=sub.add_parser('subscription');q.add_argument('--provider',choices=sorted(adapters.IDS),required=True);q.add_argument('--date',default='');q.add_argument('--kind',choices=['renewal','expiry','none'],required=True)
     sub.add_parser('catalog')
+    sub.add_parser('limits')
     c=sub.add_parser('configure');c.add_argument('--providers',required=True);c.add_argument('--local-patterns',choices=['on','off'],default='off')
     i=sub.add_parser('ingest');i.add_argument('--provider',choices=sorted(adapters.IDS),required=True);i.add_argument('--file',type=Path,required=True)
+    h=sub.add_parser('hook');h.add_argument('--provider',choices=sorted(journal.PROVIDERS),required=True)
+    h=sub.add_parser('hooks');h.add_argument('--provider',choices=sorted(instrumentation.NATIVE_EVENTS),required=True);h.add_argument('--action',choices=['install','remove'],required=True)
+    h=sub.add_parser('journal');h.add_argument('--action',choices=['report','session','inventory','scan','annotate','compare','export'],default='report');h.add_argument('--session');h.add_argument('--provider',choices=sorted(journal.PROVIDERS),default='codex');h.add_argument('--skills-dir',type=Path,action='append',default=[]);h.add_argument('--config',type=Path);h.add_argument('--file',type=Path);h.add_argument('--label');h.add_argument('--variant');h.add_argument('--outcome',choices=['accepted','failed','rework','unknown'],default='unknown');h.add_argument('--before');h.add_argument('--after')
+    sub.add_parser('mcp')
     a=p.parse_args();os.umask(0o077)
+    if a.command=='hook':
+        import sys
+        j=None
+        try:
+            body=sys.stdin.buffer.read(journal.MAX_INPUT+1)
+            if len(body)>journal.MAX_INPUT:raise ValueError('oversize')
+            j=journal.Journal(a.state);j.record(a.provider,json.loads(body))
+        except Exception:
+            try:
+                if j:j.reject(a.provider)
+            except Exception:pass
+        finally:
+            if j:j.close()
+        return
+    if a.command=='mcp':mcp_server.serve(a.state);return
     try:
-        if a.command=='subscription':
+        if a.command=='journal':result=journal_cli.run(a)
+        elif a.command=='hooks':result=instrumentation.configure_hooks(a.provider,a.state,a.action=='install')
+        elif a.command=='subscription':
             s=Store(a.state);s.set_subscription(a.provider,a.date,a.kind);s.db.close();result={'saved':True}
         elif a.command=='catalog':result=adapters.CATALOG
+        elif a.command=='limits':result=collect_codex(datetime.now(timezone.utc).strftime('%Y-%m-%d'),adapters.load_config(a.state),quota_only=True,directory=a.state)[0]
         elif a.command=='configure':
             enabled=list(dict.fromkeys(a.providers.split(','))) if a.providers else []
             if any(x not in adapters.IDS for x in enabled):raise ValueError('invalid_provider')

@@ -1,5 +1,17 @@
 # Changelog / Изменения
 
+## 0.3.0 — 2026-10-06
+
+- Opt-in silent native Codex/ZCode/Claude observations, private SQLite journal and hashed evidence.
+- Paired outcomes/durations, session timeline, workflow/retry/read discovery, explicit capability inventory and observational before/after review.
+- Local bounded read-only MCP with three evidence tools; no model/API usage added.
+- Mac and Windows tabbed analytics; preserved native hook configuration and separate Windows console helper.
+- Codex limits refresh every minute with quota-source time; counters every five minutes. Independent reads can still briefly differ.
+- Privacy/concurrency/provenance regression tests and bilingual setup/limitations.
+
+Новый локальный журнал, сценарии, доказательства, сравнение вариантов и MCP аналитики. Лимиты Codex обновляются раз в минуту с временем получения. Все наблюдатели добровольные; полный охват каждого шага и токены каждого инструмента не обещаются.
+
+
 ## 0.2.2 — 2026-10-06
 
 - Resolve the Windows demo fixture to an absolute path before the frozen executable smoke check.

@@ -32,6 +32,7 @@ jobs:
           ./build.sh
           'dist/Agent Pulse.app/Contents/MacOS/AgentPulse' --fixture examples/demo.json --snapshot .build/widget.png
           'dist/Agent Pulse.app/Contents/Resources/pulse-collector' catalog > .build/catalog.json
+          python scripts/frozen_smoke.py 'dist/Agent Pulse.app/Contents/Resources/pulse-collector'
           cp LICENSE NOTICE 'dist/Agent Pulse.app/Contents/Resources/'
           python scripts/runtime_notices.py 'dist/Agent Pulse.app/Contents/Resources/Licenses'
           codesign --force --sign - 'dist/Agent Pulse.app'
@@ -39,6 +40,10 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent 'dist/Agent Pulse.app' 'dist/agent-pulse-${{ matrix.artifact }}.zip'
       - if: runner.os == 'Windows'
         run: |
+          python -m PyInstaller --clean --noconfirm --onefile --console --name pulse-collector collector.py
+          & ./dist/pulse-collector.exe catalog
+          python scripts/frozen_smoke.py dist/pulse-collector.exe
+          if ($LASTEXITCODE -ne 0) { throw "Frozen collector failed" }
           python -m PyInstaller --clean --noconfirm --onefile --windowed --name AgentPulse --paths . windows/agent_pulse.py
           python windows/agent_pulse.py --fixture examples/demo.json --smoke
           $demo = (Resolve-Path examples/demo.json).Path
@@ -49,7 +54,7 @@ jobs:
             throw 'Packaged Windows smoke failed; diagnostic output above'
           }
           python scripts/runtime_notices.py dist/Licenses
-          Compress-Archive -Path dist/AgentPulse.exe,dist/Licenses,LICENSE,NOTICE,README.md,README.ru.md -DestinationPath 'dist/agent-pulse-${{ matrix.artifact }}.zip'
+          Compress-Archive -Path dist/AgentPulse.exe,dist/pulse-collector.exe,dist/Licenses,LICENSE,NOTICE,README.md,README.ru.md -DestinationPath 'dist/agent-pulse-${{ matrix.artifact }}.zip'
       - uses: actions/upload-artifact@v4
         with:
           name: agent-pulse-${{ matrix.artifact }}

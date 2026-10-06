@@ -19,3 +19,15 @@ Network: Codex/ZCode native processes can use their own authentication and vendo
 Мост Claude отбрасывает названия/ID сессий, пути переписки и рабочие каталоги. Размер контекста не считается расходом. Импортируйте только счётчики, не переписку или секреты. Старые/недатированные данные помечаются устаревшими. Ключ Kimi хранится только в локальном `Secrets.json`, не в git и не в телеметрии.
 
 Штатные Codex/ZCode могут обращаться к своим сервисам и имеют собственную авторизацию/телеметрию. Опциональный Kimi делает GET только в официальный API; переадресации и прокси окружения отключены. Qwen читает явно настроенный loopback и не запускает сервер. Корпоративные MCP и удалённые плагины не используются.
+
+## Event journal (0.3.0) / Журнал событий
+
+Opt-in native hooks transiently receive payloads and retain only allowlisted metadata, fixed command shapes and keyed input/session/project/resource fingerprints in own local SQLite. No payload, prompt, result, code, transcript or literal project path persists. Device key is in local Secrets.json. Metadata/hashes are private activity evidence, not anonymous public data. No exports are uploaded automatically. Reports are bounded; retention and native-coverage gaps are documented in [analytics](docs/ANALYTICS.md). Native hook configuration is changed only by explicit observer enable/remove, preserving other handlers; no trust bypass. Only this observer is removed. The optional local MCP reads bounded evidence and performs own-cache housekeeping; no native tools/model calls are exposed.
+
+Добровольные хуки сохраняют очищенные метаданные, формы команд и локальные HMAC, без текстов/кода/секретов/путей проекта. Ключ в Secrets.json. Это личные сведения о работе; публичная анонимность не обещается. Экспорт не отправляется. Включение/удаление наблюдателя меняет только его обработчики в нативном конфиге. Доверие клиента не обходится. Локальный MCP читает ограниченные сведения и обслуживает свой кеш; не управляет клиентами.
+
+
+Account switching observes only known auth/config file modification/size/inode attributes for selected clients, never their contents. Native Codex account/read identity is transiently hashed with the journal key; raw IDs/emails are not retained. Quota cache for an unknown/mismatched account is not reused. / Переключение аккаунтов использует только атрибуты известных файлов, без чтения секретов; штатная личность Codex сохраняется лишь как локальный HMAC.
+
+
+Work history remains continuous across account switches. The journal groups by provider/task, not login. Known Codex daily account reports are stored per hashed account/day, updated (not incremented) on each read, then summed for general daily history. Switching back does not count the same account twice. Earlier unscoped rows remain stored; if they overlap a known-account day, they are not added because identity/overlap cannot be verified. Therefore totals cover observed accounts only, not every account ever used. Current quotas and manual billing dates remain account-specific; GLM local aggregates remain client history.

@@ -17,7 +17,7 @@ struct Provider: Codable, Identifiable {
     var id: String; var name: String; var status: String; var quotas: [Quota]
     var todayTokens: Double?; var lifetimeTokens: Double?; var periodTokens: Double?; var contextTokens: Double?
     var sessions: Double?; var resetCredits: Double?; var sourceStatus: [String]
-    var observedAt: Double?; var lastSuccessfulAt: Double?; var tokenSource: String?; var tokenCoverage: String?; var todayTokenCoverage: String?; var subscription: Subscription
+    var accountScope: String?; var quotaObservedAt: Double?; var observedAt: Double?; var lastSuccessfulAt: Double?; var tokenSource: String?; var tokenCoverage: String?; var todayTokenCoverage: String?; var subscription: Subscription
 }
 struct ProviderSpec: Codable, Identifiable { var id: String; var name: String; var mode: String; var support: String }
 struct DayUsage: Codable, Identifiable {
@@ -31,7 +31,41 @@ struct Pattern: Codable, Identifiable {
 }
 struct Snapshot: Codable {
     var generatedAt: Double; var providers: [Provider]; var history: [DayUsage]; var patterns: [Pattern]
+    var analytics: AnalyticsReport?
     var patternCoverage: String; var privacy: String; var catalog: [ProviderSpec]?; var localPatterns: Bool?
+}
+struct EventCoverage: Codable, Identifiable {
+    var provider: String; var state: String; var calls: Int; var pairedCalls: Int; var rejected: Int
+    var id: String { provider }
+}
+struct WorkflowFinding: Codable, Identifiable {
+    var id: String; var provider: String; var kind: String; var title: String; var titleRu: String
+    var suggestion: String; var suggestionRu: String; var occurrences: Int; var sessions: Int
+    var sequence: [String]; var evidenceSessions: [String]?; var evidenceIds: [String]; var inventoryStatus: String; var confidence: String
+}
+struct JournalCall: Codable, Identifiable {
+    var id: String; var provider: String; var session: String; var tool: String; var category: String
+    var template: String; var outcome: String; var durationMs: Double?; var durationSource: String
+    var startedAt: Double?; var endedAt: Double?; var paired: Bool; var source: String; var turn_source: String
+}
+struct JournalSession: Codable, Identifiable {
+    var id: String; var provider: String; var calls: Int; var failed: Int; var pending: Int; var paired: Int
+    var elapsedMs: Double?; var startedAt: Double?; var label: String?; var outcome: String; var variant: String?
+}
+struct AnalyticsReport: Codable {
+    var calls: Int; var inventoryCount: Int; var eventLimitReached: Bool
+    var coverage: [EventCoverage]; var findings: [WorkflowFinding]; var sessions: [JournalSession]; var recentCalls: [JournalCall]
+}
+func categoryText(_ code: String) -> String {
+    let ru = ["read":"чтение", "search":"поиск", "edit":"изменение", "test":"проверка", "build":"сборка", "inspect":"осмотр", "remote":"внешний инструмент", "shell":"команда", "other":"прочее", "delegate":"делегирование", "environment":"среда"]
+    return russian ? ru[code] ?? code : code
+}
+func outcomeText(_ code: String) -> String {
+    let ru = ["success":"успешно", "failed":"ошибка", "unknown":"неизвестно", "pending":"без завершения", "accepted":"принято", "rework":"доработка"]
+    return russian ? ru[code] ?? code : code
+}
+func coverageText(_ code: String) -> String {
+    return code == "receiving" ? tr("receiving events", "получает события") : code == "stale" ? tr("no recent events", "нет свежих событий") : tr("not observed", "не наблюдается")
 }
 let isoDay: DateFormatter = { let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.timeZone = TimeZone(secondsFromGMT: 0); f.dateFormat = "yyyy-MM-dd"; return f }()
 let bg = Color(red: 0.082, green: 0.102, blue: 0.114)
@@ -69,7 +103,7 @@ func subscriptionText(_ s: Subscription) -> String {
     @Published var snapshot: Snapshot?; @Published var loading = false; @Published var error: String?; @Published var settingsMessage: String?
     @Published var expanded = false; @Published var topmost = true; @Published var page = 0
     @Published var language: String = UserDefaults.standard.string(forKey: "language") ?? "en" { didSet { UserDefaults.standard.set(language, forKey: "language") } }
-    let fixture: String?; private var timer: Timer?
+    let fixture: String?; private var timer: Timer?; private var limitTimer: Timer?; private var readingLimits = false; private var authTimer: Timer?; private var authMarks: [String: String] = [:]; private var authRevision = 0
     init() {
         let args = CommandLine.arguments
         fixture = args.firstIndex(of: "--fixture").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
@@ -78,6 +112,9 @@ func subscriptionText(_ s: Subscription) -> String {
             do { snapshot = try JSONDecoder().decode(Snapshot.self, from: Data(contentsOf: URL(fileURLWithPath: fixture))) }
             catch { self.error = tr("Could not load demo", "Не удалось прочитать демо") }
         } else {
+            authMarks = authenticationMetadata()
+            authTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in Task { @MainActor in self?.checkAuthenticationChange() } }
+            limitTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in Task { @MainActor in self?.refreshLimits() } }
             refresh(); timer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in Task { @MainActor in self?.refresh() } }
         }
     }
@@ -90,7 +127,7 @@ func subscriptionText(_ s: Subscription) -> String {
             do {
                 let process = Process(); let bundled = resources.appendingPathComponent("pulse-collector")
                 if FileManager.default.isExecutableFile(atPath: bundled.path) { process.executableURL = bundled; process.arguments = arguments }
-                else { process.executableURL = URL(fileURLWithPath: "/usr/bin/env"); process.arguments = ["python3", resources.appendingPathComponent("collector.py").path] + arguments }
+                else { process.executableURL = URL(fileURLWithPath: "/usr/bin/env"); process.arguments = [ProcessInfo.processInfo.environment["AGENT_PULSE_PYTHON"] ?? "python3", resources.appendingPathComponent("collector.py").path] + arguments }
                 var env = ProcessInfo.processInfo.environment
                 env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + (env["PATH"] ?? "/usr/bin:/bin")
                 process.environment = env
@@ -102,15 +139,83 @@ func subscriptionText(_ s: Subscription) -> String {
         }
     }
     func refresh() {
-        guard !loading, !isFixture else { return }; loading = true; error = nil
+        guard !loading, !isFixture else { return }; loading = true; error = nil; let revision = authRevision
         run(["snapshot"]) { [weak self] result in
             guard let self else { return }; self.loading = false
+            guard revision == self.authRevision else { self.refresh(); return }
             switch result {
             case .success(let data):
-                do { self.snapshot = try JSONDecoder().decode(Snapshot.self, from: data); self.page = min(self.page, self.pages - 1) }
+                do { var next = try JSONDecoder().decode(Snapshot.self, from: data)
+                    if let old = self.snapshot?.providers.first(where: { $0.id == "codex" }), let idx = next.providers.firstIndex(where: { $0.id == "codex" }), old.accountScope == next.providers[idx].accountScope, (old.quotaObservedAt ?? 0) > (next.providers[idx].quotaObservedAt ?? 0) {
+                        next.providers[idx].quotas = old.quotas; next.providers[idx].quotaObservedAt = old.quotaObservedAt
+                    }
+                    self.snapshot = next; self.page = min(self.page, self.pages - 1) }
                 catch { self.error = tr("Invalid metrics response", "Неполный ответ источника") }
             case .failure: self.error = tr("Refresh failed; last data retained", "Не удалось обновить; сохранены последние данные")
             }
+        }
+    }
+    func authenticationMetadata() -> [String: String] {
+        // File attributes only. Never open authentication files or extract credentials.
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let roots = ["codex": ProcessInfo.processInfo.environment["CODEX_HOME"].map { URL(fileURLWithPath: $0).appendingPathComponent("auth.json") } ?? home.appendingPathComponent(".codex/auth.json"),
+                     "glm": home.appendingPathComponent(".zcode/v2/provider_config.json"),
+                     "claude": home.appendingPathComponent(".claude/.credentials.json"),
+                     "kimi": home.appendingPathComponent(".kimi/config.toml"),
+                     "qwen": home.appendingPathComponent(".qwen/oauth_creds.json")]
+        var result: [String: String] = [:]
+        let selected = Set(snapshot?.providers.map { $0.id } ?? ["codex", "glm"])
+        for (id, path) in roots where selected.contains(id) {
+            if let attributes = try? FileManager.default.attributesOfItem(atPath: path.path) {
+                result[id] = String(describing: attributes[.modificationDate]) + ":" + String(describing: attributes[.size]) + ":" + String(describing: attributes[.systemFileNumber])
+            } else { result[id] = "missing" }
+        }
+        return result
+    }
+    func checkAuthenticationChange() {
+        guard !isFixture else { return }
+        let next = authenticationMetadata()
+        guard next != authMarks else { return }
+        let changed = Set(next.keys).union(authMarks.keys).filter { next[$0] != authMarks[$0] }
+        authMarks = next; authRevision += 1
+        if var value = snapshot {
+            for idx in value.providers.indices where changed.contains(value.providers[idx].id) {
+                value.providers[idx].quotas = []; value.providers[idx].quotaObservedAt = nil
+                value.providers[idx].todayTokens = nil; value.providers[idx].lifetimeTokens = nil
+                value.providers[idx].periodTokens = nil; value.providers[idx].contextTokens = nil
+                value.providers[idx].accountScope = nil; value.providers[idx].status = "unavailable"
+                value.providers[idx].subscription = Subscription(date: nil, kind: "renewal", source: "manual")
+            }
+            snapshot = value
+        }
+        refreshLimits(); refresh()
+    }
+    func refreshLimits() {
+        guard !isFixture, !readingLimits, snapshot?.providers.contains(where: { $0.id == "codex" }) == true else { return }
+        readingLimits = true; let revision = authRevision
+        run(["limits"]) { [weak self] result in
+            guard let self else { return }; self.readingLimits = false
+            guard revision == self.authRevision else { self.refreshLimits(); return }
+            struct LimitResult: Decodable { var status: String; var quotas: [Quota]; var quotaObservedAt: Double?; var accountScope: String? }
+            if case .success(let data) = result, let value = try? JSONDecoder().decode(LimitResult.self, from: data), value.status == "ready", let idx = self.snapshot?.providers.firstIndex(where: { $0.id == "codex" }) {
+                let switched = self.snapshot?.providers[idx].accountScope != nil && value.accountScope != nil && self.snapshot?.providers[idx].accountScope != value.accountScope
+                if switched {
+                    self.authRevision += 1
+                    self.snapshot?.providers[idx].todayTokens = nil; self.snapshot?.providers[idx].lifetimeTokens = nil
+                    self.snapshot?.providers[idx].subscription = Subscription(date: nil, kind: "renewal", source: "manual")
+                    // General task/token history continues across account changes.
+                }
+                self.snapshot?.providers[idx].accountScope = value.accountScope
+                self.snapshot?.providers[idx].quotas = value.quotas; self.snapshot?.providers[idx].quotaObservedAt = value.quotaObservedAt
+                if switched { self.refresh() }
+            }
+        }
+    }
+    func observer(_ provider: String, enable: Bool) {
+        guard !isFixture else { settingsMessage = tr("Demo: no configuration changes", "Демо: настройки не меняются"); return }
+        run(["hooks", "--provider", provider, "--action", enable ? "install" : "remove"]) { [weak self] result in
+            if case .success = result { self?.settingsMessage = tr("Observer configured. Start a new client session; Codex may request hook trust review.", "Наблюдатель настроен. Начните новую сессию клиента; Codex может запросить проверку доверия хуку.") }
+            else { self?.settingsMessage = tr("Configuration failed; inspect the local CLI", "Настройка не удалась; проверьте локальную CLI") }
         }
     }
     func configure(_ ids: [String], patterns: Bool) {
@@ -154,11 +259,12 @@ struct ProviderLine: View {
                 HStack(spacing: 18) {
                     ForEach(provider.quotas.prefix(2)) { q in
                         HStack(alignment: .firstTextBaseline, spacing: 5) {
-                            Text(q.remainingPercent.map { String(format: "%.0f%%", $0) } ?? "—").font(.system(size: 23, weight: .medium, design: .monospaced)).foregroundStyle((q.remainingPercent ?? 100) < 15 ? amber : mint)
+                            Text(q.remainingPercent.map { "\(Int(floor($0)))%" } ?? "—").font(.system(size: 23, weight: .medium, design: .monospaced)).foregroundStyle((q.remainingPercent ?? 100) < 15 ? amber : mint)
                             VStack(alignment: .leading, spacing: 1) { Text(q.label).font(.system(size: 10)); Text(stamp(q.resetsAt, compact: true)).font(.system(size: 9)).foregroundStyle(quiet) }
                         }
                     }
                 }
+                Text(tr("Limit read: ", "Лимит получен: ") + stamp(provider.quotaObservedAt ?? provider.observedAt, compact: true)).font(.system(size: 9)).foregroundStyle(quiet).help(tr("Independent quota snapshot; refresh to compare with the native client", "Независимый снимок лимита; обновите для сравнения с клиентом"))
                 Text(tr("Tokens today: ", "Токены сегодня: ") + shortNumber(provider.todayTokens) + (provider.todayTokenCoverage == "partial-local" ? tr(" · partial", " · частично") : "")).font(.system(size: 10)).foregroundStyle(quiet)
             } else {
                 HStack(alignment: .firstTextBaseline) {
@@ -208,48 +314,169 @@ struct WidgetView: View {
 }
 struct AnalysisView: View {
     @ObservedObject var store: PulseStore
+    @State var tab = CommandLine.arguments.firstIndex(of: "--tab").flatMap { $0 + 1 < CommandLine.arguments.count ? CommandLine.arguments[$0 + 1] : nil } ?? "overview"
+    @State var selectedSession: String?; @State var calls: [JournalCall] = []; @State var evidence: Set<String> = []
+    @State var label = ""; @State var variant = "before"; @State var outcome = "unknown"
+    @State var before = "before"; @State var after = "after"; @State var message = ""
+    func select(_ session: JournalSession, evidenceIds: [String] = []) {
+        selectedSession = session.id; label = session.label ?? ""; variant = session.variant ?? "before"; outcome = session.outcome
+        evidence = Set(evidenceIds); tab = "sessions"; message = ""
+        calls = (store.snapshot?.analytics?.recentCalls ?? []).filter { $0.session == session.id }
+        if !store.isFixture {
+            store.run(["journal", "--action", "session", "--session", session.id]) { r in
+                struct Result: Decodable { var calls: [JournalCall]; var truncated: Bool }
+                if case .success(let data) = r, let result = try? JSONDecoder().decode(Result.self, from: data) {
+                    calls = result.calls
+                    if result.truncated { message = tr("Showing first 500 calls; export for further review", "Первые 500 вызовов; используйте экспорт для продолжения") }
+                }
+            }
+        }
+    }
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack { Text(tr("Agent activity", "Работа агентов")).font(.system(size: 26, weight: .medium)); Spacer(); Button(tr("Refresh", "Обновить"), action: store.refresh).disabled(store.loading || store.isFixture) }
-                Text(tr("Reported counters. Missing days are unknown, not zero. Daily history uses UTC.", "Счётчики источников. Пропущенные дни неизвестны, а не равны нулю. История по UTC.")).font(.system(size: 12)).foregroundStyle(quiet)
-                if let snapshot = store.snapshot {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 16) {
-                        ForEach(snapshot.providers) { p in
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(p.name).font(.system(size: 16, weight: .semibold))
-                                Text(tr("Tokens today: ", "Токены сегодня: ") + fullNumber(p.todayTokens)).font(.system(size: 12))
-                                if let context = p.contextTokens { Text(tr("Context gauge: ", "Размер контекста: ") + fullNumber(context)).font(.system(size: 11)).foregroundStyle(amber) }
-                                Text(subscriptionText(p.subscription)).font(.system(size: 11)).foregroundStyle(quiet)
-                                Text(p.tokenSource ?? tr("Source unavailable", "Источник недоступен")).font(.system(size: 10)).foregroundStyle(quiet)
-                                Text(p.tokenCoverage ?? p.todayTokenCoverage ?? "").font(.system(size: 10)).foregroundStyle(quiet)
-                                Text(p.status).font(.system(size: 10)).foregroundStyle(p.status == "ready" ? mint : amber)
-                            }.frame(maxWidth: .infinity, alignment: .leading)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack { Text(tr("Agent activity", "Работа агентов")).font(.system(size: 26, weight: .medium)); Spacer(); Button(tr("Refresh", "Обновить"), action: store.refresh).disabled(store.loading || store.isFixture) }
+            Picker("View", selection: $tab) {
+                Text(tr("Overview", "Обзор")).tag("overview"); Text(tr("Workflows", "Сценарии")).tag("workflows")
+                Text(tr("Sessions", "Сессии")).tag("sessions"); Text(tr("Compare", "Сравнение")).tag("compare")
+            }.pickerStyle(.segmented).labelsHidden()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    if let snapshot = store.snapshot {
+                        if tab == "overview" { overview(snapshot) }
+                        else if let report = snapshot.analytics {
+                            if tab == "workflows" { workflows(report) }
+                            else if tab == "sessions" { sessions(report) }
+                            else { comparison(report) }
+                        } else { Text(tr("No event journal yet. Enable a local observer in Settings.", "Журнал ещё пуст. Включите локальный наблюдатель в настройках.")).foregroundStyle(quiet) }
+                    }
+                }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8)
+            }
+            Text(tr("Local evidence · partial coverage · no model calls or per-tool token estimates", "Локальные данные · частичный охват · без вызовов моделей и оценки токенов каждого инструмента")).font(.system(size: 10)).foregroundStyle(quiet)
+        }.padding(24).background(bg).foregroundStyle(ink).colorScheme(.dark)
+        .onAppear {
+            if CommandLine.arguments.contains("--session-demo"), let first = store.snapshot?.analytics?.sessions.first { select(first) }
+        }
+    }
+    func overview(_ snapshot: Snapshot) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(tr("Quota windows, reported tokens and billing dates remain separate.", "Окна лимитов, переданные токены и даты оплаты учитываются отдельно.")).font(.system(size: 12)).foregroundStyle(quiet)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 16) {
+                ForEach(snapshot.providers) { p in
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(p.name).font(.system(size: 16, weight: .semibold))
+                        Text(tr("Tokens today: ", "Токены сегодня: ") + fullNumber(p.todayTokens)).font(.system(size: 12))
+                        if let context = p.contextTokens { Text(tr("Context gauge: ", "Размер контекста: ") + fullNumber(context)).font(.system(size: 11)).foregroundStyle(amber) }
+                        Text(subscriptionText(p.subscription)).font(.system(size: 11)).foregroundStyle(quiet)
+                        Text(p.tokenSource ?? tr("Source unavailable", "Источник недоступен")).font(.system(size: 10)).foregroundStyle(quiet)
+                        Text(p.tokenCoverage ?? "").font(.system(size: 10)).foregroundStyle(quiet)
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            Divider()
+            Text(tr("Reported tokens · UTC", "Переданные токены · UTC")).font(.system(size: 16, weight: .semibold))
+            if snapshot.history.isEmpty { Text(tr("No history reported", "История не получена")).foregroundStyle(quiet) }
+            else { Chart(snapshot.history) { item in BarMark(x: .value("Date", item.day, unit: .day), y: .value("Tokens", item.tokens)).foregroundStyle(by: .value("Client", item.provider)).position(by: .value("Client", item.provider)) }.frame(height: 140) }
+            if let report = snapshot.analytics {
+                Text(tr("Observed work", "Наблюдаемая работа")).font(.system(size: 16, weight: .semibold))
+                Text("\(report.calls) " + tr("calls · ", "вызовов · ") + "\(report.findings.count) " + tr("workflow findings", "наблюдений по сценариям")).foregroundStyle(mint)
+                coverage(report)
+            }
+            Text(tr("Missing days are unknown, not zero. Imported counters do not provide a command timeline.", "Пропущенные дни неизвестны, а не равны нулю. Импорт счётчиков не даёт хронологию команд.")).font(.system(size: 11)).foregroundStyle(quiet)
+        }
+    }
+    func coverage(_ report: AnalyticsReport) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(report.coverage) { c in
+                HStack { Text(c.provider.uppercased()).font(.system(size: 11, weight: .semibold, design: .monospaced)); Spacer(); Text(coverageText(c.state)).foregroundStyle(c.state == "receiving" ? mint : amber) }
+                Text("\(c.pairedCalls)/\(c.calls) " + tr("paired calls · ", "пар вызовов · ") + "\(c.rejected) " + tr("rejected events", "отклонённых событий")).font(.system(size: 10)).foregroundStyle(quiet)
+            }
+            if report.eventLimitReached { Text(tr("Analysis limited to the latest 20,000 events", "Анализ ограничен последними 20 000 событиями")).foregroundStyle(amber) }
+        }.font(.system(size: 11))
+    }
+    func workflows(_ report: AnalyticsReport) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            coverage(report)
+            Text(tr("Suggestions require review. Repetition alone does not prove waste or a missing skill.", "Предложения требуют проверки. Повтор сам по себе не доказывает лишнюю работу или отсутствие скилла.")).font(.system(size: 12)).foregroundStyle(quiet)
+            if report.findings.isEmpty { Text(tr("Not enough paired events yet. Enable an observer and run ordinary tasks.", "Пока недостаточно пар событий. Включите наблюдатель и выполняйте обычные задачи.")).foregroundStyle(quiet) }
+            ForEach(report.findings) { finding in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack { Text(russian ? finding.titleRu : finding.title).font(.system(size: 15, weight: .semibold)); Spacer(); Text(finding.provider.uppercased()).font(.system(size: 10, design: .monospaced)).foregroundStyle(mint) }
+                    if !finding.sequence.isEmpty { Text(finding.sequence.map(categoryText).joined(separator: " → ")).font(.system(size: 12, design: .monospaced)).foregroundStyle(mint) }
+                    Text("\(finding.occurrences) " + tr("occurrences · ", "повторов · ") + "\(finding.sessions) " + tr("sessions", "сессий")).font(.system(size: 11)).foregroundStyle(quiet)
+                    Text(russian ? finding.suggestionRu : finding.suggestion).font(.system(size: 12))
+                    Text(finding.inventoryStatus == "inventory_unknown" ? tr("Inventory unknown: no claim that a tool is missing", "Каталог неизвестен: отсутствие инструмента не установлено") : finding.inventoryStatus == "configured_unverified" ? tr("Candidate configured; live availability unverified", "Кандидат настроен; доступность не проверена") : tr("Category match requires manual review", "Совпадение категорий требует ручной проверки")).font(.system(size: 10)).foregroundStyle(amber)
+                    if let sid = finding.evidenceSessions?.first ?? report.recentCalls.first(where: { finding.evidenceIds.contains($0.id) })?.session {
+                        Button(tr("Inspect evidence →", "Посмотреть примеры →")) {
+                            let session = report.sessions.first(where: { $0.id == sid }) ?? JournalSession(id: sid, provider: finding.provider, calls: 0, failed: 0, pending: 0, paired: 0, elapsedMs: nil, startedAt: nil, label: nil, outcome: "unknown", variant: nil)
+                            select(session, evidenceIds: finding.evidenceIds)
                         }
                     }
-                    Divider().overlay(divider)
-                    Text(tr("Tokens by day", "Токены по дням")).font(.system(size: 16, weight: .semibold))
-                    if snapshot.history.isEmpty { Text(tr("No history reported", "История ещё не получена")).foregroundStyle(quiet) }
-                    else {
-                        Chart(snapshot.history) { item in BarMark(x: .value("Date", item.day, unit: .day), y: .value("Tokens", item.tokens)).foregroundStyle(by: .value("Client", item.provider)).position(by: .value("Client", item.provider)) }.chartXAxis { AxisMarks(values: .stride(by: .day, count: 4)) { _ in AxisValueLabel(format: .dateTime.day().month(.abbreviated)) } }.frame(height: 160)
-                    }
-                    Text(tr("Coverage differs by client. Context size and subscription quotas are not token spend; do not total them as billed usage.", "Охват различается. Размер контекста и лимиты подписки не равны расходу токенов; их нельзя суммировать как оплаченный расход.")).font(.system(size: 11)).foregroundStyle(quiet)
-                    Divider().overlay(divider)
-                    Text(tr("Repeated calls · 7 days", "Повторяющиеся вызовы · 7 дней")).font(.system(size: 16, weight: .semibold))
-                    Text(tr("Optional partial Codex events and client aggregates. Static command categories are hints, not proof of execution. Counts do not attribute tokens to tools.", "Опциональная выборка событий Codex и агрегаты клиентов. Статические группы команд — признаки, а не доказательство исполнения. Токены инструментам не приписываются.")).font(.system(size: 11)).foregroundStyle(quiet)
-                    if snapshot.patterns.isEmpty { Text(tr("Not enough records yet", "Пока недостаточно записей")).foregroundStyle(quiet) }
-                    ForEach(snapshot.patterns.prefix(15)) { p in
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack { Text(p.name).font(.system(size: 12, weight: .medium, design: .monospaced)); Spacer(); Text(p.provider + " · " + shortNumber(p.count)).font(.system(size: 12, design: .monospaced)).foregroundStyle(mint) }
-                            Text(tr("Review the workflow before adding a skill, tool or MCP.", "Изучите сценарий перед созданием скилла, инструмента или MCP.")).font(.system(size: 11)).foregroundStyle(quiet)
-                            Text(p.source).font(.system(size: 10)).foregroundStyle(quiet)
-                        }.padding(.vertical, 5)
-                        Rectangle().fill(divider).frame(height: 1)
-                    }
-                    Text(tr("Only counters and sanitized tool names persist. No prompts, arguments, results or code. No model calls.", "Сохраняются счётчики и безопасные имена инструментов. Без промптов, аргументов, результатов и кода. Модели не вызываются.")).font(.system(size: 11)).foregroundStyle(quiet)
+
+                }.padding(.vertical, 8)
+                Divider()
+            }
+        }
+    }
+    @ViewBuilder func sessions(_ report: AnalyticsReport) -> some View {
+        if selectedSession == nil { sessionList(report) } else { sessionDetail() }
+    }
+    func sessionList(_ report: AnalyticsReport) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+                Text(tr("Choose a session to inspect observed calls", "Выберите сессию для просмотра вызовов")).font(.system(size: 14, weight: .semibold))
+                ForEach(report.sessions) { session in
+                    Button { select(session) } label: {
+                        HStack { VStack(alignment: .leading, spacing: 4) { Text(session.provider.uppercased() + " · " + String(session.id.prefix(8))).font(.system(size: 13, weight: .semibold, design: .monospaced)); Text(stamp(session.startedAt, compact: true)).font(.system(size: 11)).foregroundStyle(quiet) }; Spacer(); Text("\(session.calls) " + tr("calls · ", "вызовов · ") + "\(session.failed) " + tr("failed", "ошибок")).font(.system(size: 11)) }.padding(.vertical, 5)
+                    }.buttonStyle(.plain)
+                    Divider()
                 }
-            }.padding(28)
-        }.background(bg).foregroundStyle(ink).colorScheme(.dark).environment(\.locale, Locale(identifier: store.language == "ru" ? "ru_RU" : "en_US"))
+                if report.sessions.isEmpty { Text(tr("No observed sessions", "Наблюдаемых сессий пока нет")).foregroundStyle(quiet) }
+        }
+    }
+    func sessionDetail() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+
+                Button(tr("← Sessions", "← Сессии")) { selectedSession = nil; evidence = [] }
+                Text(String(selectedSession!.prefix(12))).font(.system(size: 17, weight: .medium, design: .monospaced))
+                Text(tr("Arguments are intentionally hidden. Safe command shape, outcome and wall time only; overlapping durations are not summed.", "Аргументы скрыты. Только безопасная форма команды, исход и время; длительности параллельных вызовов не складываются.")).font(.system(size: 11)).foregroundStyle(quiet)
+                HStack { TextField(tr("Task label (slug)", "Метка задачи (slug)"), text: $label); TextField(tr("Variant", "Вариант"), text: $variant); Picker(tr("Outcome", "Исход"), selection: $outcome) { ForEach(["unknown", "accepted", "failed", "rework"], id: \.self) { Text(outcomeText($0)).tag($0) } }.labelsHidden().frame(width: 160) }
+                Button(tr("Save review", "Сохранить оценку")) {
+                    guard let sid = selectedSession else { return }
+                    if store.isFixture { message = tr("Demo: review not saved", "Демо: оценка не сохраняется"); return }
+                    store.run(["journal", "--action", "annotate", "--session", sid, "--label", label, "--variant", variant, "--outcome", outcome]) { r in
+                        if case .success = r { message = tr("Saved locally", "Сохранено локально"); store.refresh() }
+                        else { message = tr("Use nonsensitive ASCII labels without spaces", "Используйте нечувствительные ASCII-метки без пробелов") }
+                    }
+                }
+                if !message.isEmpty { Text(message).font(.system(size: 11)).foregroundStyle(amber) }
+                ForEach(calls) { call in callRow(call); Divider() }
+        }
+    }
+    func callRow(_ call: JournalCall) -> some View {
+        let duration = call.durationMs.map { String(format: "%.2f s", $0 / 1000) } ?? "—"
+        let incomplete = call.paired ? "" : tr(" · incomplete pair", " · неполная пара")
+        let metadata = [stamp(call.startedAt, compact: true), duration, call.durationSource].joined(separator: " · ") + incomplete
+        return
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack { Text(categoryText(call.category).uppercased()).font(.system(size: 10, weight: .bold)).foregroundStyle(evidence.contains(call.id) ? mint : quiet); Text(call.tool).font(.system(size: 11, design: .monospaced)); Spacer(); Text(outcomeText(call.outcome)).font(.system(size: 11)).foregroundStyle(call.outcome == "failed" ? amber : quiet) }
+                        Text(call.template).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
+                        Text(metadata).font(.system(size: 10)).foregroundStyle(quiet)
+                    }.padding(.vertical, 6)
+    }
+    func comparison(_ report: AnalyticsReport) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(tr("Review the same task family before and after a change", "Сравните одну группу задач до и после изменения")).font(.system(size: 16, weight: .semibold))
+            Text(tr("Label sessions, variant and acceptance in Sessions. At least 3 observations per variant are needed. Model settings and task difficulty still require your review.", "Укажите метки, вариант и результат в Сессиях. Нужно хотя бы 3 наблюдения на вариант. Настройки моделей и сложность задач проверяете вы.")).font(.system(size: 12)).foregroundStyle(quiet)
+            HStack { TextField(tr("Task label", "Метка задачи"), text: $label); TextField(tr("Before", "До"), text: $before); TextField(tr("After", "После"), text: $after) }
+            Button(tr("Compare observations", "Сравнить наблюдения")) {
+                if store.isFixture { message = tr("Demo comparison: use real reviewed sessions to measure effects.", "Демо: для оценки эффекта используйте реальные проверенные сессии."); return }
+                store.run(["journal", "--action", "compare", "--label", label, "--before", before, "--after", after]) { r in
+                    if case .success(let data) = r, let obj = try? JSONSerialization.jsonObject(with: data), let formatted = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]), let text = String(data: formatted, encoding: .utf8) { message = text }
+                    else { message = tr("Use valid task and variant labels", "Проверьте метки задачи и вариантов") }
+                }
+            }
+            if !message.isEmpty { Text(message).font(.system(size: 11, design: .monospaced)).textSelection(.enabled) }
+            Text(tr("No causal claim, exact per-tool cost or promised subscription saving. Failed and rework results remain visible.", "Без заявления о причинности, точной стоимости инструмента или обещаний экономии подписки. Ошибки и доработки учитываются.")).font(.system(size: 11)).foregroundStyle(amber)
+        }
     }
 }
 struct SubscriptionRow: View {
@@ -282,10 +509,16 @@ struct SettingsView: View {
                 Text(tr("Off by default. Transient parsing of bounded recent event files; only counters and tool categories are retained.", "По умолчанию выключено. Ограниченное чтение недавних событий; сохраняются только счётчики и категории инструментов.")).font(.system(size: 11)).foregroundStyle(quiet)
                 Button(tr("Apply client selection", "Применить выбор клиентов")) { store.configure((store.snapshot?.catalog ?? []).filter { selected.contains($0.id) }.map { $0.id }, patterns: patterns) }
                 Divider().overlay(divider)
+                Text(tr("Local event observers · opt in", "Локальные наблюдатели · по выбору")).font(.system(size: 16, weight: .semibold))
+                Text(tr("Records sanitized metadata only. Start a new client session after setup; native hook trust review may be required. Existing hooks are preserved.", "Записываются только очищенные метаданные. После настройки начните новую сессию; клиент может запросить доверие хуку. Существующие хуки сохраняются.")).font(.system(size: 11)).foregroundStyle(quiet)
+                ForEach(["codex", "glm", "claude"], id: \.self) { id in
+                    HStack { Text(id.uppercased()).frame(width: 70, alignment: .leading); Button(tr("Enable", "Включить")) { store.observer(id, enable: true) }; Button(tr("Remove", "Удалить")) { store.observer(id, enable: false) } }
+                }
+                Divider().overlay(divider)
                 Text(tr("Billing dates · manual", "Даты подписок · вручную")).font(.system(size: 16, weight: .semibold))
                 ForEach(store.snapshot?.providers ?? []) { p in SubscriptionRow(provider: p, store: store) }
                 if let m = store.settingsMessage { Text(m).foregroundStyle(mint) }
-                Text(tr("Refresh every 5 minutes. Configure bridges/imports as documented in the provider guide. No screen, microphone or Accessibility permission required.", "Обновление каждые 5 минут. Мосты и импорт настраиваются по инструкции. Доступ к экрану, микрофону и Accessibility не требуется.")).font(.system(size: 11)).foregroundStyle(quiet)
+                Text(tr("Counters every 5 minutes; Codex limits every minute. Configure bridges/imports as documented in the provider guide. No screen, microphone or Accessibility permission required.", "Счётчики — каждые 5 минут; лимиты Codex — каждую минуту. Мосты и импорт настраиваются по инструкции. Доступ к экрану, микрофону и Accessibility не требуется.")).font(.system(size: 11)).foregroundStyle(quiet)
             }.padding(26)
         }.frame(width: 560, height: 620).background(bg).foregroundStyle(ink).colorScheme(.dark)
         .onAppear { selected = Set((store.snapshot?.providers ?? []).map { $0.id }); patterns = store.snapshot?.localPatterns ?? false }

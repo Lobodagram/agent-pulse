@@ -33,3 +33,27 @@ Prepublication evidence, public counters excluded:
 The downloaded macOS ARM64 package was extracted and tested on the development Mac: strict/deep code-signature verification passed, the bundled frozen collector returned its 11-client catalog, and the packaged app rendered its demo window. Own-window diagnostics passed floating level, all-spaces flags, hide/restore and menu-bar presence. This did not query accounts or replace the user's installed app.
 
 Скачанный Mac ARM64-пакет проверен локально: подпись, встроенный сборщик и демонстрационное окно прошли; это не заменяет ручную приёмку всех сценариев рабочего стола.
+
+
+## v0.3.0 local verification (2026-10-06)
+
+66 unit tests pass on Python 3.12/macOS, including journal pairing, deduplication, failure/unknown outcomes, payload omission, concurrency/key stability, parallel/actor/turn separation, inventory provenance, comparison quality, native configuration preservation/removal and silent fail-open bridge/MCP rejection. These are contract tests with synthetic events, not proof that native live hooks are active in every client.
+
+The native Mac app compiled with Swift 6.2.3/macOS 14 target. Actual own-window fixtures are rendered and inspected at 760×620 and 620×520, in English/Russian. Fresh Codex quota read matched the native desktop-tool read in the same verification interval; the previous cached metric was about four minutes old. This supports refresh timing as the likely discrepancy source, without proving the earlier 7%/8% pair. Fast quota reads do not query account tokens, create turns, call models or start peers. Independent reads can still briefly differ.
+
+Core analytics uses invented scenarios, no private counters in public artifacts. A local CLI event → journal → report and bounded MCP path is covered; live Codex/GLM event delivery still requires an activated/trusted native hook and new session. New release/Windows/frozen-package outcomes will be recorded only after those checks finish.
+
+66 тест прошёл локально; нативное Mac-окно собралось. Новые сценарии проверены на вымышленных событиях, без заявления о включённых живых хуках во всех клиентах. Свежий лимит сборщика совпал со штатным ответом в интервале проверки; прошлый кеш был примерно на четыре минуты старше. Причина прошлой пары 7%/8% предположительна; отдельное минутное обновление и время источника добавлены.
+
+
+Account-switch regressions verify preserving general history, clearing account billing date and rejecting previous-account cached quota after a failed identity read. Metadata watching is implemented on both desktop clients; actual interactive switch-after-launch acceptance remains a separate check. No claim of universal IDE account discovery.
+
+
+Final local source checks: 66 tests pass, including native quota fast-read isolation, account-scoped daily upserts/general aggregation and per-account manual-date restoration. Synthetic executable bridge → SQLite → journal report is silent and passes; round trip for two source hook processes plus report measured about 293 ms (not a model charge, not a universal latency guarantee). Codex and GLM observers are configured on the development machine; a new native session/trust review is still required to assert live delivery. Existing native configuration was preserved. Public figures use only invented data.
+
+66 тестов и синтетический полный путь событий прошли. Наблюдатели Codex/GLM настроены локально; активация в новой сессии/проверка доверия ещё нужны для утверждения о живой доставке. Общая история сохраняется через смену аккаунтов; квоты и ручные даты разделены.
+
+
+Native macOS interaction acceptance (isolated QA bundle, invented data): clicked Analytics → Workflows → Inspect evidence and verified paired failing calls in Sessions; edited task label and clicked Save review (demo correctly refused persistence), then opened Compare. The same installed user widget was not clicked or quit. EN/RU own-window captures and the 620×520 scrollable layout inspected. Hierarchy, typography, composition and product-specific evidence score 4/5 or better; no new permissions granted.
+
+Нативные клики в отдельной тестовой сборке прошли: аналитика → сценарии → примеры → сессия, редактирование метки и безопасный отказ сохранения в демо, вкладка сравнения. Рабочий пользовательский виджет не закрывался. Окна EN/RU и минимальная ширина просмотрены.

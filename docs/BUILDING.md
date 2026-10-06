@@ -2,7 +2,7 @@
 
 [Русский](BUILDING.ru.md)
 
-Development requires Python 3.10+ (release CI uses 3.12). The collector has no third-party runtime Python dependency. Build-only PyInstaller is pinned in `requirements-build.txt`. Create a virtual environment for builds; do not install build dependencies globally. Native clients are optional and separately installed/authenticated.
+Development requires Python 3.11+ (release CI uses 3.12). The collector has no third-party runtime Python dependency. Build-only PyInstaller is pinned in `requirements-build.txt`. Create a virtual environment for builds; do not install build dependencies globally. Native clients are optional and separately installed/authenticated.
 
 ```sh
 python3 -m venv .build/venv
@@ -11,7 +11,7 @@ python3 -m venv .build/venv
 
 ## macOS
 
-macOS 14+, Xcode Command Line Tools. A source-only app expects `python3` on PATH and copies its collector modules; a redistributable release bundles a frozen collector:
+macOS 14+, Xcode Command Line Tools. A source-only app expects Python 3.11+ as `python3` on PATH (or `AGENT_PULSE_PYTHON` set to its executable) and copies its collector modules; a redistributable release bundles a frozen collector:
 
 ```sh
 .build/venv/bin/python -m pip install -r requirements-build.txt
@@ -38,6 +38,7 @@ Package in a venv, then test the **packaged** executable:
 ```powershell
 python -m venv .build/venv
 .build/venv/Scripts/python -m pip install -r requirements-build.txt
+.build/venv/Scripts/python -m PyInstaller --clean --noconfirm --onefile --console --name pulse-collector collector.py
 .build/venv/Scripts/python -m PyInstaller --clean --noconfirm --onefile --windowed --name AgentPulse --paths . windows/agent_pulse.py
 python windows/agent_pulse.py --fixture examples/demo.json --smoke
 $demo = (Resolve-Path examples/demo.json).Path

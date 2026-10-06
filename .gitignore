@@ -15,3 +15,8 @@ imports/
 .env.*
 PROJECT_CONTEXT.md
 /QA.md
+
+journal.sqlite*
+*.sqlite-wal
+*.sqlite-shm
+build/
