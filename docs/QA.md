@@ -1,8 +1,20 @@
+## 0.7.0 delivered verification · 2026-10-06
+
+157 Python tests pass. [Source Checks 37505993079](https://github.com/Lobodagram/agent-pulse/actions/runs/37505993079) passed Linux/macOS/Windows; [tagged package/publication 37506293357](https://github.com/Lobodagram/agent-pulse/actions/runs/37506293357) passed Mac ARM64/Intel and Windows x64 at 04ae1c35bf3fdbdf0472cb10f66458dba60903ac. The tag preserves the tested code; subsequent main-only evidence/screenshots updates do not replace it.
+
+All three [0.7.0 archives](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.7.0) were downloaded and matched SHA256SUMS. Runtime/notices and archive-path checks passed; Mac embedded versions are 0.7.0. Windows binary execution/version inspection on this Mac is not claimed. Downloaded ARM64 passed strict/deep signature, strict two-second hook/journal/five-tool MCP acceptance, the 15-case own-widget matrix and EN/RU model fixtures. Minimum Workflows/Capabilities renders use labeled DEMO data; changed renders inspected.
+
+Verified 0.7.0 build 16 installed: one production instance after duplicate launch, previous version preserved, configuration byte-stable, observer path unchanged. `ditto` preserved signed bundle metadata; an initial generic-copy staging bundle was rejected by the signature gate before live replacement. No peer launch/runtime/profile/trust change, model call or permission change. Installed live UI clicks and physical Windows DPI/Intel charts/Spaces/multiple displays/fullscreen/sleep-wake remain open.
+
+The shared skill/check/handoff experiment has a real local baseline and exact source-tree digest, but no comparable accepted after-period yet. Current native evidence does not confirm the new skill's invocation by either client. No synthetic production events or historical attribution backfill. Read-only Markdown pack, finding decision lifecycle and equal-window rechecks are mechanics-tested; effectiveness and subscription savings remain unknown. Main analytics-goal assessment stays 7/10.
+
+157 тестов и CI трёх платформ прошли. Три скачанных архива сверены, ARM64 проверен и установлен: один экземпляр, настройки и прежняя версия сохранены. Общий скилл доступен через общий контекст; применение GLM и эффект экономии пока не подтверждены. Демонстрационные проверки не заменяют реальную приёмку и полный охват агентов.
+
 0.7.0 platform correction: first source CI failed the Russian CLI Markdown test on Windows (legacy output encoding); Linux passed, Mac was cancelled by matrix fail-fast. CLI/MCP now emit explicit UTF-8, fixture exports decode UTF-8, source helper reads UTF-8. A legacy-cp1252 regression test exercises both CLI and MCP. Failed source commit remains in history; no release tag was created for it.
 
 ## 0.7.0 source verification · 2026-10-06
 
-156 Python tests pass on bundled Python 3.12. Source helper exports 102 allowlisted files, validates Python syntax/local links/privacy and produces a validated handoff. Mac source compile and own 15-case widget matrix, EN/RU model-history fixtures pass. Shared skill frontmatter/path checks pass with a stdlib fallback; bundled skill validator cannot import PyYAML (no dependency installed). Actual baseline/experiment and private shared skill are excluded from public export. Package/native/CI acceptance remains a separate final gate, recorded when complete. No model calls or peer runtime changes.
+157 Python tests pass on bundled Python 3.12. Source helper exports 102 allowlisted files, validates Python syntax/local links/privacy and produces a validated handoff. Mac source compile and own 15-case widget matrix, EN/RU model-history fixtures pass. Shared skill frontmatter/path checks pass with a stdlib fallback; bundled skill validator cannot import PyYAML (no dependency installed). Actual baseline/experiment and private shared skill are excluded from public export. Package/native/CI acceptance remains a separate final gate, recorded when complete. No model calls or peer runtime changes.
 
 # Verification — 2026-10-06 / Проверка
 
