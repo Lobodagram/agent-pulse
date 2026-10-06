@@ -1,4 +1,4 @@
-Agent Pulse v0.5.1 - Workspace evidence / Аналитика для улучшения песочниц
+Agent Pulse v0.5.2 - Workspace evidence / Аналитика для улучшения песочниц
 
 Bounded command families, strict result provenance, collection gaps, tool frequencies, cross-client candidates and a Capabilities tab: registered skill loads, explicit invocations and declarations are distinct. Parallel, failed, pending and running-process calls cannot silently form serial workflows. Local CLI/MCP evidence packs help review a finding before choosing an existing capability or building a script/skill/MCP. No automatic agent loop, exact per-tool billing or guaranteed savings.
 
@@ -11,3 +11,5 @@ Mac Analytics/Settings restore and focus the existing window on the active Space
 MIT original source; earlier tags unchanged. macOS 14+ ARM64/Intel: ad-hoc signed, not notarized. Windows 10/11 x64: unsigned preview. Keep Windows GUI, collector and pulse-runtime together. Bundled Python; no new permissions. Physical multiple-display/fullscreen/sleep-wake and Windows DPI/live-client acceptance remain open.
 
 0.5.1: own-window checks use a direct executable launch and explicit readiness instead of repeated LaunchServices launches. Intel 0.5.0 checks failed to obtain the fixture process/report twice; that tag has no binaries and is superseded. Assertions remain enforced.
+
+0.5.2: the focus/restore fixture starts on text-only Workflows before view construction, isolating that test from the hosted Intel Metal chart-render abort exposed by 0.5.1 diagnostics. All focus/restore assertions remain; charts are visually checked on the development ARM64 Mac, not certified on physical Intel hardware. Earlier failed tags have no binaries.

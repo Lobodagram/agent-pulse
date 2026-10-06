@@ -21,6 +21,9 @@ with tempfile.TemporaryDirectory() as tmp:
         executable=bundle/'Contents/MacOS/AgentPulse'
         args=[str(executable),'--fixture',str(demo),'--language','en' if mode=='compact-en' else 'ru','--scale','.8','--view',view,'--snapshot',str(out),'--ready-file',str(ready)]
         if mode.startswith('menu'):args.append('--menu-only')
+        # Focus/restore is a window test, independent of GPU chart rendering.
+        # Set the initial tab before view construction on headless Intel runners.
+        if mode=='window-focus':args+=['--tab','workflows']
         if mode=='menu-next':args+=['--status-page','1']
         if mode=='menu-timer':args.append('--rotation-check')
         if mode=='menu-active':args+=['--active-app','dev.zcode.app']

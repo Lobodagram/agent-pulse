@@ -1,5 +1,9 @@
 # Verification — 2026-10-06 / Проверка
 
+## 0.5.2 GPU-independent focus check
+
+[0.5.1 package run](https://github.com/Lobodagram/agent-pulse/actions/runs/37474830760) passed ARM64/Windows and exposed an Intel abort in MTLLoader: Target device architecture is nil, during window-focus. 0.5.2 selects text-only Workflows before constructing the focus-test view; focus, restore, placement and duplicate-instance assertions are unchanged. Charts were rendered/inspected on the ARM64 development Mac; physical Intel chart acceptance remains open. Earlier failed tags have no binary assets.
+
 ## 0.5.1 launch-check correction
 
 [0.5.0 package run](https://github.com/Lobodagram/agent-pulse/actions/runs/37472877086) passed ARM64 and Windows, but Intel failed twice without a final window-focus report; the second attempt logged a LaunchServices GetProcessPID error. Publication was skipped. The old tag is preserved without binary assets. 0.5.1 directly launches the fixture executable, waits for explicit readiness before checking the second-instance guard and reports stderr on failure; all window assertions remain enforced.

@@ -1,5 +1,9 @@
 # Changelog / Изменения
 
+## 0.5.2 · 2026-10-06
+
+- Focus/restore fixture starts on text-only Workflows before view construction, isolating window assertions from the hosted Intel Metal chart abort diagnosed in 0.5.1. Graphs checked on the development ARM64 Mac; physical Intel graph acceptance remains open. Earlier failed tags preserved without binaries.
+
 ## 0.5.1 · 2026-10-06
 
 - Native fixture checks launch their executable directly and wait for explicit app readiness before testing the second-instance guard. This avoids an Intel LaunchServices process-ID failure; assertions remain enforced and failures include stderr. 0.5.0 tag preserved, with no published binary assets.

@@ -16,7 +16,7 @@ TOOLS=[
 
 def dispatch(request,state):
     method=request.get('method');params=request.get('params') or {}
-    if method=='initialize':return {'protocolVersion':'2024-11-05','capabilities':{'tools':{}},'serverInfo':{'name':'agent-pulse-local','version':'0.5.1'}}
+    if method=='initialize':return {'protocolVersion':'2024-11-05','capabilities':{'tools':{}},'serverInfo':{'name':'agent-pulse-local','version':'0.5.2'}}
     if method=='ping':return {}
     if method=='tools/list':return {'tools':TOOLS}
     if method!='tools/call':raise ValueError('method_not_allowed')
