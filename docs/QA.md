@@ -1,8 +1,16 @@
 # Verification — 2026-10-06 / Проверка
 
-## 0.6.0 local verification — 2026-10-06
+## Delivered 0.6.0 — 2026-10-06
 
-130 tests, including native model identifiers, missing/conflicting model fields, repeated events, unknown gaps and parallel actor/outer-call barriers, pass locally. Fourteen invented mechanics cases still pass. Mac 15-case widget matrix, two EN/RU minimum model-history renders and two-second frozen hook→journal→MCP pass. Both model-history images visually inspected. No model called or raw native payload inspected. Cross-platform source/package verification will be recorded after publication. Native ZCode tool events observed here omit per-call models; the timeline therefore preserves unknowns. The adapter proposal is documentation, not installed plugins or billing integration.
+[Source Checks 37483506278](https://github.com/Lobodagram/agent-pulse/actions/runs/37483506278) and [tagged packages/publication 37483885565](https://github.com/Lobodagram/agent-pulse/actions/runs/37483885565) passed Linux/Mac/Windows source and Mac ARM64/Intel/Windows packages at f0abded04219ae65c3caa7f43ff364e8dcf2afd0. 130 tests cover native model identity, missing/conflicting fields, duplicate events, unknown gaps and parallel actor/outer-call barriers. Fourteen invented mechanics cases, Mac 15-case own-widget matrix and two EN/RU minimum model-history renders pass. Both images visually inspected. Two-second frozen hook→journal→MCP passes; no model called by this verification suite.
+
+All three [release archives](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.6.0) downloaded back and matched SHA256SUMS; runtime and notices present. Downloaded ARM64 passed strict/deep signature, frozen helper deadline, 15 widget cases and EN/RU model timeline renders; downloaded Russian render inspected. 0.6.0 installed with 0.5.2 preserved; exactly one production instance after duplicate launch and configuration bytes stable across replacement/duplicate launch. Existing native observer command path unchanged. Installed live clicks remain unverified because CUA's prior app identity was stale/ambiguous; own fixture interaction and focus/restore checks passed.
+
+The actual local journal confirms native Codex call-model evidence; observed ZCode tool events omit it. Unknowns stay unknown; no historical model reconstruction or synthetic native events. The adapter proposal is documentation, not installed plugins or new billing integration. No peer started, client configuration/model/subscription changed, macOS permissions granted or raw native payload inspected during this delivery.
+
+130 тестов, исходники и три пакета прошли проверки. Архивы скачаны обратно, SHA256 совпали. Mac-пакет прошёл подпись, срок запуска сборщика, проверки виджета и модельной истории EN/RU. Проверенная версия установлена, один экземпляр, настройки сохранены; прежняя сборка доступна для возврата. У реальных вызовов Codex модель подтверждается событиями; ZCode пока не передаёт её. План адаптеров не означает установленные плагины или автоматические даты оплаты.
+
+Assessment remains 7/10 against actual analytics goal. Representative accepted tasks and measured improvement effects, supported native model/paid-plan adapters and physical Windows DPI/Intel chart/multi-display/fullscreen/sleep-wake acceptance remain open. Hosted fixtures do not prove all-step native coverage, exact per-tool billing or guaranteed savings.
 
 ## Delivered 0.5.2 - 2026-10-06
 

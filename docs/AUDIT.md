@@ -1,6 +1,14 @@
 # Analytics readiness audit · 2026-10-06
 
-## 0.5.2 update
+## Current 0.6.0 assessment
+
+**7/10 against the analytics goal.** Native per-call model evidence, conservative observed-change timelines and bounded exports are implemented and covered by 130 tests. Real user-started ZCode work now supplies paired Read/Skill/Bash events including structured shell exits. This improves collection evidence but does not prove every step, sustained coverage or representative pattern accuracy. Observed ZCode tool events omit models: their model remains unknown. See [models](MODELS.md), [adapter proposal](CLIENT_ADAPTERS.md) and [dated verification](QA.md).
+
+Model history must distinguish missing/conflicting identity, parallel work and unknown gaps; current UI selection is not historical evidence. A client plugin can package observers, but cannot expose undocumented billing data. Kimi Work/Chat compatibility with Kimi Code OAuth usage is unverified; remote paid ZCode plan and renewal adapters are not delivered. Subscription renewals remain manual unless a supported source explicitly reports them.
+
+Remaining gates: supported native model/plan adapters, reviewed comparable real tasks and actual improvement acceptance; physical Windows DPI, Intel charts, multiple displays/Spaces/fullscreen/sleep-wake. Local fixtures and hosted package tests do not establish causal savings or a complete universal trace. The dated sections below describe earlier states.
+
+## Historical 0.5.2 update
 
 **7/10 against the primary analytics goal**: collection 6, bounded mechanics 8, capability attribution 6, effect evaluation 5, privacy 8, delivery 8. Engineering judgements, not certification. Representative reviewed real repeated tasks, completed ZCode shell outcomes and physical Windows acceptance remain missing. Synthetic precision is not production accuracy.
 
