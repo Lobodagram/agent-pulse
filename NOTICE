@@ -7,3 +7,5 @@ Tk/Tcl Windows UI runtime: Tcl/Tk license; included runtime notices apply.
 PyInstaller bootloader: GPL with its distribution exception; see https://pyinstaller.org/en/stable/license.html . Building an application with PyInstaller does not apply the GPL to Agent Pulse's original source.
 SwiftUI/AppKit/Charts and native client executables are platform/vendor components and are not distributed as project source.
 No third-party agent project was copied or forked as the application base.
+
+Python 3.12 license fallback: official CPython v3.12.10 LICENSE, https://github.com/python/cpython/blob/v3.12.10/LICENSE .

@@ -13,8 +13,8 @@ cat > 'dist/Agent Pulse.app/Contents/Info.plist' <<'PLIST'
 <key>CFBundleIdentifier</key><string>app.agentpulse.desktop</string>
 <key>CFBundleName</key><string>Agent Pulse</string>
 <key>CFBundleDisplayName</key><string>Agent Pulse</string>
-<key>CFBundleVersion</key><string>2</string>
-<key>CFBundleShortVersionString</key><string>0.2.0</string>
+<key>CFBundleVersion</key><string>3</string>
+<key>CFBundleShortVersionString</key><string>0.2.1</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>LSUIElement</key><true/>

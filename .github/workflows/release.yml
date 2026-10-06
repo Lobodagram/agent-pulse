@@ -8,6 +8,7 @@ permissions:
 jobs:
   package:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: macos-15
@@ -33,10 +34,12 @@ jobs:
           'dist/Agent Pulse.app/Contents/Resources/pulse-collector' catalog > .build/catalog.json
           cp LICENSE NOTICE 'dist/Agent Pulse.app/Contents/Resources/'
           python scripts/runtime_notices.py 'dist/Agent Pulse.app/Contents/Resources/Licenses'
+          codesign --force --sign - 'dist/Agent Pulse.app'
+          codesign --verify --deep --strict 'dist/Agent Pulse.app'
           ditto -c -k --sequesterRsrc --keepParent 'dist/Agent Pulse.app' 'dist/agent-pulse-${{ matrix.artifact }}.zip'
       - if: runner.os == 'Windows'
         run: |
-          python -m PyInstaller --clean --noconfirm --onefile --windowed --name AgentPulse windows/agent_pulse.py
+          python -m PyInstaller --clean --noconfirm --onefile --windowed --name AgentPulse --paths . windows/agent_pulse.py
           python windows/agent_pulse.py --fixture examples/demo.json --smoke
           Start-Process -FilePath dist/AgentPulse.exe -ArgumentList '--fixture','examples/demo.json','--smoke' -Wait -PassThru | ForEach-Object { if ($_.ExitCode -ne 0) { throw 'Packaged Windows smoke failed' } }
           python scripts/runtime_notices.py dist/Licenses

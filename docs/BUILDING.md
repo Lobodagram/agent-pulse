@@ -38,7 +38,7 @@ Package in a venv, then test the **packaged** executable:
 ```powershell
 python -m venv .build/venv
 .build/venv/Scripts/python -m pip install -r requirements-build.txt
-.build/venv/Scripts/python -m PyInstaller --clean --noconfirm --onefile --windowed --name AgentPulse windows/agent_pulse.py
+.build/venv/Scripts/python -m PyInstaller --clean --noconfirm --onefile --windowed --name AgentPulse --paths . windows/agent_pulse.py
 python windows/agent_pulse.py --fixture examples/demo.json --smoke
 Start-Process -FilePath dist/AgentPulse.exe -ArgumentList '--fixture','examples/demo.json','--smoke' -Wait
 ```

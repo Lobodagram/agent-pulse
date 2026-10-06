@@ -1,5 +1,13 @@
 # Changelog / Изменения
 
+## 0.2.1 — 2026-10-06
+
+- Bundle the official Python 3.12 notice when a runner omits it; verify the final macOS signature after adding runtime notices.
+- Show Windows token counters and human-readable reset times in the compact panel; explicit packaging search path.
+- Keep independent package builds running if another architecture fails.
+
+Исправлена упаковка лицензий Python и финальная подпись macOS. В Windows-виджет добавлены токены и читаемые даты сброса.
+
 ## 0.2.0 — 2026-10-06 (public preview / публичная предварительная версия)
 
 - Selectable provider catalog with native, status-line, loopback, quota API and import adapters.

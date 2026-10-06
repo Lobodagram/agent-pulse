@@ -1,5 +1,6 @@
 """Windows preview: portable always-on-top widget; Tk UI, shared read-only collector."""
 import argparse
+from datetime import datetime
 import json
 from pathlib import Path
 import queue
@@ -17,7 +18,7 @@ BG='#151a1d';FG='#f2f6f4';MINT='#a4e8cd';QUIET='#a6b4b0'
 class Pulse:
     def __init__(self,root,fixture=None,smoke=False):
         self.root=root;self.state=state_directory();self.fixture=fixture;self.smoke=smoke;self.data={};self.loading=False;self.page=0;self.pending=queue.Queue();self.language='en'
-        root.title('Agent Pulse');root.geometry('370x255+100+100');root.configure(bg=BG);root.overrideredirect(True);root.attributes('-topmost',True)
+        root.title('Agent Pulse');root.geometry('400x310+100+100');root.configure(bg=BG);root.overrideredirect(True);root.attributes('-topmost',True)
         header=tk.Frame(root,bg=BG);header.pack(fill='x',padx=14,pady=(12,6))
         title=tk.Label(header,text='● AGENT PULSE'+(' · DEMO' if fixture else ''),bg=BG,fg=MINT,font=('Segoe UI',10,'bold'));title.pack(side='left')
         title.bind('<Button-1>',self.begin_drag);title.bind('<B1-Motion>',self.drag)
@@ -67,6 +68,10 @@ class Pulse:
                 if v is None:v=p.get('contextTokens');label=self.t('context size, not spend','контекст, не расход')
                 text=('—' if v is None else f'{v:,.0f}')+' · '+label
             tk.Label(self.content,text=text,bg=BG,fg=MINT,font=('Segoe UI',14),anchor='w').pack(fill='x')
+            if q:
+                tokens=p.get('todayTokens');resets=[datetime.fromtimestamp(x['resetsAt']).strftime('%d %b %H:%M') for x in q if isinstance(x.get('resetsAt'),(int,float))]
+                line=self.t('Tokens today: ','Токены сегодня: ')+('—' if tokens is None else f'{tokens:,.0f}')+' · '+self.t('reset: ','сброс: ')+(' / '.join(resets) or '—')
+                tk.Label(self.content,text=line,bg=BG,fg=QUIET,font=('Segoe UI',8),anchor='w',wraplength=365).pack(fill='x')
             s=p['subscription'];date=s.get('date');billing=self.t('Billing date not set','Дата подписки не указана') if not date else s['kind']+': '+date+' · '+self.t('manual','вручную')
             if s['kind']=='none':billing=self.t('No subscription','Без подписки')
             tk.Label(self.content,text=billing,bg=BG,fg=QUIET,font=('Segoe UI',9),anchor='w').pack(fill='x')
@@ -78,7 +83,7 @@ class Pulse:
         lines=[self.t('Counters, quotas and billing dates are distinct. Missing is not zero.','Токены, лимиты и даты оплаты различаются. Пропуск не равен нулю.'),'']
         for p in self.data.get('providers',[]):
             lines += [p['name']+' · '+p['status'],self.t('Tokens today: ','Токены сегодня: ')+str(p.get('todayTokens')),self.t('Context gauge: ','Размер контекста: ')+str(p.get('contextTokens')),p.get('tokenSource',''),p.get('tokenCoverage','')]
-            for q in p.get('quotas',[]):lines.append(f"Remaining: {q.get('remainingPercent')}% · reset epoch: {q.get('resetsAt')}")
+            for q in p.get('quotas',[]):lines.append(f"Remaining: {q.get('remainingPercent')}% · reset: {datetime.fromtimestamp(q['resetsAt']).strftime('%Y-%m-%d %H:%M') if isinstance(q.get('resetsAt'),(int,float)) else 'not reported'}")
             lines.append('')
         lines+=[self.t('DAILY TOKENS · UTC','ТОКЕНЫ ПО ДНЯМ · UTC')]
         for d in self.data.get('history',[]):lines.append(f"{d['date']}  {d['provider']:10}  {d['tokens']:>12,.0f}")

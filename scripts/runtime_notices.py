@@ -7,7 +7,8 @@ def main():
     a=argparse.ArgumentParser();a.add_argument('destination');x=a.parse_args();out=Path(x.destination);out.mkdir(parents=True,exist_ok=True)
     roots=[Path(sys.base_prefix),Path(sys.prefix)]
     py=next((p for r in roots for name in ['LICENSE','LICENSE.txt'] if (p:=r/name).is_file()),None)
-    if py is None:raise SystemExit('Python runtime license not found')
+    if py is None:py=Path(__file__).resolve().parents[1]/'third_party/PYTHON-3.12-LICENSE.txt'
+    if not py.is_file():raise SystemExit('Python runtime license not found')
     (out/'PYTHON-LICENSE.txt').write_bytes(py.read_bytes())
     # Official Windows Python bundles Tcl/Tk notices beneath its tcl tree.
     for r in roots:
