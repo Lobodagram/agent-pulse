@@ -19,7 +19,10 @@ jobs:
           python-version: '3.12'
       - run: python -m unittest discover -s tests -v
       - if: runner.os == 'Windows'
-        run: python windows/agent_pulse.py --fixture examples/demo.json --smoke
+        run: |
+          python windows/agent_pulse.py --fixture examples/demo.json --smoke
+          python -c "import json,pathlib; p=pathlib.Path('.build'); p.mkdir(exist_ok=True); d=json.loads(pathlib.Path('examples/demo.json').read_text()); d['providers'][1]['quotas']=d['providers'][0]['quotas']; (p/'two-quotas.json').write_text(json.dumps(d))"
+          python windows/agent_pulse.py --fixture .build/two-quotas.json --smoke
       - if: runner.os == 'macOS'
         run: |
           ./build.sh
