@@ -57,3 +57,10 @@ Final local source checks: 66 tests pass, including native quota fast-read isola
 Native macOS interaction acceptance (isolated QA bundle, invented data): clicked Analytics → Workflows → Inspect evidence and verified paired failing calls in Sessions; edited task label and clicked Save review (demo correctly refused persistence), then opened Compare. The same installed user widget was not clicked or quit. EN/RU own-window captures and the 620×520 scrollable layout inspected. Hierarchy, typography, composition and product-specific evidence score 4/5 or better; no new permissions granted.
 
 Нативные клики в отдельной тестовой сборке прошли: аналитика → сценарии → примеры → сессия, редактирование метки и безопасный отказ сохранения в демо, вкладка сравнения. Рабочий пользовательский виджет не закрывался. Окна EN/RU и минимальная ширина просмотрены.
+
+
+## v0.3.0 pre-release packages
+
+[Checks 37429341671](https://github.com/Lobodagram/agent-pulse/actions/runs/37429341671) passed on Linux, macOS and Windows. [Pre-release packages 37429418213](https://github.com/Lobodagram/agent-pulse/actions/runs/37429418213) passed all three builds (Mac ARM64, Mac Intel, Windows x64) at source 5ae2ba82032731325e0ed53701139a2a99cc98ad. Each job ran all 66 tests; frozen helper checks exercised silent hook input → paired journal report → bounded read-only MCP. Mac own-window fixture/codesign and packaged Windows GUI tab smoke passed. Publication was intentionally skipped because this was a manual pre-tag run.
+
+Проверки и все три упакованные сборки прошли. Каждый пакет проверил 66 тестов и полный синтетический путь событий через встроенную среду; Mac-окно/подпись и Windows-вкладки прошли. Это проверка поставляемой программы, не утверждение о живых аккаунтах всех провайдеров или полном охвате действий.
