@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.1 · 2026-10-06
+
+- Fix frozen macOS HTTPS trust when the build Python framework CA path is absent: add OS-owned roots while retaining certificate/hostname verification and fail-closed behavior.
+- Исправлено чтение квот GLM/Kimi упакованным Mac-обработчиком при отсутствующем CA-файле Python framework; проверка HTTPS остаётся обязательной.
+
 ## 0.8.0 — 2026-10-06
 
 - Persistent Limits / Today widget switch on macOS and Windows; daily tokens never substituted by week/context totals. Menu/tray summaries retain quotas.

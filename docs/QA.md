@@ -1,3 +1,7 @@
+## 0.8.1 frozen macOS HTTPS correction · 2026-10-06
+
+Live installed 0.8.0 exposed an HTTPS trust-path packaging defect: the frozen Python framework CA file was absent on the development Mac, while source reads worked. A scoped comparison with the OS-owned /etc/ssl/cert.pem made the same frozen quota GET succeed. 0.8.1 adds OS roots to the frozen Mac HTTPS context with certificate/hostname verification required; no insecure TLS fallback, redirects, proxies or credential changes. Missing/invalid roots remain fail-closed. Four regressions cover strict verification, Mac roots, other runtimes/platforms and invalid roots. Native package/live acceptance is recorded after verification.
+
 ## 0.8.0 GLM quotas and metric selection · 2026-10-06
 
 178 tests and isolated wheel/console/hook/MCP pass. Source Mac strict two-second frozen helper and 20 own-widget cases pass, EN/RU model-history fixtures inspected. Live personal Z.ai five-hour/week quota percentages and native reset fields verified on the development Mac. Source CI and release-package verification remain independent gates. Local tokens and configured-key quotas remain separate. No native credentials/config/session or model calls changed. No subscription savings claim; analytics effectiveness remains 7/10 and cold-start/physical/signing risks stay open.

@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 import json
 import os
 import re
+import ssl
+import sys
 from pathlib import Path
 import time
 import urllib.request
@@ -98,8 +100,17 @@ def claude_statusline(raw):
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self,*args,**kwargs):return None
 
+def verified_http_context():
+    context=ssl.create_default_context()
+    # Frozen python.org macOS builds retain a framework CA path absent on many Macs.
+    # Add the OS-owned roots; certificate and hostname verification remain required.
+    if sys.platform=='darwin' and getattr(sys,'frozen',False):
+        roots=Path('/etc/ssl/cert.pem')
+        if roots.is_file():context.load_verify_locations(cafile=str(roots))
+    return context
+
 def get_json(url,headers=None):
-    opener=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect())
+    opener=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect(),urllib.request.HTTPSHandler(context=verified_http_context()))
     with opener.open(urllib.request.Request(url,headers=headers or {},method='GET'),timeout=12) as r:
         body=r.read(2*1024*1024+1)
         if len(body)>2*1024*1024:raise ValueError('response_too_large')

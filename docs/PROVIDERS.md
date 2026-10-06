@@ -126,3 +126,6 @@ The independent adapter reads only `GET https://api.z.ai/api/monitor/usage/quota
 Quotas belong to the **configured key**, while local tokens belong to **ZCode records on this device**; these may cover different accounts. Token/task history continues across account changes. Changing ZCode login does not switch the separately configured key. Manual subscription dates remain separate. Remote quotas refresh with the five-minute snapshot or Refresh; Codex's existing minute refresh remains. Without a key, local ZCode tokens still work and quota values show unavailable. Live five-hour/week quota and reset fields were verified on the development Mac using a user-configured personal key; this is not a guarantee for every account or regional endpoint.
 
 The widget's **Limits ⇄ / Today ⇄** button selects remaining subscription percentages or today's reported tokens (UTC), and retains the choice after restart. Today never substitutes a seven-day total/context gauge. The menu bar/Windows compact mode and tray tooltip always keep quota summaries.
+
+
+Frozen Mac 0.8.1 adds OS-owned /etc/ssl/cert.pem roots to the verified HTTPS context because the build Python framework CA path may be absent. Certificate/hostname verification remains required; invalid roots fail closed. / Сборка Mac 0.8.1 использует также системные CA; проверка сертификата и имени сервера сохраняется.
