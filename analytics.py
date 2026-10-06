@@ -12,18 +12,23 @@ TEXT = {
  'repeat_call':('Repeated identical tool input','Повтор одинакового запроса','Inspect the task before consolidating these calls.','Изучите задачу перед объединением вызовов.'),
  'template':('Repeated operation family','Повторяющееся семейство операций','Similar categories may have different purposes; inspect evidence.','Одинаковые категории могут решать разные задачи; изучите примеры.')}
 
-def recommendation(j,key,kind,calls,sequence=None):
+def recommendation(j,key,kind,calls,sequence=None,*,summary_only=False):
     unique={c['id']:c for c in calls};calls=list(unique.values())
+    provider=calls[0]['provider'];examples=[c['id'] for c in calls[:10]]
+    summary={'id':j.digest('finding',[provider,kind,key]),'provider':provider,'kind':kind,
+             'occurrences':len(calls),'sessions':len({c['session'] for c in calls}),'evidenceIds':examples}
+    # Rechecks need qualification/counts, not inventory routing or display metadata.
+    # Keep the same ranking and overlap evidence as the complete finding path.
+    if summary_only:return summary
     completed=[c for c in calls if c['paired'] and c['outcome'] in {'success','failed','unknown'}]
     durations=[c['durationMs'] for c in completed if c['durationMs'] is not None]
-    categories=set(sequence or [c['category'] for c in calls]);provider=calls[0]['provider']
+    categories=set(sequence or [c['category'] for c in calls])
     inventory=[dict(r) for r in j.db.execute('SELECT * FROM inventory WHERE provider=?',(provider,))]
     # Generic other/shell buckets do not establish a useful substitution.
     relevant=[r for r in inventory if r['category'] in categories-{'other','shell'}]
     recent=[r for r in relevant if time.time()-r['observed']<7*86400]
     available=[r for r in recent if r['status']=='available']
     configured=[r for r in recent if r['status']=='configured']
-    examples=[c['id'] for c in calls[:10]]
     observed_candidates=[dict(r) for r in j.db.execute(
         'SELECT id,kind,count(*) AS calls FROM capability_evidence WHERE provider=? AND evidence=? AND call IN ('+','.join('?' for _ in examples)+') GROUP BY id,kind',
         [provider,'invoked',*examples])] if examples else []
@@ -43,17 +48,18 @@ def recommendation(j,key,kind,calls,sequence=None):
     elif not relevant and 'remote' in categories:action='typed_tool_or_mcp'
     title,ru,suggest,suggest_ru=TEXT[kind]
     # Frequency is evidence, not a promised token saving. Tool duration sums can overlap.
-    return {'id':j.digest('finding',[provider,kind,key]),'provider':provider,'kind':kind,'title':title,'titleRu':ru,
+    return {**summary,'title':title,'titleRu':ru,
       'suggestion':suggest,'suggestionRu':suggest_ru,'action':action,'confidence':'medium' if kind!='template' else 'low',
-      'occurrences':len(calls),'sessions':len({c['session'] for c in calls}),
-      'sequence':sequence or [],'evidenceSessions':list(dict.fromkeys(c['session'] for c in calls[:10])),'evidenceIds':[c['id'] for c in calls[:10]],
+      'sequence':sequence or [],'evidenceSessions':list(dict.fromkeys(c['session'] for c in calls[:10])),
       'medianDurationMs':statistics.median(durations) if durations else None,'failedCalls':sum(c['outcome']=='failed' for c in calls),
       'unknownOutcomes':sum(c['outcome']=='unknown' for c in calls),'sampledCapabilityInvocations':observed_candidates,
       'models':sorted({c['model'] for c in calls if c['model']!='other'}),'unknownModelCalls':sum(c['model']=='other' for c in calls),
       'inventoryStatus':match,'inventoryDetail':detail,'inventoryCandidates':[{'id':r['id'],'kind':r['kind'],'status':r['status']} for r in relevant[:10]],
       'measuredTokenSavings':None,'limitations':['Observed calls only; unknown coverage outside this journal.','Frequency does not prove waste or exact per-tool token cost.']}
 
-def findings(j,calls):
+def findings(j,calls,*,summary_only=False):
+    def card(key,kind,items,sequence=None):
+        return recommendation(j,key,kind,items,sequence,summary_only=summary_only)
     groups=defaultdict(list);reads=defaultdict(list);families=defaultdict(list);lanes=defaultdict(list)
     for c in calls:
         if c['paired']:
@@ -66,10 +72,10 @@ def findings(j,calls):
     result=[]
     for key,items in groups.items():
         fails=[c for c in items if c['outcome']=='failed']
-        if len(fails)>=3:result.append(recommendation(j,key,'retry',fails))
-        elif len(items)>=4 and len({c['turn'] for c in items})>=2:result.append(recommendation(j,key,'repeat_call',items))
+        if len(fails)>=3:result.append(card(key,'retry',fails))
+        elif len(items)>=4 and len({c['turn'] for c in items})>=2:result.append(card(key,'repeat_call',items))
     for key,items in reads.items():
-        if len(items)>=3:result.append(recommendation(j,key,'repeat_read',items))
+        if len(items)>=3:result.append(card(key,'repeat_read',items))
     sequences=defaultdict(list)
     for lane,items in lanes.items():
         items.sort(key=lambda c:c['startedAt'] if c['startedAt'] is not None else c['endedAt'])
@@ -108,15 +114,17 @@ def findings(j,calls):
         if any(key[:2]==other[:2] and turns<=other_turns and
                any(shape==other[2][i:i+len(shape)] and key[3]==other[3][i:i+len(shape)] for i in range(len(other[2])-len(shape)+1))
                for other,other_turns in kept):continue
-        kept.append((key,turns));card=recommendation(j,key,'sequence',[c for chunk in chunks for c in chunk],list(shape))
-        card['occurrences']=len(chunks);card['operations']=list(key[3])
-        card['sequenceBasis']='operation-family' if not any(o in {'legacy','unknown'} for o in key[3]) else 'category-only'
-        if card['sequenceBasis']=='category-only':card['confidence']='low'
-        result.append(card)
+        kept.append((key,turns));entry=card(key,'sequence',[c for chunk in chunks for c in chunk],list(shape))
+        entry['occurrences']=len(chunks)
+        if not summary_only:
+            entry['operations']=list(key[3])
+            entry['sequenceBasis']='operation-family' if not any(o in {'legacy','unknown'} for o in key[3]) else 'category-only'
+            if entry['sequenceBasis']=='category-only':entry['confidence']='low'
+        result.append(entry)
     for key,items in families.items():
         if any(c.get('operation') in {'unknown','legacy'} for c in items):continue
         if len(items)>=10 and len({c['turn'] for c in items})>=3 and not any(r['provider']==key[0] and set(r['evidenceIds']) & {c['id'] for c in items} for r in result):
-            result.append(recommendation(j,key,'template',items))
+            result.append(card(key,'template',items))
     # Prioritize failure/repetition evidence; no fabricated numeric saving score.
     priority={'retry':0,'sequence':1,'repeat_read':2,'repeat_call':3,'template':4}
     return sorted(result,key=lambda r:(priority[r['kind']],-r['sessions'],-r['occurrences']))[:30]

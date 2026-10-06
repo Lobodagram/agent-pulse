@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.2 — 2026-10-06
+
+- Equal-window finding rechecks use the same detection/ranking/overlap rules with summary-only cards; no unnecessary inventory/capability SQL or display metadata. Separate windows are still evaluated separately.
+- Regression coverage for all five pattern kinds, the top-30 limit, unknowns, provider/project/window boundaries and unchanged full finding output.
+- Session pagination imports the shared numeric sanitizer directly.
+- Перепроверка находок стала легче без изменения порогов, порядка и границ временных окон. Новые проверки защищают от ошибочного использования общей статистики вместо отдельных окон.
+
 ## 0.7.1 — 2026-10-06
 
 - Unified numeric/name projections with the journal's stricter credential/path boundaries.

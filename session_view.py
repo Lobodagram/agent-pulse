@@ -4,7 +4,7 @@ import hmac
 import json
 import re
 import time
-from journal import number
+from sanitizers import number
 from model_evidence import model_history
 
 def session_page(j,session,cursor=None,limit=500):

@@ -1,3 +1,9 @@
+## 0.7.2 review qualification checks · 2026-10-06
+
+Five focused regressions pass for equivalent lightweight/full findings, all five pattern kinds, the top-30 cap, pending/unknown calls and separate provider/project/half-open time windows. The previous committed full finding and review outputs were independently compared in a private invented fixture: 19,980 calls / 30 distinct completed review windows, exact equality. No production telemetry was injected; no peer client was started or modified.
+
+Local benchmark scope and remaining acceptance gates are in [AUDIT.md](AUDIT.md). Build/package/platform checks will be recorded after delivery; source tests alone are not native client acceptance.
+
 ## 0.7.1 delivered packages · 2026-10-06
 
 [Source Checks 37513242771](https://github.com/Lobodagram/agent-pulse/actions/runs/37513242771) passed Linux/macOS/Windows, including isolated installed-wheel/console/hook verification. [Tagged packages/publication 37513613892](https://github.com/Lobodagram/agent-pulse/actions/runs/37513613892) passed Mac ARM64/Intel, Windows x64 and publication at 4c9c0b93f07d54a48ad0fc3da83fdd82766e9c4b. 161 tests. The immutable tag preserves tested source; final main-only evidence updates do not replace it.

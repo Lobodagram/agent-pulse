@@ -7,7 +7,7 @@ STATUSES={'open','actioned','dismissed'}
 REASONS={'unspecified','script','skill','mcp','routing','retrieval','fix','not-applicable','duplicate'}
 
 def window_summary(j,calls,finding_id):
-    candidate=next((f for f in findings(j,calls) if f['id']==finding_id),None)
+    candidate=next((f for f in findings(j,calls,summary_only=True) if f['id']==finding_id),None)
     return {'observedCalls':len(calls),'pairedCalls':sum(c['paired'] for c in calls),
             'knownTurns':len({(c['session'],c['turn']) for c in calls if c['turn_source']!='unknown'}),
             'unknownOutcomes':sum(c['outcome']=='unknown' for c in calls),

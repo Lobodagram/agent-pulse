@@ -1,3 +1,13 @@
+## 0.7.2 window review · 2026-10-06
+
+Third peer audit verified against canonical 0.7.1. A global finding list cannot replace separate provider/project/time-window detections: it would change qualification. Rechecks now use lightweight cards through the same detector, rank, overlap suppression and top-30 limit. Complete display cards remain unchanged. Session pagination imports the numeric sanitizer directly from its source.
+
+Local fixture benchmark: 19,980 calls and 30 distinct completed review windows. Full cards and review results equal the previous committed implementation. Recheck SQL statements decrease from 61 to 1; median of three runs 79.63 → 75.37 ms on this Mac, peak traced allocation 155,656 → 135,774 bytes. These are fixture-only review measurements, not whole-app speed, native collection completeness or subscription savings. Distinct windows still require distinct detection passes.
+
+Five added regressions cover all pattern kinds, ranking/overlap/counts, top-30, unknowns, provider/project/window scope and no inventory/capability queries in the summary path. Engineering hygiene improves; effectiveness against the core analytics goal stays **7/10** pending representative accepted tasks and observational follow-up. Signing, slow-device hook starts and physical platform acceptance remain open.
+
+Общий список находок нельзя подставлять вместо отдельных окон сравнения. Облегчённый расчёт сохраняет прежние результаты; замер на синтетическом журнале не доказывает экономию подписки или полноту сбора реальных событий.
+
 ## 0.7.1 audit hygiene · 2026-10-06
 
 Shared strict sanitizers, canonical version and isolated runtime-only wheel checks close drift/package hygiene findings. Chunked hashing preserves exact snapshot integrity and previous cursors while reducing temporary allocation in a fixture benchmark. README spacing and Linux/headless guidance cleaned. Main-goal assessment stays 7/10 pending representative accepted effect evidence and stronger native outcomes/model coverage. Source quality and analytics effectiveness are separate judgements.
