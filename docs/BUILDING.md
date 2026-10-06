@@ -1,5 +1,7 @@
 # Building / release pipeline
 
+Source/headless installation: in your own virtual environment run `python3 -m pip install -e .` for `agent-pulse` and `agent-pulse-mcp`. Python 3.11+ is declared in metadata. Collector startup gives a clear version message. Opt-in `--debug` prints only an exception class to stderr, never its message; hooks stay silent/fail-open. Linux supports collector/local MCP without a desktop widget; native adapters vary.
+
 [Русский](BUILDING.ru.md)
 
 Development requires Python 3.11+ (release CI uses 3.12). The collector has no third-party runtime Python dependency. Build-only PyInstaller is pinned in `requirements-build.txt`. Create a virtual environment for builds; do not install build dependencies globally. Native clients are optional and separately installed/authenticated.

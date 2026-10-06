@@ -18,7 +18,6 @@ func activeProvider(bundleID: String?) -> String? {
     return ["com.openai.codex": "codex", "com.openai.Codex": "codex", "dev.zcode.app": "glm", "ai.z.ZCode": "glm", "com.zai.zcode": "glm", "com.anthropic.claudefordesktop": "claude"][bundleID]
 }
 func compactQuotaLine(_ p: Provider) -> String {
-    let aliases = ["codex": "Cdx", "glm": "GLM", "claude": "Cl", "kimi": "Kimi", "qwen": "Qwen"]
     let values = p.quotas.prefix(2).map { q -> String in
         var label = tr("win", "окно")
         if let m = q.durationMinutes, m.isFinite, m > 0, m <= 525600 {
@@ -29,7 +28,7 @@ func compactQuotaLine(_ p: Provider) -> String {
         let value = q.remainingPercent.flatMap { $0.isFinite && $0 >= 0 && $0 <= 100 ? "\(Int(floor($0)))%" : nil } ?? "—"
         return label + " " + value
     }
-    return (p.status == "stale" ? "~" : "") + (aliases[p.id] ?? String(p.name.prefix(5))) + " " + (values.isEmpty ? "—" : values.joined(separator: " · "))
+    return (p.status == "stale" ? "~" : "") + p.id.uppercased() + " " + (values.isEmpty ? "—" : values.joined(separator: " · "))
 }
 struct Subscription: Codable { var date: String?; var kind: String; var source: String }
 struct Provider: Codable, Identifiable {
@@ -56,6 +55,7 @@ struct Snapshot: Codable {
 struct EventCoverage: Codable, Identifiable {
     var provider: String; var state: String; var calls: Int; var pairedCalls: Int; var rejected: Int
     var knownOutcomes: Int?; var unknownOutcomes: Int?; var collectionGaps: Int?
+    var lastToolEventAt: Double?
     var id: String { provider }
 }
 struct WorkflowFinding: Codable, Identifiable {
@@ -406,20 +406,32 @@ struct AnalysisView: View {
     @State var modelHistory: ModelHistory?
     @State var label = ""; @State var variant = "before"; @State var outcome = "unknown"
     @State var before = "before"; @State var after = "after"; @State var message = ""
+    @State var sessionCursors: [String?] = [nil]; @State var sessionPage = 0; @State var nextCursor: String?
+    @State var sessionTotal = 0; @State var pageOffset = 0; @State var pageLoading = false; @State var pageRequest = UUID()
+    @State var showUnobservedCapabilities = false
     func select(_ session: JournalSession, evidenceIds: [String] = []) {
         selectedSession = session.id; label = session.label ?? ""; variant = session.variant ?? "before"; outcome = session.outcome
         evidence = Set(evidenceIds); tab = "sessions"; message = ""
         calls = (store.snapshot?.analytics?.recentCalls ?? []).filter { $0.session == session.id }
         modelHistory = session.modelHistory
+        sessionCursors = [nil]; sessionPage = 0; nextCursor = nil; pageOffset = 0; sessionTotal = session.calls
         if !store.isFixture {
-            store.run(["journal", "--action", "session", "--session", session.id]) { r in
-                struct Result: Decodable { var calls: [JournalCall]; var truncated: Bool; var modelHistory: ModelHistory? }
-                if selectedSession == session.id, case .success(let data) = r, let result = try? JSONDecoder().decode(Result.self, from: data) {
-                    calls = result.calls
-                    modelHistory = result.modelHistory
-                    if result.truncated { message = tr("Showing first 500 calls; export for further review", "Первые 500 вызовов; используйте экспорт для продолжения") }
-                }
-            }
+            loadSessionPage(session.id, cursor: nil)
+        }
+    }
+    func loadSessionPage(_ sid: String, cursor: String?, index: Int = 0) {
+        let request = UUID(); pageRequest = request; pageLoading = true; message = ""
+        var arguments = ["journal", "--action", "session", "--session", sid]
+        if let cursor { arguments += ["--cursor", cursor] }
+        store.run(arguments) { result in
+            guard selectedSession == sid, pageRequest == request else { return }
+            pageLoading = false
+            struct Page: Decodable { var calls: [JournalCall]; var cursor: String; var nextCursor: String?; var pageOffset: Int; var callCount: Int; var modelHistory: ModelHistory?; var eventLimitReached: Bool }
+            if case .success(let data) = result, let value = try? JSONDecoder().decode(Page.self, from: data) {
+                calls = value.calls; nextCursor = value.nextCursor; pageOffset = value.pageOffset; sessionTotal = value.callCount; modelHistory = value.modelHistory
+                sessionPage = index; sessionCursors[index] = value.cursor
+                if value.eventLimitReached { message = tr("Journal event limit reached; this snapshot is partial.", "Достигнут лимит событий журнала; снимок частичный.") }
+            } else { message = tr("Page unavailable. Reopen the session for a fresh snapshot.", "Страница недоступна. Откройте сессию заново для свежего снимка.") }
         }
     }
     var body: some View {
@@ -487,29 +499,43 @@ struct AnalysisView: View {
                 if let known = c.knownOutcomes {
                     Text("\(known) " + tr("known results · ", "известных результатов · ") + "\(c.unknownOutcomes ?? 0) " + tr("unknown · ", "неизвестных · ") + "\(c.collectionGaps ?? 0) " + tr("collection gaps", "пропусков сбора")).font(.system(size: 10)).foregroundStyle(quiet)
                 }
+                if let at = c.lastToolEventAt { Text(tr("Last received call: ", "Последний полученный вызов: ") + stamp(at, compact: true)).font(.system(size: 10)).foregroundStyle(quiet) }
             }
+            Text(tr("Silence may mean an idle client. Paired calls count only received events; total coverage is unknown.", "Тишина может означать простой клиента. Пары считаются среди полученных событий; полный охват неизвестен.")).font(.system(size: 10)).foregroundStyle(quiet)
             if report.eventLimitReached { Text(tr("Analysis limited to the latest 20,000 events", "Анализ ограничен последними 20 000 событиями")).foregroundStyle(amber) }
         }.font(.system(size: 11))
     }
     func capabilities(_ report: AnalyticsReport) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let all = report.capabilities ?? []
+        let observed = all.filter { $0.loaded + $0.invoked + $0.declared > 0 }
+        let visible = showUnobservedCapabilities ? all.sorted { a, b in
+            let x = a.loaded + a.invoked + a.declared; let y = b.loaded + b.invoked + b.declared
+            return x == y ? a.identity < b.identity : x > y
+        } : observed
+        return VStack(alignment: .leading, spacing: 12) {
             Text(tr("Read ≠ invoked ≠ manually declared. No observed use does not prove non-use.", "Чтение ≠ вызов ≠ ручная отметка. Отсутствие наблюдения не доказывает неиспользование.")).font(.system(size: 12)).foregroundStyle(quiet)
+            Text("\(all.count) " + tr("catalog entries · ", "записей каталога · ") + "\(observed.count) " + tr("with evidence · ", "с подтверждением · ") + "\((report.toolUsage ?? []).count) " + tr("observed tools", "наблюдаемых инструментов")).font(.system(size: 12)).foregroundStyle(mint)
+            Text(tr("Shell reads are not attributed to skills. Unregistered MCP names appear as tools. Counts cannot establish skill non-use.", "Чтение через shell не привязано к скиллам. MCP вне каталога видны как инструменты. По этим счётчикам нельзя установить неиспользование навыка.")).font(.system(size: 11)).foregroundStyle(quiet)
+            Text(tr("Observed tools", "Наблюдаемые инструменты")).font(.system(size: 16, weight: .semibold))
+            if (report.toolUsage ?? []).isEmpty { Text(tr("No tool calls received in this view.", "В этом разделе пока нет полученных вызовов инструментов.")).foregroundStyle(quiet) }
+            ForEach(report.toolUsage ?? [], id: \.identity) { row in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(row.provider.uppercased() + " · " + row.tool).font(.system(size: 12, design: .monospaced)).fixedSize(horizontal: false, vertical: true)
+                    Text("\(row.calls) " + tr("calls · ", "вызовов · ") + "\(row.failed) " + tr("failed · ", "ошибок · ") + "\(row.unknown) " + tr("unknown · ", "неизвестных · ") + "\(row.pending) " + tr("pending", "незавершённых")).font(.system(size: 11)).foregroundStyle(quiet)
+                }
+            }
             Text(tr("Reviewed skills and MCP", "Учтённые скиллы и MCP")).font(.system(size: 16, weight: .semibold))
-            if (report.capabilities ?? []).isEmpty { Text(tr("Scan or import a reviewed inventory first.", "Сначала отсканируйте или импортируйте проверенный каталог.")).foregroundStyle(quiet) }
-            ForEach(report.capabilities ?? [], id: \.identity) { row in
+            if all.isEmpty { Text(tr("Scan or import a reviewed inventory first.", "Сначала отсканируйте или импортируйте проверенный каталог.")).foregroundStyle(quiet) }
+            else { Toggle(tr("Show catalog entries without observed use", "Показать записи каталога без подтверждённого применения"), isOn: $showUnobservedCapabilities).font(.system(size: 12)) }
+            if !all.isEmpty && visible.isEmpty { Text(tr("No registered use confirmed. This does not mean no skills were used.", "Применение из каталога не подтверждено. Это не означает, что скиллы не использовались.")).foregroundStyle(quiet) }
+            ForEach(visible, id: \.identity) { row in
                 VStack(alignment: .leading, spacing: 4) {
                     Text(row.provider.uppercased() + " · " + row.kind + " · " + row.id).font(.system(size: 12, design: .monospaced)).fixedSize(horizontal: false, vertical: true)
-                    Text("\(row.loaded) " + tr("loaded · ", "чтений · ") + "\(row.invoked) " + tr("invoked · ", "вызовов · ") + "\(row.declared) " + tr("declared", "отметок")).font(.system(size: 11)).foregroundStyle(mint)
+                    if row.loaded + row.invoked + row.declared == 0 { Text(tr("No confirmed events", "Нет подтверждённых событий")).font(.system(size: 11)).foregroundStyle(quiet) }
+                    else { Text("\(row.loaded) " + tr("loaded · ", "чтений · ") + "\(row.invoked) " + tr("invoked · ", "вызовов · ") + "\(row.declared) " + tr("declared", "отметок")).font(.system(size: 11)).foregroundStyle(mint) }
                     Text(row.status + (row.inventoryFresh ? "" : tr(" · inventory needs refresh", " · обновите каталог"))).font(.system(size: 10)).foregroundStyle(quiet)
                 }.padding(.vertical, 4)
                 Divider()
-            }
-            Text(tr("Observed tools", "Наблюдаемые инструменты")).font(.system(size: 16, weight: .semibold))
-            ForEach(report.toolUsage ?? [], id: \.identity) { row in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(row.provider.uppercased() + " · " + row.tool).font(.system(size: 12, design: .monospaced))
-                    Text("\(row.calls) " + tr("calls · ", "вызовов · ") + "\(row.failed) " + tr("failed · ", "ошибок · ") + "\(row.unknown) " + tr("unknown · ", "неизвестных · ") + "\(row.pending) " + tr("pending", "незавершённых")).font(.system(size: 11)).foregroundStyle(quiet)
-                }
             }
         }
     }
@@ -517,7 +543,9 @@ struct AnalysisView: View {
         VStack(alignment: .leading, spacing: 14) {
             coverage(report)
             Text(tr("Suggestions require review. Repetition alone does not prove waste or a missing skill.", "Предложения требуют проверки. Повтор сам по себе не доказывает лишнюю работу или отсутствие скилла.")).font(.system(size: 12)).foregroundStyle(quiet)
-            if report.findings.isEmpty { Text(tr("Not enough paired events yet. Enable an observer and run ordinary tasks.", "Пока недостаточно пар событий. Включите наблюдатель и выполняйте обычные задачи.")).foregroundStyle(quiet) }
+            if report.findings.isEmpty {
+                Text(report.calls == 0 ? tr("No calls received. Configure an observer in Settings and check native trust.", "Вызовы не получены. Настройте наблюдатель в Настройках и проверьте доверие клиента.") : tr("Calls are recorded; no repeat candidate meets the thresholds yet. Workflows need matching sequences in at least 3 turns. Other findings have separate thresholds.", "Вызовы записываются; ни один кандидат пока не достиг порогов. Для сценария нужны совпадающие цепочки минимум в 3 ходах. У других находок свои пороги.")).foregroundStyle(quiet)
+            }
             ForEach(report.findings) { finding in
                 VStack(alignment: .leading, spacing: 6) {
                     HStack { Text(russian ? finding.titleRu : finding.title).font(.system(size: 15, weight: .semibold)); Spacer(); Text(finding.provider.uppercased()).font(.system(size: 10, design: .monospaced)).foregroundStyle(mint) }
@@ -558,7 +586,7 @@ struct AnalysisView: View {
     func sessionDetail() -> some View {
         VStack(alignment: .leading, spacing: 12) {
 
-                Button(tr("← Sessions", "← Сессии")) { selectedSession = nil; evidence = [] }
+                Button(tr("← Sessions", "← Сессии")) { selectedSession = nil; evidence = []; pageRequest = UUID(); pageLoading = false }
                 Text(String(selectedSession!.prefix(12))).font(.system(size: 17, weight: .medium, design: .monospaced))
                 Text(tr("Arguments are intentionally hidden. Safe command shape, outcome and wall time only; overlapping durations are not summed.", "Аргументы скрыты. Только безопасная форма команды, исход и время; длительности параллельных вызовов не складываются.")).font(.system(size: 11)).foregroundStyle(quiet)
                 if let history = modelHistory { modelTimeline(history) }
@@ -572,6 +600,13 @@ struct AnalysisView: View {
                     }
                 }
                 if !message.isEmpty { Text(message).font(.system(size: 11)).foregroundStyle(amber) }
+                Text(tr("Fixed journal snapshot · observed calls only · 30-day retention", "Фиксированный снимок журнала · только полученные вызовы · хранение 30 дней")).font(.system(size: 10)).foregroundStyle(quiet)
+                HStack {
+                    Text(pageLoading ? tr("Loading page…", "Загрузка страницы…") : "\(calls.isEmpty ? 0 : pageOffset + 1)–\(pageOffset + calls.count) / \(sessionTotal)").font(.system(size: 11)).foregroundStyle(quiet)
+                    Spacer()
+                    Button(tr("Previous", "Назад")) { loadSessionPage(selectedSession!, cursor: sessionCursors[sessionPage - 1], index: sessionPage - 1) }.disabled(store.isFixture || pageLoading || sessionPage == 0)
+                    Button(tr("Next", "Далее")) { if let nextCursor { sessionCursors = Array(sessionCursors.prefix(sessionPage + 1)); sessionCursors.append(nextCursor); loadSessionPage(selectedSession!, cursor: nextCursor, index: sessionPage + 1) } }.disabled(store.isFixture || pageLoading || nextCursor == nil)
+                }
                 ForEach(calls) { call in callRow(call); Divider() }
         }
     }
@@ -607,6 +642,7 @@ struct AnalysisView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text(tr("Review the same task family before and after a change", "Сравните одну группу задач до и после изменения")).font(.system(size: 16, weight: .semibold))
             Text(tr("Label sessions, variant and acceptance in Sessions. At least 3 observations per variant are needed. Model settings and task difficulty still require your review.", "Укажите метки, вариант и результат в Сессиях. Нужно хотя бы 3 наблюдения на вариант. Настройки моделей и сложность задач проверяете вы.")).font(.system(size: 12)).foregroundStyle(quiet)
+            Text("\(report.sessions.filter { !($0.label ?? "").isEmpty }.count) " + tr("labelled sessions in this view. Empty groups mean insufficient reviewed evidence, not zero improvement.", "размеченных сессий в этом разделе. Пустые группы означают недостаток проверенных данных, а не нулевое улучшение.")).font(.system(size: 11)).foregroundStyle(quiet)
             HStack { TextField(tr("Task label", "Метка задачи"), text: $label); TextField(tr("Before", "До"), text: $before); TextField(tr("After", "После"), text: $after) }
             Button(tr("Compare observations", "Сравнить наблюдения")) {
                 if store.isFixture { message = tr("Demo comparison: use real reviewed sessions to measure effects.", "Демо: для оценки эффекта используйте реальные проверенные сессии."); return }
@@ -751,7 +787,7 @@ final class FloatingPanel: NSPanel {
         let args = CommandLine.arguments
         let fixtureID = store.isFixture ? args.firstIndex(of: "--active-app").flatMap { $0 + 1 < args.count ? args[$0+1] : nil } : nil
         if store.menuFollowActive, let provider = activeProvider(bundleID: fixtureID ?? NSWorkspace.shared.frontmostApplication?.bundleIdentifier), let match = providers.firstIndex(where: { $0.id == provider }) { index = match }
-        let values = lines.isEmpty ? "—" : lines[index] + (lines.count > 1 ? " \(index+1)/\(lines.count)" : "")
+        let values = lines.isEmpty ? "—" : lines[index]
         button.title = store.menuNumbers && store.displayMode == "menu" ? values : ""
         button.imagePosition = .imageLeading; button.font = font
         let caption = tr("Remaining limits · — not reported · click to show/hide movable widget", "Осталось лимитов · — не передано · нажмите: показать/скрыть подвижное табло")

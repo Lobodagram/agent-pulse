@@ -1,5 +1,9 @@
 # Verification — 2026-10-06 / Проверка
 
+## 0.6.1 clarity and continuation · 2026-10-06
+
+140 unit tests pass, including signed pages, tampered/session-bound cursors, late events/reconciliation and generated sensitive-canary persistence checks. Fixed-snapshot continuation verified against an actual long local session without inserting events; private values excluded from public evidence. Python version message, silent unsupported-runtime hook and exception-class-only debug verified. Final wheel metadata, console entry points and hook resource verified in an isolated venv. Eight own EN/RU minimum analytics renders and compact menu captures inspected. Native model/skill completeness, physical Windows DPI/Intel charts and representative effect acceptance remain open. One first local frozen launch exceeded two seconds; subsequent strict two-second hook/journal/MCP and four startup trials passed. This transient is recorded, not a universal cold-start guarantee. Native hook timeout is unchanged.
+
 ## Delivered 0.6.0 — 2026-10-06
 
 [Source Checks 37483506278](https://github.com/Lobodagram/agent-pulse/actions/runs/37483506278) and [tagged packages/publication 37483885565](https://github.com/Lobodagram/agent-pulse/actions/runs/37483885565) passed Linux/Mac/Windows source and Mac ARM64/Intel/Windows packages at f0abded04219ae65c3caa7f43ff364e8dcf2afd0. 130 tests cover native model identity, missing/conflicting fields, duplicate events, unknown gaps and parallel actor/outer-call barriers. Fourteen invented mechanics cases, Mac 15-case own-widget matrix and two EN/RU minimum model-history renders pass. Both images visually inspected. Two-second frozen hook→journal→MCP passes; no model called by this verification suite.

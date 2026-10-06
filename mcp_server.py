@@ -8,15 +8,16 @@ from analytics import report, compare
 from platform_support import state_directory
 from evidence_pack import evidence_pack
 from pathlib import Path
+from session_view import session_page
 TOOLS=[
  {'name':'pulse_report','description':'Local observed workflow findings and coverage; not exact tool token costs.','inputSchema':{'type':'object','properties':{},'additionalProperties':False}},
- {'name':'pulse_session','description':'Read at most 100 sanitized observed calls for one hashed session.','inputSchema':{'type':'object','properties':{'sessionId':{'type':'string'}},'required':['sessionId'],'additionalProperties':False}},
+ {'name':'pulse_session','description':'Read a bounded page of sanitized calls. Pass nextCursor back as cursor to continue one fixed snapshot.','inputSchema':{'type':'object','properties':{'sessionId':{'type':'string'},'cursor':{'type':'string'},'limit':{'type':'integer','minimum':1,'maximum':100}},'required':['sessionId'],'additionalProperties':False}},
  {'name':'pulse_compare','description':'Observational before/after comparison using manually reviewed task labels.','inputSchema':{'type':'object','properties':{'label':{'type':'string'},'before':{'type':'string'},'after':{'type':'string'}},'required':['label','before','after'],'additionalProperties':False}},
  {'name':'pulse_evidence','description':'Bounded local examples and review checklist for one workflow hypothesis; does not execute or create tools.','inputSchema':{'type':'object','properties':{'findingId':{'type':'string'}},'required':['findingId'],'additionalProperties':False}}]
 
 def dispatch(request,state):
     method=request.get('method');params=request.get('params') or {}
-    if method=='initialize':return {'protocolVersion':'2024-11-05','capabilities':{'tools':{}},'serverInfo':{'name':'agent-pulse-local','version':'0.6.0'}}
+    if method=='initialize':return {'protocolVersion':'2024-11-05','capabilities':{'tools':{}},'serverInfo':{'name':'agent-pulse-local','version':'0.6.1'}}
     if method=='ping':return {}
     if method=='tools/list':return {'tools':TOOLS}
     if method!='tools/call':raise ValueError('method_not_allowed')
@@ -34,15 +35,17 @@ def dispatch(request,state):
                 session['modelHistory']['truncated'] |= len(session['modelHistory']['segments'])>5
                 session['modelHistory']['segments']=session['modelHistory']['segments'][-5:]
         elif name=='pulse_evidence' and set(args)=={'findingId'}:data=evidence_pack(j,args['findingId'])
-        elif name=='pulse_session' and set(args)=={'sessionId'} and isinstance(args['sessionId'],str):
-            import re
-            if not re.fullmatch('[a-f0-9]{32}',args['sessionId']):raise ValueError('invalid_session')
-            from model_evidence import model_history
-            rows=j.calls(args['sessionId']);data={'calls':rows[:100],'truncated':len(rows)>100,'modelHistory':model_history(rows,20)}
+        elif name=='pulse_session' and 'sessionId' in args and set(args)<={'sessionId','cursor','limit'}:
+            limit=args.get('limit',50)
+            if not isinstance(limit,int) or isinstance(limit,bool) or not 1<=limit<=100:raise ValueError('invalid_page_size')
+            data=session_page(j,args['sessionId'],args.get('cursor'),limit)
+            data['modelHistory']['truncated'] |= len(data['modelHistory']['segments'])>20
+            data['modelHistory']['segments']=data['modelHistory']['segments'][-20:]
         elif name=='pulse_compare' and set(args)=={'label','before','after'}:data=compare(j,args['label'],args['before'],args['after'])
         else:raise ValueError('tool_not_allowed')
         text=json.dumps(data,ensure_ascii=False,allow_nan=False)
-        if len(text)>65536:text=json.dumps({'error':'report_too_large','hint':'Read one session or use local CLI export'})
+        if len(text)>65536:
+            return {'content':[{'type':'text','text':json.dumps({'error':'report_too_large','hint':'Reduce session page limit or use local CLI export'})}],'isError':True}
         return {'content':[{'type':'text','text':text}],'isError':False}
     finally:j.close()
 
@@ -63,5 +66,7 @@ def serve(state):
             res={'jsonrpc':'2.0','id':req['id'],'error':{'code':-32602,'message':'Request not supported or invalid'}}
         sys.stdout.write(json.dumps(res,ensure_ascii=False,allow_nan=False)+'\n');sys.stdout.flush()
 
-if __name__=='__main__':
+def main():
     a=argparse.ArgumentParser();a.add_argument('--state',type=Path,default=state_directory());serve(a.parse_args().state)
+
+if __name__=='__main__':main()

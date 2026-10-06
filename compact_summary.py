@@ -1,7 +1,7 @@
 """Display only reported quota percentages; never infer them from token counts."""
 import math
 
-NAMES={'codex':'Cdx','glm':'GLM','claude':'Cl','kimi':'Kimi','qwen':'Qwen'}
+NAMES={'codex':'CODEX','glm':'GLM','claude':'CLAUDE','kimi':'KIMI','qwen':'QWEN'}
 
 def window_label(minutes,ru=False):
     if not isinstance(minutes,(int,float)) or isinstance(minutes,bool) or not math.isfinite(minutes) or minutes<=0 or minutes>525600:return 'окно' if ru else 'win'
@@ -10,7 +10,7 @@ def window_label(minutes,ru=False):
     return str(int(minutes))+('м' if ru else 'm')
 
 def provider_line(provider,ru=False):
-    name=NAMES.get(provider.get('id'),str(provider.get('name') or provider.get('id') or '?')[:5])
+    name=NAMES.get(provider.get('id'),str(provider.get('id') or provider.get('name') or '?').upper())
     values=[]
     for q in provider.get('quotas',[])[:2]:
         v=q.get('remainingPercent');valid=isinstance(v,(int,float)) and not isinstance(v,bool) and math.isfinite(v) and 0<=v<=100

@@ -1,5 +1,14 @@
 # Changelog / Изменения
 
+## 0.6.1 · 2026-10-06
+
+- Clear empty-workflow states, collection timestamp/idle guidance and reviewed-label counts.
+- Observed tools first, capability coverage summary, explicit unconfirmed events and optional Mac catalog expansion.
+- Signed bounded snapshot session continuation on Mac/Windows/CLI/MCP; changed old evidence requires refresh, one-page JSON export and retention limits explicit.
+- Full uppercase compact client names; Mac menu page fraction removed, rotation retained.
+- Python version gate/package entry points, safe debug class, bilingual legacy suggestions and generated privacy canaries; 140 tests.
+- Понятные пустые состояния, страницы сессий и полные названия в верхней панели без 1/2.
+
 ## 0.6.0 · 2026-10-06
 
 - Per-call model sources, bounded observed model segments, unknown/conflicting identifiers and parallel-lane separation.

@@ -1,5 +1,5 @@
 """Explicit provider catalog and read-only adapters. No dynamic plugin code execution."""
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import os
 import re
@@ -134,7 +134,7 @@ def collect_extra(ident,directory,config):
             if path.parent.is_symlink() or path.is_symlink() or path.stat().st_size>2*1024*1024:raise ValueError('invalid_import')
             p=normalized(json.loads(path.read_text()),ident)
             if ident=='claude':p['tokenSource']='Claude official status-line bridge';p['tokenCoverage']='context size, not token spend';p['todayTokens']=None;p['daily']=[];p['periodTokens']=None
-            if p.get('observedAt') is not None and datetime.fromtimestamp(p['observedAt'],__import__('datetime').timezone.utc).strftime('%Y-%m-%d') != datetime.now(__import__('datetime').timezone.utc).strftime('%Y-%m-%d'):p['todayTokens']=None
+            if p.get('observedAt') is not None and datetime.fromtimestamp(p['observedAt'],timezone.utc).strftime('%Y-%m-%d') != datetime.now(timezone.utc).strftime('%Y-%m-%d'):p['todayTokens']=None
             return p
         if ident=='kimi':
             secret=Path(directory)/'Secrets.json'

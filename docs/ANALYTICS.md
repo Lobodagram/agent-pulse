@@ -1,5 +1,7 @@
 # Local workflow analytics
 
+[Paged session viewing and empty-state guide](READING_ANALYTICS.md). In 0.6.1 CLI/desktop returns up to 500 calls per page, MCP up to 100. Continue with nextCursor; general-export recentCalls remains a preview.
+
 [Русский](ANALYTICS.ru.md)
 
 Goal: collect evidence for improving an agent workspace, then verify an improvement. All analysis is deterministic, on your device, without model calls or telemetry uploads.
@@ -27,7 +29,7 @@ Packaged Mac helper: `Agent Pulse.app/Contents/Resources/pulse-collector`. Windo
 - **Repeated reads**: at least three reads of the same hashed resource and unchanged size/mtime in a turn. Metadata does not prove identical contents. Only explicit file-path tools support this hint; shell paths are never recovered/persisted.
 - **Operation family**: ten calls across three turns, lower confidence. Known compound operations retain bounded sanitized families; unsupported/dynamic syntax stays unclassified. Static parsing does not prove branch execution.
 
-Workflows → Inspect evidence opens an observed session. The recent UI/report preview is bounded; the local CLI reads up to 500 calls per session, MCP up to 100. Old examples outside the preview remain accessible by hashed session ID while retained. Session wall span is displayed; overlapping tool durations are never totalled as elapsed work. A missing end is pending; shell completion without an exit status is unknown. Process launch and process completion may be different tools: this preview does not correlate all asynchronous subprocess lifecycles.
+Workflows → Inspect evidence opens an observed session. The recent UI/report preview is bounded; the desktop/CLI reads up to 500 calls per page, MCP up to 100, with nextCursor continuation. Old examples outside the preview remain accessible by hashed session ID while retained. Session wall span is displayed; overlapping tool durations are never totalled as elapsed work. A missing end is pending; shell completion without an exit status is unknown. Process launch and process completion may be different tools: this preview does not correlate all asynchronous subprocess lifecycles.
 
 Tokens are native provider counters, not exact costs of a particular command. The journal can accept explicit native per-turn usage through its programmatic contract; **these hooks do not promise live turn-token reports**. No account-counter delta is attributed to a concurrent task or tool, and no subscription-percent-to-token conversion is made.
 

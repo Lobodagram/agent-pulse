@@ -288,7 +288,7 @@ class Pulse:
         capabilities=page(self.t('Capabilities','Навыки'))
         report=self.data.get('analytics',{});lines=[self.t('Tokens, quotas and billing dates are separate. Missing is unknown.','Токены, лимиты и даты оплаты различаются. Пропуск неизвестен.'),'']
         for p in self.data.get('providers',[]):
-            lines += [p['name']+' · '+p['status'],self.t('Tokens today: ','Токены сегодня: ')+str(p.get('todayTokens')),p.get('tokenCoverage',''),'']
+            lines += [p['name']+' · '+p['status'],self.t('Tokens today: ','Токены сегодня: ')+(str(p['todayTokens']) if p.get('todayTokens') is not None else '—'),p.get('tokenCoverage',''),'']
         for d in self.data.get('history',[]):lines.append(f"{d['date']}  {d['provider']:10}  {d['tokens']:>12,.0f}")
         lines+=['',self.t('OBSERVED COVERAGE','НАБЛЮДАЕМЫЙ ОХВАТ')]
         for c in report.get('coverage',[]):
@@ -296,17 +296,26 @@ class Pulse:
             lines.append(self.t('Known results / unknown / collection gaps: ','Результат известен / неизвестен / пропуски: ')+f"{c.get('knownOutcomes','—')} / {c.get('unknownOutcomes','—')} / {c.get('collectionGaps','—')}")
         textview(overview,lines)
         lines=[self.t('Read ≠ invoked ≠ declared. No observation does not prove non-use.','Чтение ≠ вызов ≠ отметка. Отсутствие наблюдения не доказывает неиспользование.'),'']
+        catalog=report.get('capabilities',[])
+        observed=sum(r['loaded']+r['invoked']+r['declared']>0 for r in catalog)
+        lines += [f"{len(catalog)} "+self.t('catalog entries','записей каталога')+f" · {observed} "+self.t('with evidence','с подтверждением'),self.t('Shell reads are unattributed. Unregistered MCP names appear as tools.','Чтение через shell не привязано к скиллам. MCP вне каталога видны как инструменты.'),'']
         for r in report.get('toolUsage',[]):
             lines.append(f"{r['provider']} · {r['tool']} · {r['calls']} "+self.t('calls','вызовов')+f" · {r['failed']} failed · {r['unknown']} unknown · {r['pending']} pending")
         lines+=['',self.t('REVIEWED SKILLS AND MCP','УЧТЁННЫЕ СКИЛЛЫ И MCP')]
-        for r in report.get('capabilities',[]):
-            lines += [f"{r['provider']} · {r['kind']} · {r['id']}",f"{r['loaded']} "+self.t('loaded','чтений')+f" · {r['invoked']} "+self.t('invoked','вызовов')+f" · {r['declared']} "+self.t('declared','отметок'),r['status']+('' if r['inventoryFresh'] else self.t(' · refresh inventory',' · обновите каталог')),'']
+        for r in sorted(catalog,key=lambda r:(-(r['loaded']+r['invoked']+r['declared']),r['provider'],r['id'])):
+            evidence=f"{r['loaded']} "+self.t('loaded','чтений')+f" · {r['invoked']} "+self.t('invoked','вызовов')+f" · {r['declared']} "+self.t('declared','отметок') if r['loaded']+r['invoked']+r['declared'] else self.t('No confirmed events','Нет подтверждённых событий')
+            lines += [f"{r['provider']} · {r['kind']} · {r['id']}",evidence,r['status']+('' if r['inventoryFresh'] else self.t(' · refresh inventory',' · обновите каталог')),'']
         textview(capabilities,lines)
         tk.Label(workflows,text=self.t('Suggestions need review; repeated does not mean waste.','Предложения требуют проверки; повтор не доказывает лишнюю работу.'),bg=BG,fg=QUIET,wraplength=670).pack(anchor='w',padx=8,pady=8)
         finder=ttk.Treeview(workflows,columns=('provider','repeats'),show='tree headings',height=7);finder.heading('#0',text=self.t('Workflow','Сценарий'));finder.heading('provider',text=self.t('Client','Клиент'));finder.heading('repeats',text=self.t('Occurrences','Повторы'));finder.column('provider',width=90,stretch=False);finder.column('repeats',width=80,stretch=False);finder.pack(fill='x',padx=8)
         findings=report.get('findings',[])
         for i,r in enumerate(findings):finder.insert('','end',iid=str(i),text=r['titleRu'] if self.language=='ru' else r['title'],values=(r['provider'],r['occurrences']))
-        info=textview(workflows,[self.t('Select a finding to inspect evidence.','Выберите наблюдение для просмотра примеров.') if findings else self.t('Not enough paired events. Enable observers in Settings.','Недостаточно пар событий. Включите наблюдатель в настройках.')])
+        empty=self.t('No calls received. Configure observers in Settings and check native trust.','Вызовы не получены. Настройте наблюдатель и проверьте доверие клиента.') if not report.get('calls') else self.t('Calls are recorded; no repeat candidate meets the thresholds. Matching workflows need at least 3 turns. Other findings have separate thresholds.','Вызовы записываются; кандидаты пока не достигли порогов. Для одинаковых сценариев нужны минимум 3 хода. У других находок свои пороги.')
+        health=[self.t('Silence can mean an idle client. Total coverage is unknown.','Тишина может означать простой клиента. Полный охват неизвестен.')]
+        for c in report.get('coverage',[]):
+            at=c.get('lastToolEventAt');last=datetime.fromtimestamp(at).strftime('%Y-%m-%d %H:%M:%S') if at else '—'
+            health.append(f"{c['provider']} · {c['pairedCalls']}/{c['calls']} · "+self.t('last received: ','последний полученный: ')+last)
+        info=textview(workflows,[self.t('Select a finding to inspect evidence.','Выберите наблюдение для просмотра примеров.') if findings else empty,'',*health])
         def finding_selected(_):
             if not finder.selection():return
             r=findings[int(finder.selection()[0])];calls=[c for c in report.get('recentCalls',[]) if c['id'] in r['evidenceIds']]
@@ -322,16 +331,29 @@ class Pulse:
         for title,var in [(self.t('Task label','Метка'),label),(self.t('Variant','Вариант'),variant)]:tk.Label(row,text=title,bg=BG,fg=FG).pack(side='left');ttk.Entry(row,textvariable=var,width=13).pack(side='left',padx=3)
         ttk.Combobox(row,textvariable=outcome,values=['unknown','accepted','failed','rework'],width=10,state='readonly').pack(side='left')
         detail=textview(sessions,[self.t('Select a session. Only sanitized metadata is shown.','Выберите сессию. Показываются только очищенные метаданные.')])
-        def selected(_):
+        pager=tk.Frame(sessions,bg=BG);pager.pack(fill='x',padx=8)
+        position=tk.StringVar(value='');tk.Label(pager,textvariable=position,bg=BG,fg=QUIET).pack(side='left')
+        page_state={'cursors':[None],'index':0,'next':None}
+        def selected(_,reset=True):
             if not tree.selection():return
             r=items[int(tree.selection()[0])];label.set(r.get('label') or '');variant.set(r.get('variant') or 'before');outcome.set(r['outcome'])
             calls=[c for c in report.get('recentCalls',[]) if c['session']==r['id']]
+            if reset:page_state.update(cursors=[None],index=0,next=None)
+            from model_evidence import model_history
+            history=r.get('modelHistory') or model_history(calls)
             if not self.fixture:
                 j=Journal(self.state)
-                try:calls=j.calls(r['id'])[:500]
+                try:
+                    from session_view import session_page
+                    value=session_page(j,r['id'],page_state['cursors'][page_state['index']])
+                    calls=value['calls'];history=value['modelHistory'];page_state['next']=value['nextCursor'];page_state['cursors'][page_state['index']]=value['cursor']
+                    position.set(f"{value['pageOffset']+1 if calls else 0}–{value['pageOffset']+len(calls)} / {value['callCount']}"+self.t(' · fixed snapshot',' · фиксированный снимок'))
+                except ValueError:
+                    position.set(self.t('Reopen session for a fresh snapshot','Откройте сессию заново для свежего снимка'));return
                 finally:j.close()
-            from model_evidence import model_history
-            history=model_history(calls)
+            else:position.set(self.t('Demo preview only','Только демо-просмотр'))
+            previous.configure(state='normal' if not self.fixture and page_state['index']>0 else 'disabled')
+            following.configure(state='normal' if not self.fixture and page_state['next'] else 'disabled')
             unknown=self.t('Unknown model','Модель неизвестна')
             transitions={'first-observed':'первое наблюдение','unknown-gap':'модель не передана','after-unknown':'после пропуска','timing-unverified':'порядок не подтверждён','overlapping-observations':'параллельные наблюдения','reported-change':'изменение в вызовах','same-reported-model':'та же модель'}
             def model_name(m):return unknown if m in (None,'other') else m
@@ -346,6 +368,12 @@ class Pulse:
             lines += ['',self.t('Observed calls; wall times may overlap.','Наблюдаемые вызовы; времена могут пересекаться.'),'']+[f"{c['category']} · {c['tool']} · {c['outcome']}\n  {model_name(c.get('model'))} · {c.get('modelSource','not-reported')}\n  {c['template']}\n  {c['durationMs']} ms · {c['durationSource']}" for c in calls]
             detail.configure(state='normal');detail.delete('1.0','end');detail.insert('1.0','\n'.join(lines));detail.configure(state='disabled')
         tree.bind('<<TreeviewSelect>>',selected)
+        def navigate(delta):
+            if delta>0 and page_state['next']:
+                page_state['cursors']=page_state['cursors'][:page_state['index']+1]+[page_state['next']]
+            page_state['index']+=delta;selected(None,False)
+        previous=ttk.Button(pager,text=self.t('Previous','Назад'),command=lambda:navigate(-1),state='disabled');previous.pack(side='right')
+        following=ttk.Button(pager,text=self.t('Next','Далее'),command=lambda:navigate(1),state='disabled');following.pack(side='right',padx=3)
         def annotate():
             if self.fixture or not tree.selection():return
             j=Journal(self.state)
@@ -354,6 +382,8 @@ class Pulse:
             finally:j.close()
         ttk.Button(row,text=self.t('Save review','Сохранить'),command=annotate).pack(side='left',padx=3)
         tk.Label(comparison,text=self.t('Label at least 3 sessions per variant. Equal difficulty/model settings need review.','Отметьте хотя бы 3 сессии на вариант. Сложность задач и настройки модели проверяете вы.'),bg=BG,fg=QUIET,wraplength=670).pack(pady=10)
+        labelled=sum(bool(r.get('label')) for r in items)
+        tk.Label(comparison,text=f"{labelled} "+self.t('labelled sessions in this view. Empty groups mean insufficient evidence.','размеченных сессий в этом разделе. Пустые группы означают недостаток данных.'),bg=BG,fg=QUIET,wraplength=670).pack(pady=4)
         row=tk.Frame(comparison,bg=BG);row.pack(fill='x',padx=8);task=tk.StringVar();before=tk.StringVar(value='before');after=tk.StringVar(value='after')
         for var in [task,before,after]:ttk.Entry(row,textvariable=var,width=18).pack(side='left',padx=3)
         result=textview(comparison,[self.t('Observational comparison only. No promised token saving or causal claim.','Сравнение наблюдений. Без обещаний экономии токенов и утверждений о причинности.')])
@@ -365,7 +395,7 @@ class Pulse:
             finally:j.close()
         ttk.Button(row,text=self.t('Compare','Сравнить'),command=compare).pack(side='left')
         if self.smoke:
-            for index in range(4):book.select(index);w.update_idletasks()
+            for index in range(5):book.select(index);w.update_idletasks()
             if findings:finder.selection_set('0');finding_selected(None)
             if items:
                 index=next((i for i,r in enumerate(items) if r.get('modelHistory',{}).get('reportedChanges',0)>0),0)

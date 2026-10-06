@@ -20,3 +20,4 @@ journal.sqlite*
 *.sqlite-wal
 *.sqlite-shm
 build/
+*.egg-info/

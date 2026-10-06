@@ -55,9 +55,9 @@ with tempfile.TemporaryDirectory() as tmp:
         if mode=='menu-widget':assert r['menuClickShowsPanel'] and r['visibleBefore'] and r['movable'],r
         if mode.startswith('menu'):assert r['displayMode']=='menu' and r['visibleBefore']==(mode=='menu-widget') and r['menuTitle'],r
         if mode in ('menu-next','menu-timer','menu-active','menu-fallback'):
-            assert r['menuTitle'].startswith('GLM —') and f"2/{len(data['providers'])}" in r['menuTitle'],r
-            assert 'Cdx 5ч' in r['menuTooltip'] and 'GLM —' in r['menuTooltip'],r
-        if mode=='menu-bar':assert r['menuTitle'].startswith('Cdx 5ч') and 'GLM' not in r['menuTitle'],r
+            assert r['menuTitle'].startswith('GLM —') and '/' not in r['menuTitle'],r
+            assert 'CODEX 5ч' in r['menuTooltip'] and 'GLM —' in r['menuTooltip'],r
+        if mode=='menu-bar':assert r['menuTitle'].startswith('CODEX 5ч') and 'GLM' not in r['menuTitle'] and '/' not in r['menuTitle'],r
         assert r['hidePassed'] and r['restorePassed'],r
         if mode=='window-focus':assert r['utilityRestorePassed'] and r['utilityFocusPassed'] and r['utilityPlacementPassed'],r
         if destination:
