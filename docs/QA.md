@@ -1,5 +1,15 @@
 # Verification — 2026-10-06 / Проверка
 
+## Current: 0.4.1 analytics audit
+
+83 tests passed locally and in [Checks 37462875308](https://github.com/Lobodagram/agent-pulse/actions/runs/37462875308) on Linux/macOS/Windows (one POSIX-only Windows skip). [Release packages 37463258460](https://github.com/Lobodagram/agent-pulse/actions/runs/37463258460) passed Mac ARM64/Intel and Windows x64, including actual two-second frozen hook deadlines and native demo UI checks. All three [0.4.1 archives](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.4.1) were downloaded and matched SHA256SUMS; directory runtimes and license notices were present. Downloaded ARM64 passed strict/deep signature verification, synthetic hook → journal → MCP and the 14-case own-widget matrix. Local directory-runtime observer starts measured 0.065–0.145 seconds, versus 6.179–6.981 seconds for the previous one-file package on the same Mac.
+
+The verified ARM64 app was installed; one production instance remained after duplicate launch. The old bundle is preserved, and config bytes were unchanged across relaunch. Initial LaunchServices launch verification did not locate a running instance; a direct absolute-executable launch was verified. Native Codex/ZCode counter reads succeeded. Subsequent explicitly authorized read/status tasks confirmed Codex receiving/paired events after standard native trust review, and a successful Read pair from ZCode desktop. Codex shell outcomes remained unknown; ZCode Bash remained pending and the desktop displayed overload. Bundled ZCode CLI failed at model creation. Complete native task/outcome coverage is therefore still open. No private counters, chat data or activity reports were published. [Readiness audit](AUDIT.md) distinguishes counter/UI readiness from the primary analytics goal, rated 6/10. Skill-use/non-use attribution, representative pattern evaluation, completed native tasks/outcomes and physical multi-display/DPI cases remain open.
+
+83 теста, исходники и все три пакета прошли. Архивы скачаны обратно, SHA256 совпали. Упакованный наблюдатель проходит срок 2 секунды; скачанная Mac-сборка — подпись и собственный интерфейс. Проверенная версия установлена, один экземпляр; настройки при перезапуске сохранены. Реальные пары Codex и чтение из ZCode desktop подтверждены. Для Codex результат shell остался неизвестным, для ZCode команда Git — незавершённой в журнале; клиент сообщил о перегрузке. Статистика применения скиллов ещё не доказана. [Аудит](AUDIT.ru.md) оценивает готовность относительно основной цели, не только внешнего вида.
+
+## Historical delivery evidence
+
 Prepublication evidence, public counters excluded:
 
 - 26 unit tests passed on Python 3.12/macOS. Quota clamping, unknown versus zero, data projection, secret omission, incremental/deduplicated counters, date validation, state permissions, cache behavior, provider selection, actual Qwen aggregate shape, Claude context semantics, Kimi quota units, loopback/redirect restriction and bounded portable RPC cleanup are covered.
