@@ -1,6 +1,12 @@
 # Analytics readiness audit · 2026-10-06
 
-## Current 0.6.0 assessment
+## Current 0.6.1 assessment
+
+**7/10 against the primary analytics goal.** Evidence is easier to inspect: observed tools precede registry entries, no qualifying patterns is distinguished from no calls, last collection time and reviewed-label counts are visible, and long sessions have signed bounded continuation. Python startup/packaging and privacy regression coverage improved; 141 tests. [Reading guide](READING_ANALYTICS.md), [verification](QA.md).
+
+These repairs do not establish universal skill attribution, complete native collection or measured improvement effects. The thresholds were not lowered to manufacture findings. Local cold helper startup exceeded the native two-second budget on first trials; the downloaded release and installed helper subsequently passed that actual deadline. Full cold-start reliability remains an explicit limit. Native adapters, representative reviewed tasks and physical-platform checks remain the next gates. Earlier states follow.
+
+## Historical 0.6.0 assessment
 
 **7/10 against the analytics goal.** Native per-call model evidence, conservative observed-change timelines and bounded exports are implemented and covered by 130 tests. Real user-started ZCode work now supplies paired Read/Skill/Bash events including structured shell exits. This improves collection evidence but does not prove every step, sustained coverage or representative pattern accuracy. Observed ZCode tool events omit models: their model remains unknown. See [models](MODELS.md), [adapter proposal](CLIENT_ADAPTERS.md) and [dated verification](QA.md).
 
