@@ -275,9 +275,10 @@ class Journal:
         old=[tuple(r) for r in self.db.execute('SELECT provider,id,locator FROM capability_locator') if (r['provider'],r['id']) in peers and not any(x[:2]==(r['provider'],r['id']) for x in locators)]
         self.db.execute('DELETE FROM inventory');self.db.executemany('INSERT OR REPLACE INTO inventory VALUES (?,?,?,?,?,?)',entries)
         self.db.execute('DELETE FROM capability_locator');self.db.executemany('INSERT OR IGNORE INTO capability_locator VALUES (?,?,?)',locators+old);self.db.commit()
-    def calls(self,session=None,days=30,as_of=None):
+    def calls(self,session=None,days=30,as_of=None,through_rowid=None):
         ceiling=time.time() if as_of is None else as_of
         args=[ceiling-days*86400,ceiling];where='received>=? AND received<=?'
+        if through_rowid is not None:where+=' AND observation.rowid<=?';args.append(through_rowid)
         if session:where+=' AND session=?';args.append(session)
         rows=self.db.execute('SELECT observation.*,call_metadata.signature,call_metadata.outcome_source,EXISTS(SELECT 1 FROM model_conflict WHERE event=observation.id) AS model_conflicted FROM observation LEFT JOIN call_metadata ON observation.id=call_metadata.event WHERE '+where+' ORDER BY received DESC LIMIT 20000',args).fetchall()
         boundaries={}

@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 from journal import Journal
 from journal_cli import run
 from mcp_server import dispatch
@@ -63,3 +64,11 @@ class SessionPageTests(unittest.TestCase):
         first=session_page(self.j,self.sid,limit=5)
         self.j.record('codex',{'session_id':'page-demo','turn_id':'turn-demo','tool_use_id':'0','tool_name':'Read','tool_input':{},'timestamp':self.at,'model':'different-model','hook_event_name':'PreToolUse'})
         with self.assertRaisesRegex(ValueError,'snapshot_changed'):session_page(self.j,self.sid,first['nextCursor'],5)
+    def test_coarse_clock_new_events_never_enter_old_pages(self):
+        with patch('journal.time.time',return_value=time.time()):
+            first=session_page(self.j,self.sid,limit=5)
+            self.pair('same-clock-tick',self.at-1)
+            second=session_page(self.j,self.sid,first['nextCursor'],5)
+            replay=session_page(self.j,self.sid,first['cursor'],5)
+            self.assertEqual(second['callCount'],12);self.assertEqual(replay['calls'],first['calls'])
+            self.assertEqual(session_page(self.j,self.sid)['callCount'],13)
