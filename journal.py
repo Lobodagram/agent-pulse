@@ -46,6 +46,18 @@ def atomic_json(path,value):
     finally:
         if Path(tmp).exists():Path(tmp).unlink()
 
+def atomic_text(path,value):
+    import tempfile
+    if not isinstance(value,str) or len(value.encode('utf-8'))>32768:raise ValueError('invalid_text_export')
+    path=Path(path);private_dir(path.parent)
+    if path.is_symlink():raise ValueError('symlink_file')
+    fd,tmp=tempfile.mkstemp(prefix='.pulse-',dir=path.parent)
+    try:
+        with os.fdopen(fd,'w',encoding='utf-8') as f:f.write(value)
+        os.replace(tmp,path)
+    finally:
+        if Path(tmp).exists():Path(tmp).unlink()
+
 def timestamp(raw,now):
     v=raw.get('timestamp',raw.get('at'))
     if isinstance(v,str):
@@ -125,6 +137,10 @@ class Journal:
         CREATE TABLE IF NOT EXISTS capability_locator(provider TEXT,id TEXT,locator TEXT,PRIMARY KEY(provider,id,locator));
         CREATE TABLE IF NOT EXISTS capability_evidence(provider TEXT,session TEXT,turn TEXT,call TEXT,
           id TEXT,kind TEXT,evidence TEXT,at REAL,PRIMARY KEY(provider,session,call,id,evidence));
+        CREATE TABLE IF NOT EXISTS capability_source(provider TEXT,session TEXT,call TEXT,id TEXT,evidence TEXT,
+          source TEXT,PRIMARY KEY(provider,session,call,id,evidence));
+        CREATE TABLE IF NOT EXISTS finding_review(id TEXT PRIMARY KEY,provider TEXT,project TEXT,kind TEXT,status TEXT,
+          reason TEXT,at REAL,seconds INTEGER,title TEXT,title_ru TEXT,baseline TEXT);
         ''')
         self.db.commit()
     def close(self):self.db.close()
@@ -209,7 +225,9 @@ class Journal:
         if istool and phase=='finish':
             stored=self.db.execute('SELECT outcome FROM observation WHERE id=?',(eid,)).fetchone()
             if stored and stored['outcome']=='success':self.observe_capabilities(provider,session,turn,call,tool,args,cwd,at)
-            else:self.db.execute("DELETE FROM capability_evidence WHERE provider=? AND session=? AND call=? AND evidence!='declared'",(provider,session,call))
+            else:
+                self.db.execute("DELETE FROM capability_evidence WHERE provider=? AND session=? AND call=? AND evidence!='declared'",(provider,session,call))
+                self.db.execute("DELETE FROM capability_source WHERE provider=? AND session=? AND call=? AND evidence!='declared'",(provider,session,call))
         self.db.execute('INSERT INTO health(provider,last_event,rejected) VALUES (?,?,0) ON CONFLICT(provider) DO UPDATE SET last_event=max(coalesce(last_event,0),excluded.last_event)',(provider,now))
         if event in {'Stop','Interrupt','SessionEnd'}:self.db.execute('DELETE FROM live_turn WHERE session=?',(lane,))
         self.db.commit()
@@ -235,28 +253,36 @@ class Journal:
         if not isinstance(path,str) or not path or len(path)>4096:return None
         return self.digest('capability-location',os.path.normcase(os.path.abspath(os.path.join(cwd,path))))
     def observe_capabilities(self,provider,session,turn,call,tool,args,cwd,at):
+        from capability_detection import literal_reads, mcp_namespace
         args=args if isinstance(args,dict) else {}
         entries=self.db.execute('SELECT id,kind FROM inventory WHERE provider=?',(provider,)).fetchall()
         path=args.get('file_path',args.get('path'))
-        loc=self.locator(path,cwd) if tool.lower() in {'read','read_file','cat_file'} else None
-        loaded={r['id'] for r in self.db.execute('SELECT id FROM capability_locator WHERE provider=? AND locator=?',(provider,loc))} if loc else set()
+        direct=tool.lower() in {'read','read_file','cat_file'}
+        paths=[path] if direct else literal_reads(tool,args)
+        loaded=set()
+        for p in paths:
+            loc=self.locator(p,cwd)
+            if loc:loaded.update(r['id'] for r in self.db.execute('SELECT id FROM capability_locator WHERE provider=? AND locator=?',(provider,loc)))
         explicit=args.get('skill',args.get('skill_name',args.get('name'))) if tool.lower() in {'skill','use_skill'} else None
         for entry in entries:
             name,kind=entry['id'],entry['kind'];evidence=None
             if kind=='skill':
                 if explicit==name:evidence='invoked'
                 elif name in loaded:evidence='loaded'
-            elif kind=='mcp' and tool.startswith('mcp__'+name+'__'):evidence='invoked'
+            elif kind=='mcp' and mcp_namespace(tool)==name:evidence='invoked'
             elif kind=='tool' and tool==name:evidence='invoked'
             if evidence:
                 self.db.execute('INSERT OR IGNORE INTO capability_evidence VALUES (?,?,?,?,?,?,?,?)',
                                 (provider,session,turn,call,name,kind,evidence,at))
+                source='read-tool' if evidence=='loaded' and direct else 'shell-literal' if evidence=='loaded' else 'explicit-skill' if kind=='skill' else 'mcp-namespace' if kind=='mcp' else 'exact-tool'
+                self.db.execute('INSERT OR REPLACE INTO capability_source VALUES (?,?,?,?,?,?)',(provider,session,call,name,evidence,source))
     def declare_capability(self,provider,session,name,kind):
         if not isinstance(session,str) or not re.fullmatch('[a-f0-9]{32}',session):raise ValueError('invalid_session')
         if not self.db.execute('SELECT 1 FROM observation WHERE provider=? AND session=?',(provider,session)).fetchone():raise ValueError('unknown_session')
         if not self.db.execute('SELECT 1 FROM inventory WHERE provider=? AND id=? AND kind=?',(provider,name,kind)).fetchone():raise ValueError('unknown_capability')
         self.db.execute('INSERT OR REPLACE INTO capability_evidence VALUES (?,?,?,?,?,?,?,?)',
-                        (provider,session,'manual','',name,kind,'declared',time.time()));self.db.commit()
+                        (provider,session,'manual','',name,kind,'declared',time.time()))
+        self.db.execute('INSERT OR REPLACE INTO capability_source VALUES (?,?,?,?,?,?)',(provider,session,'',name,'declared','manual'));self.db.commit()
     def import_inventory(self,raw):
         if not isinstance(raw,list) or len(raw)>1000:raise ValueError('invalid_inventory')
         entries=[];locators=[]
@@ -319,6 +345,8 @@ class Journal:
         self.db.execute('DELETE FROM model_conflict WHERE event NOT IN (SELECT id FROM observation)')
         self.db.execute('DELETE FROM capability_evidence WHERE at<? OR session NOT IN (SELECT session FROM observation)',(cutoff,))
         self.db.execute('DELETE FROM capability_evidence WHERE rowid IN (SELECT rowid FROM capability_evidence ORDER BY at DESC LIMIT -1 OFFSET ?)',(MAX_EVENTS,))
+        self.db.execute('DELETE FROM capability_source WHERE NOT EXISTS (SELECT 1 FROM capability_evidence c WHERE c.provider=capability_source.provider AND c.session=capability_source.session AND c.call=capability_source.call AND c.id=capability_source.id AND c.evidence=capability_source.evidence)')
+        self.db.execute('DELETE FROM finding_review WHERE at<?',(cutoff,))
         self.db.commit()
         self.db.execute('PRAGMA wal_checkpoint(PASSIVE)')
     def stats(self):

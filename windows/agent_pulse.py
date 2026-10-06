@@ -9,7 +9,7 @@ import sys
 import threading
 import tkinter as tk
 import tkinter.font as tkfont
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 from pulse_tray import Tray, Instance
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from compact_summary import provider_line,quota_pages,tray_tooltip
@@ -298,9 +298,10 @@ class Pulse:
         lines=[self.t('Read ≠ invoked ≠ declared. No observation does not prove non-use.','Чтение ≠ вызов ≠ отметка. Отсутствие наблюдения не доказывает неиспользование.'),'']
         catalog=report.get('capabilities',[])
         observed=sum(r['loaded']+r['invoked']+r['declared']>0 for r in catalog)
-        lines += [f"{len(catalog)} "+self.t('catalog entries','записей каталога')+f" · {observed} "+self.t('with evidence','с подтверждением'),self.t('Shell reads are unattributed. Unregistered MCP names appear as tools.','Чтение через shell не привязано к скиллам. MCP вне каталога видны как инструменты.'),'']
+        lines += [f"{len(catalog)} "+self.t('catalog entries','записей каталога')+f" · {observed} "+self.t('with evidence','с подтверждением'),self.t('Literal cat/sed/head/tail reads match registered paths only; reading does not prove application.','Буквальные cat/sed/head/tail учитываются по зарегистрированным путям; чтение не доказывает применение.'),'']
         for r in report.get('toolUsage',[]):
             lines.append(f"{r['provider']} · {r['tool']} · {r['calls']} "+self.t('calls','вызовов')+f" · {r['failed']} failed · {r['unknown']} unknown · {r['pending']} pending")
+        for r in report.get('mcpNamespaces',[]):lines.append(f"{r['provider']} · MCP {r['namespace']} · {r['calls']}"+('' if r['registered'] else self.t(' · not registered',' · вне каталога')))
         lines+=['',self.t('REVIEWED SKILLS AND MCP','УЧТЁННЫЕ СКИЛЛЫ И MCP')]
         for r in sorted(catalog,key=lambda r:(-(r['loaded']+r['invoked']+r['declared']),r['provider'],r['id'])):
             evidence=f"{r['loaded']} "+self.t('loaded','чтений')+f" · {r['invoked']} "+self.t('invoked','вызовов')+f" · {r['declared']} "+self.t('declared','отметок') if r['loaded']+r['invoked']+r['declared'] else self.t('No confirmed events','Нет подтверждённых событий')
@@ -315,6 +316,30 @@ class Pulse:
         for c in report.get('coverage',[]):
             at=c.get('lastToolEventAt');last=datetime.fromtimestamp(at).strftime('%Y-%m-%d %H:%M:%S') if at else '—'
             health.append(f"{c['provider']} · {c['pairedCalls']}/{c['calls']} · "+self.t('last received: ','последний полученный: ')+last)
+        controls=tk.Frame(workflows,bg=BG);controls.pack(fill='x',padx=8,pady=4)
+        def mark(status,reason):
+            if self.fixture or not finder.selection():return
+            j=Journal(self.state)
+            try:
+                from finding_review import review_finding
+                review_finding(j,findings[int(finder.selection()[0])]['id'],status,reason)
+                self.refresh();w.destroy();self.analysis()
+            except ValueError:messagebox.showerror('Agent Pulse',self.t('Decision was not saved; refresh the report.','Решение не сохранено; обновите отчёт.'),parent=w)
+            finally:j.close()
+        for title,status,reason in [(self.t('Script implemented','Внедрён скрипт'),'actioned','script'),(self.t('Skill implemented','Внедрён скилл'),'actioned','skill'),(self.t('Dismiss','Отклонить'),'dismissed','not-applicable'),(self.t('Reopen','Вернуть'),'open','unspecified')]:
+            ttk.Button(controls,text=title,command=lambda st=status,re=reason:mark(st,re),state='disabled' if self.fixture else 'normal').pack(side='left',padx=2)
+        for r in report.get('findingReviews',[]):health.append(f"{r['provider']} · {r['status']} · {r['recheckState']} · {r['windowHours']}h")
+        if report.get('findingReviews'):health.append(self.t('Equal windows and partial coverage; no causal savings or resolution claim.','Равные окна и частичный охват; экономия и устранение не доказаны.'))
+        def export_review():
+            if self.fixture:return
+            path=filedialog.asksaveasfilename(parent=w,defaultextension='.md',initialfile='agent-pulse-review.md',filetypes=[('Markdown','*.md')])
+            if not path:return
+            try:
+                from journal import atomic_text
+                from review_pack import markdown_pack
+                atomic_text(Path(path),markdown_pack(report,self.language))
+            except (ValueError,OSError):messagebox.showerror('Agent Pulse',self.t('Export failed','Экспорт не выполнен'),parent=w)
+        ttk.Button(controls,text=self.t('Markdown','Отчёт MD'),command=export_review,state='disabled' if self.fixture else 'normal').pack(side='left',padx=2)
         info=textview(workflows,[self.t('Select a finding to inspect evidence.','Выберите наблюдение для просмотра примеров.') if findings else empty,'',*health])
         def finding_selected(_):
             if not finder.selection():return

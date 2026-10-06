@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 from analytics import report, compare
-from journal import Journal, atomic_json
+from journal import Journal, atomic_json, atomic_text
 from instrumentation import configure_hooks, scan_inventory
 from evidence_pack import evidence_pack
 from model_evidence import model_history
@@ -11,7 +11,15 @@ from session_view import session_page
 def run(args):
     j=Journal(args.state)
     try:
-        if args.action=='report':return report(j)
+        if args.action=='review':
+            from finding_review import review_finding
+            return review_finding(j,args.finding,args.status,args.reason,args.days)
+        if args.action=='report':
+            r=report(j)
+            if getattr(args,'format','json')=='markdown':
+                from review_pack import markdown_pack
+                return markdown_pack(r,args.language)
+            return r
         if args.action=='evidence':
             result=evidence_pack(j,args.finding)
             if args.file:atomic_json(args.file,result);return {'saved':True,'localOnly':True}
@@ -36,6 +44,10 @@ def run(args):
         if args.action=='compare':return compare(j,args.label,args.before,args.after)
         if args.action=='export':
             if not args.file:raise ValueError('missing_file')
-            atomic_json(args.file,report(j));return {'saved':True,'localOnly':True}
+            if getattr(args,'format','json')=='markdown':
+                from review_pack import markdown_pack
+                atomic_text(args.file,markdown_pack(report(j),args.language))
+            else:atomic_json(args.file,report(j))
+            return {'saved':True,'localOnly':True}
         raise ValueError('invalid_action')
     finally:j.close()

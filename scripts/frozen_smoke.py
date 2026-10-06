@@ -16,9 +16,11 @@ with tempfile.TemporaryDirectory() as tmp:
     r=subprocess.run(base+['journal'],capture_output=True,timeout=20,check=True)
     report=json.loads(r.stdout);assert report['calls']==1 and report['recentCalls'][0]['paired'] and report['recentCalls'][0]['outcome']=='success'
     assert report['recentCalls'][0]['model']=='demo-model' and report['modelHistory']['knownModelCalls']==1
-    requests=[{'jsonrpc':'2.0','id':1,'method':'initialize','params':{}},{'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'pulse_report','arguments':{}}}]
+    requests=[{'jsonrpc':'2.0','id':1,'method':'initialize','params':{}},{'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'pulse_report','arguments':{}}},{'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'pulse_review_pack','arguments':{'language':'ru'}}},{'jsonrpc':'2.0','id':4,'method':'tools/list','params':{}}]
     r=subprocess.run(base+['mcp'],input=('\n'.join(json.dumps(x) for x in requests)+'\n').encode(),capture_output=True,timeout=20,check=True)
     responses=[json.loads(x) for x in r.stdout.splitlines()]
-    assert responses[0]['result']['serverInfo']['version']=='0.6.1'
+    assert responses[0]['result']['serverInfo']['version']=='0.7.0'
     assert json.loads(responses[1]['result']['content'][0]['text'])['calls']==1
+    assert 'пакет проверки' in json.loads(responses[2]['result']['content'][0]['text'])['markdown']
+    assert len(responses[3]['result']['tools'])==5
 print(json.dumps({'frozenHookJournalMcp':'passed','modelsCalled':0,'syntheticDataOnly':True}))

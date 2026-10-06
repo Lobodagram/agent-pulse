@@ -552,7 +552,9 @@ def main():
     i=sub.add_parser('ingest');i.add_argument('--provider',choices=sorted(adapters.IDS),required=True);i.add_argument('--file',type=Path,required=True)
     h=sub.add_parser('hook');h.add_argument('--provider',choices=sorted(journal.PROVIDERS),required=True)
     h=sub.add_parser('hooks');h.add_argument('--provider',choices=sorted(instrumentation.NATIVE_EVENTS),required=True);h.add_argument('--action',choices=['install','remove'],required=True)
-    h=sub.add_parser('journal');h.add_argument('--action',choices=['report','evidence','session','inventory','scan','annotate','declare','compare','export'],default='report');h.add_argument('--session');h.add_argument('--provider',choices=sorted(journal.PROVIDERS),default='codex');h.add_argument('--skills-dir',type=Path,action='append',default=[]);h.add_argument('--config',type=Path);h.add_argument('--file',type=Path);h.add_argument('--label');h.add_argument('--variant');h.add_argument('--outcome',choices=['accepted','failed','rework','unknown'],default='unknown');h.add_argument('--before');h.add_argument('--after');h.add_argument('--finding');h.add_argument('--capability');h.add_argument('--kind',choices=['skill','tool','mcp'])
+    h=sub.add_parser('journal');h.add_argument('--action',choices=['report','evidence','session','inventory','scan','annotate','declare','compare','export','review'],default='report');h.add_argument('--session');h.add_argument('--provider',choices=sorted(journal.PROVIDERS),default='codex');h.add_argument('--skills-dir',type=Path,action='append',default=[]);h.add_argument('--config',type=Path);h.add_argument('--file',type=Path);h.add_argument('--label');h.add_argument('--variant');h.add_argument('--outcome',choices=['accepted','failed','rework','unknown'],default='unknown');h.add_argument('--before');h.add_argument('--after');h.add_argument('--finding');h.add_argument('--capability');h.add_argument('--kind',choices=['skill','tool','mcp'])
+    h.add_argument('--status',choices=['open','actioned','dismissed'],default='open');h.add_argument('--reason',choices=['unspecified','script','skill','mcp','routing','retrieval','fix','not-applicable','duplicate'],default='unspecified');h.add_argument('--days',type=int,choices=[1,3,7],default=1)
+    h.add_argument('--format',choices=['json','markdown'],default='json');h.add_argument('--language',choices=['en','ru'],default='en')
     h.add_argument('--cursor');h.add_argument('--limit',type=int,default=500)
     sub.add_parser('mcp')
     a=p.parse_args();os.umask(0o077)
@@ -588,7 +590,7 @@ def main():
             raw=json.loads(a.file.read_text(encoding='utf-8'));result=adapters.normalized(raw,a.provider)
             adapters.atomic_json(a.state/'imports'/f'{a.provider}.json',result);result={'saved':True}
         else:result=snapshot(a.state,False if a.no_patterns else None)
-        print(json.dumps(result,ensure_ascii=False,allow_nan=False))
+        print(result if isinstance(result,str) else json.dumps(result,ensure_ascii=False,allow_nan=False))
     except Exception as error:
         if a.debug:print('Agent Pulse: '+type(error).__name__,file=sys.stderr)
         print('{"error":"collector_unavailable"}');raise SystemExit(1)

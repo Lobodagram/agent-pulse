@@ -4,9 +4,10 @@ import time
 def capabilities(j,providers=None):
     inventory={(r['provider'],r['id'],r['kind']):dict(r) for r in j.db.execute('SELECT * FROM inventory')}
     usage={}
-    for row in j.db.execute('SELECT provider,id,kind,evidence,count(*) AS n,max(at) AS last FROM capability_evidence WHERE at>=? GROUP BY provider,id,kind,evidence',(time.time()-30*86400,)):
-        key=(row['provider'],row['id'],row['kind']);u=usage.setdefault(key,{'loaded':0,'invoked':0,'declared':0,'lastSeen':None})
-        u[row['evidence']]=row['n'];u['lastSeen']=max(u['lastSeen'] or 0,row['last'])
+    for row in j.db.execute('SELECT c.provider,c.id,c.kind,c.evidence,coalesce(s.source,\'legacy\') AS source,count(*) AS n,max(c.at) AS last FROM capability_evidence c LEFT JOIN capability_source s ON c.provider=s.provider AND c.session=s.session AND c.call=s.call AND c.id=s.id AND c.evidence=s.evidence WHERE c.at>=? GROUP BY c.provider,c.id,c.kind,c.evidence,s.source',(time.time()-30*86400,)):
+        key=(row['provider'],row['id'],row['kind']);u=usage.setdefault(key,{'loaded':0,'invoked':0,'declared':0,'lastSeen':None,'evidenceSources':{}})
+        u[row['evidence']]+=row['n'];u['lastSeen']=max(u['lastSeen'] or 0,row['last'])
+        u['evidenceSources'][row['source']]=u['evidenceSources'].get(row['source'],0)+row['n']
     rows=[]
     for key in sorted(set(inventory)|set(usage)):
         provider,name,kind=key

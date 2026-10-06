@@ -2654,7 +2654,10 @@
         "invoked": 3,
         "declared": 0,
         "lastSeen": 1801396633.0,
-        "coverage": "partial; no observed use does not establish non-use"
+        "coverage": "partial; no observed use does not establish non-use",
+        "evidenceSources": {
+          "shell-literal": 3
+        }
       },
       {
         "provider": "glm",
@@ -2680,7 +2683,10 @@
         "invoked": 3,
         "declared": 0,
         "lastSeen": 1801396633.0,
-        "coverage": "partial; no observed use does not establish non-use"
+        "coverage": "partial; no observed use does not establish non-use",
+        "evidenceSources": {
+          "shell-literal": 3
+        }
       }
     ],
     "toolUsage": [
@@ -3279,6 +3285,44 @@
     },
     "tokenAttribution": "native turn usage only; no per-tool costs or subscription-token conversion",
     "inventoryCount": 4,
-    "localOnly": true
+    "localOnly": true,
+    "mcpNamespaces": [
+      {
+        "provider": "codex",
+        "namespace": "demo-files",
+        "calls": 12,
+        "confirmedSuccesses": 10,
+        "unknownOutcomes": 2,
+        "pending": 0,
+        "registered": false
+      }
+    ],
+    "findingReviews": [
+      {
+        "findingId": "1890e1ce06131737ad64183d6e1b0dbf",
+        "provider": "glm",
+        "kind": "retry",
+        "title": "Repeated failing call",
+        "titleRu": "Повторяющийся сбой",
+        "status": "actioned",
+        "reason": "skill",
+        "reviewedAt": 1780000000,
+        "windowHours": 24,
+        "afterWindowEndsAt": 1780086400,
+        "baseline": {
+          "observedCalls": 24,
+          "pairedCalls": 24,
+          "knownTurns": 4,
+          "unknownOutcomes": 0,
+          "qualifies": true,
+          "occurrences": 12
+        },
+        "after": null,
+        "recheckState": "awaiting-window",
+        "causalClaim": false,
+        "tokenSavings": null,
+        "completeCoverage": false
+      }
+    ]
   }
 }

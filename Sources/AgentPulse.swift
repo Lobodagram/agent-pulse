@@ -93,11 +93,26 @@ struct AnalyticsReport: Codable {
     var calls: Int; var inventoryCount: Int; var eventLimitReached: Bool
     var coverage: [EventCoverage]; var findings: [WorkflowFinding]; var sessions: [JournalSession]; var recentCalls: [JournalCall]
     var capabilities: [CapabilityStat]?; var toolUsage: [ToolStat]?
+    var findingReviews: [FindingReview]?; var mcpNamespaces: [McpNamespace]?
 }
 struct CapabilityStat: Codable {
     var provider: String; var id: String; var kind: String; var status: String; var evidenceStatus: String
     var loaded: Int; var invoked: Int; var declared: Int; var inventoryFresh: Bool
+    var evidenceSources: [String: Int]?
     var identity: String { provider + "." + kind + "." + id }
+}
+struct FindingReview: Codable, Identifiable {
+    var findingId: String; var provider: String; var title: String; var titleRu: String
+    var status: String; var reason: String; var recheckState: String; var windowHours: Int; var afterWindowEndsAt: Double
+    var id: String { findingId }
+}
+struct McpNamespace: Codable {
+    var provider: String; var namespace: String; var calls: Int; var registered: Bool
+    var identity: String { provider + "." + namespace }
+}
+func reviewStateText(_ value: String) -> String {
+    let ru = ["awaiting-window":"ожидается окно наблюдения", "not-requested":"перепроверка не запрошена", "insufficient-evidence":"мало подтверждений", "baseline-not-qualifying":"исходное окно не достигло порога", "not-qualifying-in-observed-window":"в новом окне порог не достигнут", "observational-lower":"наблюдаемых повторов меньше", "observational-higher":"наблюдаемых повторов больше", "observational-same":"наблюдаемое число совпадает"]
+    return russian ? ru[value] ?? value : value.replacingOccurrences(of: "-", with: " ")
 }
 struct ToolStat: Codable {
     var provider: String; var tool: String; var calls: Int; var failed: Int; var unknown: Int; var pending: Int
@@ -409,6 +424,7 @@ struct AnalysisView: View {
     @State var sessionCursors: [String?] = [nil]; @State var sessionPage = 0; @State var nextCursor: String?
     @State var sessionTotal = 0; @State var pageOffset = 0; @State var pageLoading = false; @State var pageRequest = UUID()
     @State var showUnobservedCapabilities = false
+    @State var reviewBusy = false; @State var reviewMessage = ""
     func select(_ session: JournalSession, evidenceIds: [String] = []) {
         selectedSession = session.id; label = session.label ?? ""; variant = session.variant ?? "before"; outcome = session.outcome
         evidence = Set(evidenceIds); tab = "sessions"; message = ""
@@ -434,9 +450,32 @@ struct AnalysisView: View {
             } else { message = tr("Page unavailable. Reopen the session for a fresh snapshot.", "Страница недоступна. Откройте сессию заново для свежего снимка.") }
         }
     }
+    func markFinding(_ id: String, status: String, reason: String = "unspecified") {
+        guard !store.isFixture, !reviewBusy else { return }
+        reviewBusy = true; reviewMessage = ""
+        store.run(["journal", "--action", "review", "--finding", id, "--status", status, "--reason", reason]) { result in
+            guard case .success = result else { reviewBusy = false; reviewMessage = tr("Decision was not saved", "Решение не сохранено"); return }
+            store.run(["journal"]) { result in
+                reviewBusy = false
+                if case .success(let data) = result, let report = try? JSONDecoder().decode(AnalyticsReport.self, from: data) {
+                    store.snapshot?.analytics = report
+                    reviewMessage = tr("Saved locally. Recheck uses a 24-hour observation window.", "Сохранено локально. Перепроверка использует окно 24 часа.")
+                } else { reviewMessage = tr("Saved; refresh the report", "Сохранено; обновите отчёт") }
+            }
+        }
+    }
+    func exportReview() {
+        guard !store.isFixture else { return }
+        let panel = NSSavePanel(); panel.nameFieldStringValue = "agent-pulse-review.md"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        store.run(["journal", "--action", "export", "--format", "markdown", "--language", russian ? "ru" : "en", "--file", url.path]) { result in
+            reviewMessage = (try? result.get()) == nil ? tr("Export failed", "Экспорт не выполнен") : tr("Local Markdown report saved", "Локальный Markdown-отчёт сохранён")
+        }
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack { Text(tr("Agent activity", "Работа агентов")).font(.system(size: 26, weight: .medium)); if store.isFixture { Text("DEMO").font(.system(size: 10)).foregroundStyle(amber) }; Spacer(); Button(tr("Refresh", "Обновить"), action: store.refresh).disabled(store.loading || store.isFixture) }
+            HStack { Button(tr("Export Markdown", "Экспорт Markdown"), action: exportReview).disabled(store.isFixture); Text(reviewMessage).font(.system(size: 11)).foregroundStyle(quiet).fixedSize(horizontal: false, vertical: true) }
             Picker("View", selection: $tab) {
                 Text(tr("Overview", "Обзор")).tag("overview"); Text(tr("Workflows", "Сценарии")).tag("workflows")
                 Text(tr("Sessions", "Сессии")).tag("sessions"); Text(tr("Compare", "Сравнение")).tag("compare")
@@ -513,9 +552,11 @@ struct AnalysisView: View {
             return x == y ? a.identity < b.identity : x > y
         } : observed
         return VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
             Text(tr("Read ≠ invoked ≠ manually declared. No observed use does not prove non-use.", "Чтение ≠ вызов ≠ ручная отметка. Отсутствие наблюдения не доказывает неиспользование.")).font(.system(size: 12)).foregroundStyle(quiet)
             Text("\(all.count) " + tr("catalog entries · ", "записей каталога · ") + "\(observed.count) " + tr("with evidence · ", "с подтверждением · ") + "\((report.toolUsage ?? []).count) " + tr("observed tools", "наблюдаемых инструментов")).font(.system(size: 12)).foregroundStyle(mint)
-            Text(tr("Shell reads are not attributed to skills. Unregistered MCP names appear as tools. Counts cannot establish skill non-use.", "Чтение через shell не привязано к скиллам. MCP вне каталога видны как инструменты. По этим счётчикам нельзя установить неиспользование навыка.")).font(.system(size: 11)).foregroundStyle(quiet)
+            Text(tr("Literal cat/sed/head/tail reads match registered paths only. Reading does not establish application. MCP namespaces are not proof of a plugin or live server.", "Буквальные cat/sed/head/tail учитываются только по зарегистрированным путям. Чтение не доказывает применение. Пространство MCP не подтверждает плагин или доступность сервера.")).font(.system(size: 11)).foregroundStyle(quiet)
+            }
             Text(tr("Observed tools", "Наблюдаемые инструменты")).font(.system(size: 16, weight: .semibold))
             if (report.toolUsage ?? []).isEmpty { Text(tr("No tool calls received in this view.", "В этом разделе пока нет полученных вызовов инструментов.")).foregroundStyle(quiet) }
             ForEach(report.toolUsage ?? [], id: \.identity) { row in
@@ -524,20 +565,28 @@ struct AnalysisView: View {
                     Text("\(row.calls) " + tr("calls · ", "вызовов · ") + "\(row.failed) " + tr("failed · ", "ошибок · ") + "\(row.unknown) " + tr("unknown · ", "неизвестных · ") + "\(row.pending) " + tr("pending", "незавершённых")).font(.system(size: 11)).foregroundStyle(quiet)
                 }
             }
+            ForEach(report.mcpNamespaces ?? [], id: \.identity) { row in namespaceCard(row) }
             Text(tr("Reviewed skills and MCP", "Учтённые скиллы и MCP")).font(.system(size: 16, weight: .semibold))
             if all.isEmpty { Text(tr("Scan or import a reviewed inventory first.", "Сначала отсканируйте или импортируйте проверенный каталог.")).foregroundStyle(quiet) }
             else { Toggle(tr("Show catalog entries without observed use", "Показать записи каталога без подтверждённого применения"), isOn: $showUnobservedCapabilities).font(.system(size: 12)) }
             if !all.isEmpty && visible.isEmpty { Text(tr("No registered use confirmed. This does not mean no skills were used.", "Применение из каталога не подтверждено. Это не означает, что скиллы не использовались.")).foregroundStyle(quiet) }
-            ForEach(visible, id: \.identity) { row in
+            ForEach(visible, id: \.identity) { row in capabilityCard(row); Divider() }
+
+        }
+    }
+    func namespaceCard(_ row: McpNamespace) -> some View {
+        let suffix = row.registered ? "" : tr(" · not registered", " · вне каталога")
+        let label = "\(row.provider.uppercased()) · MCP \(row.namespace) · \(row.calls) " + tr("calls", "вызовов") + suffix
+        return Text(label).font(.system(size: 11)).foregroundStyle(quiet)
+    }
+    func capabilityCard(_ row: CapabilityStat) -> some View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(row.provider.uppercased() + " · " + row.kind + " · " + row.id).font(.system(size: 12, design: .monospaced)).fixedSize(horizontal: false, vertical: true)
                     if row.loaded + row.invoked + row.declared == 0 { Text(tr("No confirmed events", "Нет подтверждённых событий")).font(.system(size: 11)).foregroundStyle(quiet) }
                     else { Text("\(row.loaded) " + tr("loaded · ", "чтений · ") + "\(row.invoked) " + tr("invoked · ", "вызовов · ") + "\(row.declared) " + tr("declared", "отметок")).font(.system(size: 11)).foregroundStyle(mint) }
+                    if let sources = row.evidenceSources, let count = sources["shell-literal"] { Text("\(count) " + tr("literal shell reads", "буквальных чтений shell")).font(.system(size: 10)).foregroundStyle(quiet) }
                     Text(row.status + (row.inventoryFresh ? "" : tr(" · inventory needs refresh", " · обновите каталог"))).font(.system(size: 10)).foregroundStyle(quiet)
                 }.padding(.vertical, 4)
-                Divider()
-            }
-        }
     }
     func workflows(_ report: AnalyticsReport) -> some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -555,6 +604,13 @@ struct AnalysisView: View {
                     if let models = finding.models { Text(tr("Models: ", "Модели: ") + (models.isEmpty ? modelText(nil) : models.joined(separator: ", ")) + " · \(finding.unknownModelCalls ?? 0) " + tr("unknown", "неизвестных")).font(.system(size: 10)).foregroundStyle(quiet).fixedSize(horizontal: false, vertical: true) }
                     Text(russian ? finding.suggestionRu : finding.suggestion).font(.system(size: 12))
                     Text(finding.inventoryStatus == "inventory_unknown" ? tr("Inventory unknown: no claim that a tool is missing", "Каталог неизвестен: отсутствие инструмента не установлено") : finding.inventoryStatus == "configured_unverified" ? tr("Candidate configured; live availability unverified", "Кандидат настроен; доступность не проверена") : tr("Category match requires manual review", "Совпадение категорий требует ручной проверки")).font(.system(size: 10)).foregroundStyle(amber)
+                    Menu(tr("Record decision", "Отметить решение")) {
+                        Button(tr("Implemented script", "Внедрён скрипт")) { markFinding(finding.id, status: "actioned", reason: "script") }
+                        Button(tr("Implemented skill", "Внедрён скилл")) { markFinding(finding.id, status: "actioned", reason: "skill") }
+                        Button(tr("Implemented MCP", "Внедрён MCP")) { markFinding(finding.id, status: "actioned", reason: "mcp") }
+                        Button(tr("Dismiss", "Отклонить")) { markFinding(finding.id, status: "dismissed", reason: "not-applicable") }
+                        Button(tr("Reopen", "Вернуть в работу")) { markFinding(finding.id, status: "open") }
+                    }.disabled(store.isFixture || reviewBusy)
                     if let sid = finding.evidenceSessions?.first ?? report.recentCalls.first(where: { finding.evidenceIds.contains($0.id) })?.session {
                         Button(tr("Inspect evidence →", "Посмотреть примеры →")) {
                             let session = report.sessions.first(where: { $0.id == sid }) ?? JournalSession(id: sid, provider: finding.provider, calls: 0, failed: 0, pending: 0, paired: 0, elapsedMs: nil, startedAt: nil, label: nil, outcome: "unknown", variant: nil)
@@ -564,6 +620,18 @@ struct AnalysisView: View {
 
                 }.padding(.vertical, 8)
                 Divider()
+            }
+            if !(report.findingReviews ?? []).isEmpty {
+                Text(tr("Reviewed decisions", "Решения по находкам")).font(.system(size: 16, weight: .semibold))
+                Text(tr("Equal time windows; partial coverage. A lower count or absence does not prove savings or resolution.", "Равные окна времени; частичный охват. Снижение или отсутствие не доказывает экономию или устранение проблемы.")).font(.system(size: 11)).foregroundStyle(quiet)
+                ForEach(report.findingReviews ?? []) { row in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text((russian ? row.titleRu : row.title) + " · " + row.provider.uppercased()).font(.system(size: 12))
+                        Text(row.status + " · " + row.reason + " · " + reviewStateText(row.recheckState)).font(.system(size: 11)).foregroundStyle(mint).fixedSize(horizontal: false, vertical: true)
+                        Text("\(row.windowHours) h · " + stamp(row.afterWindowEndsAt, compact: true)).font(.system(size: 10)).foregroundStyle(quiet)
+                        Button(tr("Reopen", "Вернуть в работу")) { markFinding(row.findingId, status: "open") }.disabled(store.isFixture || reviewBusy)
+                    }
+                }
             }
         }
     }

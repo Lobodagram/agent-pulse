@@ -1,11 +1,7 @@
-Agent Pulse v0.6.1 — Readable evidence / Понятная аналитика
+Agent Pulse 0.7.0 — review → implement → observe / проверить → внедрить → наблюдать.
 
-Workflows distinguishes no calls from no qualifying patterns. Capabilities shows real tools first and explains unconfirmed skill use. Coverage adds last received call and idle/unknown-completeness guidance; Compare shows label counts. Session details continue past 500 calls with signed bounded snapshot pages on Mac, Windows, CLI and MCP. Changed old evidence invalidates continuation instead of shifting pages. Compact client names are CODEX, CLAUDE, KIMI, GLM, etc.; no Mac menu page fraction, rotation retained.
+Registered literal skill reads and observed MCP namespaces are visible. Record manual implementation decisions, wait for an equal observation window and review the result. Export a bounded EN/RU Markdown pack or use the fifth read-only local MCP tool. One source-check/handoff helper consolidates repeated delivery checks. MIT; no model calls, raw payload retention, uploads or automatic peer launch.
 
-В «Сценариях» различаются отсутствие вызовов и отсутствие подходящих повторений. В «Навыках» реальные инструменты идут первыми; неподтверждённое применение не означает неиспользование. Есть время последнего полученного вызова и счётчик размеченных сессий. Длинные сессии читаются постранично в Mac, Windows, CLI и MCP. Верхняя панель: полные названия клиентов без 1/2, чередование сохраняется.
+Буквальные чтения зарегистрированных скиллов и пространства MCP видны в аналитике. Отмечайте внедрение вручную, дождитесь равного окна наблюдения и проверяйте результат. Ограниченный отчёт EN/RU доступен в Markdown и через пятый инструмент чтения локального MCP. Общая команда объединяет повторяемые проверки и передачу работы. MIT; без вызовов моделей, сырых аргументов, отправки данных и автоматического запуска другого агента.
 
-Python 3.11 startup message, formal source installation/console entry points, opt-in safe diagnostic class, bilingual legacy suggestions and generated privacy-canary checks. 141 unit tests. MIT; macOS 14+ ARM64/Intel ad-hoc signed, Windows 10/11 x64 unsigned preview. No models called, telemetry uploads, peer launch or universal skill attribution claim. Physical Windows DPI/Intel charts and measured improvement effects remain open. See docs/READING_ANALYTICS.md and .ru.md.
-
-First local cold helper trials exceeded the native two-second budget; the downloaded and installed release passed strict deadline checks. Start the app before relying on collection; full cold-start reliability is not guaranteed.
-
-Первые локальные запуски наблюдателя превышали две секунды; скачанный и установленный релиз прошли строгую проверку. Полная надёжность первого запуска ещё не гарантирована.
+Read docs/IMPROVEMENT_LOOP.md / docs/IMPROVEMENT_LOOP.ru.md. Reading is not proof of application; threshold absence is not zero or resolution; equal time windows do not establish causation or subscription savings. Client coverage remains partial. Ad-hoc signed macOS, unsigned Windows; physical Windows DPI, Intel chart rendering and full-screen/multi-display/sleep-wake acceptance remain open.

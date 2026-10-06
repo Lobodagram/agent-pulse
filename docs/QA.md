@@ -1,3 +1,7 @@
+## 0.7.0 source verification · 2026-10-06
+
+156 Python tests pass on bundled Python 3.12. Source helper exports 102 allowlisted files, validates Python syntax/local links/privacy and produces a validated handoff. Mac source compile and own 15-case widget matrix, EN/RU model-history fixtures pass. Shared skill frontmatter/path checks pass with a stdlib fallback; bundled skill validator cannot import PyYAML (no dependency installed). Actual baseline/experiment and private shared skill are excluded from public export. Package/native/CI acceptance remains a separate final gate, recorded when complete. No model calls or peer runtime changes.
+
 # Verification — 2026-10-06 / Проверка
 
 ## 0.6.1 clarity and continuation · 2026-10-06

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-pulse-local"
-version = "0.6.1"
+version = "0.7.0"
 description = "Local deterministic agent workflow evidence and subscription counters"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -18,4 +18,4 @@ agent-pulse-mcp = "mcp_server:main"
 
 [tool.setuptools]
 packages = ["scripts"]
-py-modules = ["collector", "providers", "platform_support", "journal", "journal_cli", "analytics", "instrumentation", "mcp_server", "session_view", "model_evidence", "capability_report", "evidence_pack", "command_profile", "result_metadata", "compact_summary"]
+py-modules = ["capability_detection", "finding_review", "review_pack", "collector", "providers", "platform_support", "journal", "journal_cli", "analytics", "instrumentation", "mcp_server", "session_view", "model_evidence", "capability_report", "evidence_pack", "command_profile", "result_metadata", "compact_summary"]

@@ -18,7 +18,8 @@ def recommendation(j,key,kind,calls,sequence=None):
     durations=[c['durationMs'] for c in completed if c['durationMs'] is not None]
     categories=set(sequence or [c['category'] for c in calls]);provider=calls[0]['provider']
     inventory=[dict(r) for r in j.db.execute('SELECT * FROM inventory WHERE provider=?',(provider,))]
-    relevant=[r for r in inventory if r['category'] in categories]
+    # Generic other/shell buckets do not establish a useful substitution.
+    relevant=[r for r in inventory if r['category'] in categories-{'other','shell'}]
     recent=[r for r in relevant if time.time()-r['observed']<7*86400]
     available=[r for r in recent if r['status']=='available']
     configured=[r for r in recent if r['status']=='configured']
@@ -42,7 +43,7 @@ def recommendation(j,key,kind,calls,sequence=None):
     elif not relevant and 'remote' in categories:action='typed_tool_or_mcp'
     title,ru,suggest,suggest_ru=TEXT[kind]
     # Frequency is evidence, not a promised token saving. Tool duration sums can overlap.
-    return {'id':j.digest('finding',[provider,key]),'provider':provider,'kind':kind,'title':title,'titleRu':ru,
+    return {'id':j.digest('finding',[provider,kind,key]),'provider':provider,'kind':kind,'title':title,'titleRu':ru,
       'suggestion':suggest,'suggestionRu':suggest_ru,'action':action,'confidence':'medium' if kind!='template' else 'low',
       'occurrences':len(calls),'sessions':len({c['session'] for c in calls}),
       'sequence':sequence or [],'evidenceSessions':list(dict.fromkeys(c['session'] for c in calls[:10])),'evidenceIds':[c['id'] for c in calls[:10]],
@@ -181,11 +182,24 @@ def report(j,providers=None):
         if len(ps)>=2 and len(turns)>=3 and len(items)>=6:
             cross.append({'operation':op,'providers':ps,'calls':len(items),'turns':len(turns),'projectId':project,
                           'evidenceIds':[c['id'] for c in items[:10]],'confidence':'low; same family, not equivalent task'})
-    return {'schemaVersion':3,'generatedAt':time.time(),'coverage':coverage,'sessions':sorted(summaries,key=lambda x:x['startedAt'] or 0,reverse=True)[:100],
+    from capability_detection import mcp_namespace
+    namespaces=defaultdict(list)
+    for c in calls:
+        name=mcp_namespace(c['tool'])
+        if name:namespaces[(c['provider'],name)].append(c)
+    mcp_usage=[{'provider':p,'namespace':n,'calls':len(items),'confirmedSuccesses':sum(c['paired'] and c['outcome']=='success' for c in items),
+               'unknownOutcomes':sum(c['outcome']=='unknown' for c in items),'pending':sum(c['outcome']=='pending' for c in items),
+               'registered':bool(j.db.execute('SELECT 1 FROM inventory WHERE provider=? AND id=? AND kind=?',(p,n,'mcp')).fetchone()),
+               'coverage':'native namespace only; plugin identity and live availability are not inferred'} for (p,n),items in namespaces.items()]
+    from finding_review import reviewed_findings
+    reviews=reviewed_findings(j,calls,providers)
+    return {'schemaVersion':4,'generatedAt':time.time(),'coverage':coverage,'sessions':sorted(summaries,key=lambda x:x['startedAt'] or 0,reverse=True)[:100],
       'findings':findings(j,calls),'recentCalls':calls[-100:],'calls':len(calls),'eventLimitReached':total>20000,
       'capabilities':capabilities(j,providers),'toolUsage':sorted(tool_usage,key=lambda x:-x['calls'])[:100],
       'crossClientPatterns':sorted(cross,key=lambda x:-x['calls'])[:30],
       'modelHistory':model_history(calls),
+      'mcpNamespaces':sorted(mcp_usage,key=lambda x:-x['calls'])[:100],'findingReviews':reviews,
+      'findingReviewsTruncated':j.db.execute('SELECT count(*) FROM finding_review').fetchone()[0]>30,
       'quality':{'pairedCalls':sum(c['paired'] for c in calls),'knownOutcomes':sum(c['paired'] and c['outcome'] in {'success','failed'} for c in calls),
                  'unpairedCalls':sum(not c['paired'] for c in calls),'windowDays':30,'completeCoverage':False},
       'tokenAttribution':'native turn usage only; no per-tool costs or subscription-token conversion',
