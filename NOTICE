@@ -1,6 +1,6 @@
-Required Notice: Copyright 2026 Lobodagram (https://github.com/Lobodagram)
+Copyright 2026 Lobodagram (https://github.com/Lobodagram)
 
-Agent Pulse original sources: PolyForm Noncommercial 1.0.0; see LICENSE.
+Agent Pulse original sources: MIT; see LICENSE.
 This license does not relicense third-party components or vendor clients.
 Python runtime: Python Software Foundation License; bundled runtime licensing notices are supplied by PyInstaller/Python.
 Tk/Tcl Windows UI runtime: Tcl/Tk license; included runtime notices apply.

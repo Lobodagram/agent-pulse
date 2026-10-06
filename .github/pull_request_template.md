@@ -3,4 +3,4 @@ Describe final behavior and verification / Изменения и проверк�
 - [ ] Tests pass / Тесты пройдены
 - [ ] No private data or credentials / Без приватных данных
 - [ ] Provider coverage remains honest / Охват источников указан корректно
-- [ ] For code contributions: commercial relicensing rights must be agreed in writing before merge (CONTRIBUTING.md) / Права коммерческого лицензирования согласованы письменно до слияния
+- [ ] Code is original or has documented MIT-compatible rights and preserved notices / Код оригинальный либо имеет подтверждённые совместимые права и сохранённые уведомления

@@ -114,3 +114,12 @@ The verified Mac package replaced the previous installed widget, with old bundle
 Native UI automation retains an old bundle mapping and extracted copies make bundle-ID selection ambiguous: no additional installed live-window UI acceptance is claimed. Actual fixture UI renders/handler interactions and installed process/collector verification are separate evidence. Physical resizing, Spaces/fullscreen/multiple displays/sleep-wake, Windows DPI and every live third-party client remain manual acceptance cases. Native hooks still need a new session/trust/event receipt; no exact per-tool token cost or universal event coverage promise.
 
 Все сборки v0.3.3 и проверка скачанных архивов прошли; на Mac установлен проверенный пакет и остался один экземпляр после повторного запуска. Дневной счётчик Codex появился с пометкой частичного локального охвата за сутки UTC. Прежние теги сохранены; ручные проверки DPI/разных экранов/всех клиентов остаются открытыми.
+
+
+## v0.4.0 compact bar · 2026-10-06
+
+75 unit checks pass locally. Actual Mac source compiled. Own-window fixture matrix checks small/detail EN/RU views, resize handler, one-client bar selection, second-client rotation state, recognized ZCode foreground mapping and unknown-app fallback, movable full widget opened by the status button, show/hide restoration and single-instance rejection. The timer is local UI-only; bundle-ID matching reads no window content. Native ZCode bundle ID verified locally; Codex/Claude matching remains client-version-dependent. Fixture screenshots inspected at actual dimensions; unknown GLM quota remains —.
+
+Windows source/frozen smoke adds compact-strip geometry, full-widget restore and five pages covering 13 synthetic clients, with existing native tray/mutex and EN/RU two-quota checks. Hosted Windows and package results will be recorded after completion. Arbitrary live providers, Windows DPI, physical dragging, multiple displays/Spaces/fullscreen and sleep-wake are still manual acceptance cases.
+
+MIT applies to the current original-source snapshot; old tags and third-party runtime notices are preserved. No persistent desktop-chat UI plugin is claimed or installed.

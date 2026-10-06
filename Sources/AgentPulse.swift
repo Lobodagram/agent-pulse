@@ -9,9 +9,27 @@ struct Quota: Codable, Identifiable {
     var bucket: String; var kind: String; var durationMinutes: Double?; var remainingPercent: Double?; var resetsAt: Double?
     var id: String { bucket + kind + String(durationMinutes ?? 0) }
     var label: String {
-        if let m = durationMinutes { return m >= 10080 ? tr("Week", "Неделя") : m == 300 ? tr("5 hours", "5 часов") : "\(Int(m / 60)) h" }
+        if let m = durationMinutes, m.isFinite, m > 0, m <= 525600 { return m >= 10080 ? tr("Week", "Неделя") : m == 300 ? tr("5 hours", "5 часов") : "\(Int(m / 60)) h" }
         return tr("Window", "Окно")
     }
+}
+func activeProvider(bundleID: String?) -> String? {
+    guard let bundleID else { return nil }
+    return ["com.openai.codex": "codex", "com.openai.Codex": "codex", "dev.zcode.app": "glm", "ai.z.ZCode": "glm", "com.zai.zcode": "glm", "com.anthropic.claudefordesktop": "claude"][bundleID]
+}
+func compactQuotaLine(_ p: Provider) -> String {
+    let aliases = ["codex": "Cdx", "glm": "GLM", "claude": "Cl", "kimi": "Kimi", "qwen": "Qwen"]
+    let values = p.quotas.prefix(2).map { q -> String in
+        var label = tr("win", "окно")
+        if let m = q.durationMinutes, m.isFinite, m > 0, m <= 525600 {
+            if m.truncatingRemainder(dividingBy: 1440) == 0 { label = "\(Int(m / 1440))" + tr("d", "д") }
+            else if m.truncatingRemainder(dividingBy: 60) == 0 { label = "\(Int(m / 60))" + tr("h", "ч") }
+            else { label = "\(Int(m))" + tr("m", "м") }
+        }
+        let value = q.remainingPercent.flatMap { $0.isFinite && $0 >= 0 && $0 <= 100 ? "\(Int(floor($0)))%" : nil } ?? "—"
+        return label + " " + value
+    }
+    return (p.status == "stale" ? "~" : "") + (aliases[p.id] ?? String(p.name.prefix(5))) + " " + (values.isEmpty ? "—" : values.joined(separator: " · "))
 }
 struct Subscription: Codable { var date: String?; var kind: String; var source: String }
 struct Provider: Codable, Identifiable {
@@ -107,6 +125,7 @@ func subscriptionText(_ s: Subscription) -> String {
     @Published var widgetScale: Double = min(1, max(0.8, UserDefaults.standard.double(forKey: "widgetScale") == 0 ? 1 : UserDefaults.standard.double(forKey: "widgetScale"))) { didSet { if !isFixture { UserDefaults.standard.set(widgetScale, forKey: "widgetScale") } } }
     @Published var displayMode: String = UserDefaults.standard.string(forKey: "displayMode") ?? "floating" { didSet { if !isFixture { UserDefaults.standard.set(displayMode, forKey: "displayMode") } } }
     @Published var menuNumbers: Bool = UserDefaults.standard.object(forKey: "menuNumbers") as? Bool ?? true { didSet { if !isFixture { UserDefaults.standard.set(menuNumbers, forKey: "menuNumbers") } } }
+    @Published var menuFollowActive: Bool = UserDefaults.standard.bool(forKey: "menuFollowActive") { didSet { if !isFixture { UserDefaults.standard.set(menuFollowActive, forKey: "menuFollowActive") } } }
     let fixture: String?; private var timer: Timer?; private var limitTimer: Timer?; private var readingLimits = false; private var authTimer: Timer?; private var authMarks: [String: String] = [:]; private var authRevision = 0
     init() {
         let args = CommandLine.arguments
@@ -544,7 +563,9 @@ struct SettingsView: View {
                     Text(tr("Floating widget", "Плавающий виджет")).tag("floating"); Text(tr("Menu bar only", "Только строка меню")).tag("menu")
                 }.frame(width: 350)
                 Toggle(tr("Compact values in menu bar", "Короткие значения в строке меню"), isOn: $store.menuNumbers)
-                Text(tr("Click the menu-bar icon for the widget; right-click for actions. Icon-only saves space beside the camera.", "Нажмите значок сверху для табло; правая кнопка — действия. Режим без цифр экономит место рядом с камерой.")).font(.system(size: 11)).foregroundStyle(quiet)
+                Toggle(tr("Follow the active app in the menu bar", "Следовать за активным приложением сверху"), isOn: $store.menuFollowActive)
+                Text(tr("Recognizes Codex, ZCode and Claude desktop app IDs only. Terminals and other windows use rotation; no window titles or chat content are read.", "Распознаёт идентификаторы приложений Codex, ZCode и Claude. В терминалах и других окнах — чередование; заголовки окон и чаты не читаются.")).font(.system(size: 11)).foregroundStyle(quiet)
+                Text(tr("Remaining percentages for selected clients; one client at a time, rotating every 8 seconds. Click to show/hide the movable widget; — means unavailable.", "Проценты остатка выбранных клиентов; один клиент за раз, смена каждые 8 секунд. Нажатие показывает/скрывает подвижное табло; — значит нет данных.")).font(.system(size: 11)).foregroundStyle(quiet)
                 Text(tr("Clients", "Клиенты")).font(.system(size: 16, weight: .semibold))
                 ForEach(store.snapshot?.catalog ?? []) { spec in
                     Toggle(isOn: Binding(get: { selected.contains(spec.id) }, set: { on in if on { selected.insert(spec.id) } else { selected.remove(spec.id) } })) { VStack(alignment: .leading, spacing: 2) { Text(spec.name); Text(spec.mode == "import" ? tr("Import only; no automatic quota adapter", "Только импорт; автоматических лимитов нет") : spec.mode == "native" ? tr("Built-in client statistics", "Штатная статистика клиента") : spec.mode == "statusline" ? tr("Local status-line bridge", "Локальный мост status-line") : spec.mode == "loopback" ? tr("Existing local dashboard", "Уже запущенное локальное табло") : tr("Optional quota API", "Опциональное чтение квот")).font(.system(size: 10)).foregroundStyle(quiet) } }
@@ -576,7 +597,7 @@ final class FloatingPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
-    var observations = Set<AnyCancellable>(); var popover = NSPopover(); var statusMenu: NSMenu?
+    var statusPage = 0; var statusTimer: Timer?; var observations = Set<AnyCancellable>(); var statusMenu: NSMenu?
     var store: PulseStore!
     var panel: FloatingPanel?
     var statusItem: NSStatusItem!
@@ -607,6 +628,9 @@ final class FloatingPanel: NSPanel {
         statusItem.button?.target = self; statusItem.button?.action = #selector(statusClicked)
         statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         store.$snapshot.combineLatest(store.$menuNumbers, store.$displayMode).sink { [weak self] _, _, _ in DispatchQueue.main.async { self?.updateStatus() } }.store(in: &observations)
+        store.$menuFollowActive.sink { [weak self] _ in DispatchQueue.main.async { self?.updateStatus() } }.store(in: &observations)
+        NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didActivateApplicationNotification).sink { [weak self] _ in DispatchQueue.main.async { self?.updateStatus() } }.store(in: &observations)
+        statusTimer = Timer.scheduledTimer(withTimeInterval: 8, repeats: true) { [weak self] _ in Task { @MainActor in self?.statusPage += 1; self?.updateStatus() } }
         let panel = FloatingPanel(contentRect: NSRect(x: 0, y: 0, width: 360, height: 270), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.title = "Agent Pulse"; panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -625,31 +649,30 @@ final class FloatingPanel: NSPanel {
         handleSnapshotArguments()
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if store.displayMode == "menu" { if !popover.isShown { statusClicked() } }
-        else { panel?.orderFrontRegardless() }
+        panel?.orderFrontRegardless()
         return true
     }
     func updateStatus() {
         guard let button = statusItem?.button else { return }
-        let title = store.menuNumbers && store.displayMode == "menu" ? (store.snapshot?.providers.prefix(2).map { p in
-            let name = p.id == "codex" ? "C" : p.id == "glm" ? "G" : String(p.name.prefix(2))
-            let value = p.quotas.first?.remainingPercent.map { "\(Int(floor($0)))%" } ?? (p.todayTokens.map { shortNumber($0) } ?? "—")
-            return name + " " + value
-        }.joined(separator: " · ") ?? "") : ""
-        button.title = title; button.imagePosition = .imageLeading; button.font = .monospacedDigitSystemFont(ofSize: 11, weight: .medium)
-        button.toolTip = tr("Agent Pulse · click for widget, right-click for actions", "Agent Pulse · нажмите для табло, правая кнопка — действия")
+        let providers = store.snapshot?.providers ?? []
+        let lines = providers.map(compactQuotaLine)
+        let font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .medium)
+        var index = statusPage % max(1, lines.count)
+        let args = CommandLine.arguments
+        let fixtureID = store.isFixture ? args.firstIndex(of: "--active-app").flatMap { $0 + 1 < args.count ? args[$0+1] : nil } : nil
+        if store.menuFollowActive, let provider = activeProvider(bundleID: fixtureID ?? NSWorkspace.shared.frontmostApplication?.bundleIdentifier), let match = providers.firstIndex(where: { $0.id == provider }) { index = match }
+        let values = lines.isEmpty ? "—" : lines[index] + (lines.count > 1 ? " \(index+1)/\(lines.count)" : "")
+        button.title = store.menuNumbers && store.displayMode == "menu" ? values : ""
+        button.imagePosition = .imageLeading; button.font = font
+        let caption = tr("Remaining limits · — not reported · click to show/hide movable widget", "Осталось лимитов · — не передано · нажмите: показать/скрыть подвижное табло")
+        button.toolTip = ([caption] + lines).joined(separator: "\n")
+        button.setAccessibilityLabel("Agent Pulse · " + caption + " · " + lines.joined(separator: " · "))
     }
     @objc func statusClicked() {
         guard let button = statusItem.button else { return }
         if NSApp.currentEvent?.type == .rightMouseUp { statusMenu?.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.minY), in: button); return }
-        if store.displayMode == "menu" {
-            if popover.isShown { popover.performClose(nil); return }
-            popover.behavior = .transient
-            popover.contentViewController = NSHostingController(rootView: WidgetView(store: store, actions: self))
-            popover.contentSize = NSSize(width: 360 * store.widgetScale, height: store.baseHeight * store.widgetScale)
-            NSApp.activate(ignoringOtherApps: true)
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-        } else { togglePanel() }
+        togglePanel()
+        if panel?.isVisible == true { NSApp.activate(ignoringOtherApps: true) }
     }
     func setScale(_ value: Double) { store.widgetScale = min(1, max(0.8, value)); resizePanel() }
     func resizePanel() {
@@ -657,17 +680,16 @@ final class FloatingPanel: NSPanel {
         let top = panel.frame.maxY
         panel.setFrame(NSRect(x: panel.frame.minX, y: top - store.baseHeight * store.widgetScale, width: 360 * store.widgetScale, height: store.baseHeight * store.widgetScale), display: true)
         panel.contentView?.layer?.cornerRadius = 14 * store.widgetScale
-        if popover.isShown { popover.contentSize = panel.frame.size }
     }
     func setDisplayMode(_ mode: String) {
-        store.displayMode = mode == "menu" ? "menu" : "floating"; popover.performClose(nil)
+        store.displayMode = mode == "menu" ? "menu" : "floating"
         if store.displayMode == "menu" { panel?.orderOut(nil) } else { panel?.orderFrontRegardless() }
         updateStatus()
     }
     @objc func refresh() { store.refresh() }
     @objc func quit() { NSApp.terminate(nil) }
     @objc func togglePanel() { if panel?.isVisible == true { hidePanel() } else { panel?.orderFrontRegardless() } }
-    func hidePanel() { panel?.orderOut(nil); popover.performClose(nil) }
+    func hidePanel() { panel?.orderOut(nil) }
     func collapseToMenu() { setDisplayMode("menu") }
     func toggleExpanded() {
         guard panel != nil else { return }
@@ -675,7 +697,6 @@ final class FloatingPanel: NSPanel {
     }
     @objc func openAnalysis() { showAnalysis() }
     func showAnalysis() {
-        popover.performClose(nil)
         if analysisWindow == nil {
             let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 620), styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
             w.title = tr("Agent Pulse · analytics", "Agent Pulse · аналитика"); w.isReleasedWhenClosed = false; w.minSize = NSSize(width: 620, height: 520)
@@ -685,7 +706,6 @@ final class FloatingPanel: NSPanel {
     }
     @objc func openSettings() { showSettings() }
     func showSettings() {
-        popover.performClose(nil)
         if settingsWindow == nil {
             let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 620), styleMask: [.titled, .closable], backing: .buffered, defer: false)
             w.title = tr("Agent Pulse · settings", "Agent Pulse · настройки"); w.isReleasedWhenClosed = false
@@ -698,11 +718,16 @@ final class FloatingPanel: NSPanel {
         guard let index = args.firstIndex(of: "--snapshot"), index + 1 < args.count else { return }
         let path = args[index + 1]
         let mode = args.firstIndex(of: "--view").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } ?? "compact"
+        if store.isFixture {
+            if let i = args.firstIndex(of: "--status-page"), i+1 < args.count { statusPage = max(0, Int(args[i+1]) ?? 0) }
+            if args.contains("--active-app") { store.menuFollowActive = true }
+            updateStatus()
+        }
         if mode == "expanded" { toggleExpanded() }
         if mode.hasPrefix("analysis") { showAnalysis() }
         if mode == "analysis-small" { analysisWindow?.setContentSize(NSSize(width: 620, height: 520)) }
         if mode == "settings" { showSettings() }
-        if mode == "menu-popover" { setDisplayMode("menu"); DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { self.statusClicked() } }
+        if mode == "menu-widget" { setDisplayMode("menu"); DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { self.statusClicked() } }
         if mode == "resize-check", store.isFixture {
             let grip = ResizeGrip.Grip(); grip.actions = self
             let down = NSEvent.mouseEvent(with: .leftMouseDown, location: NSPoint(x: 280, y: 10), modifierFlags: [], timestamp: 0, windowNumber: panel?.windowNumber ?? 0, context: nil, eventNumber: 1, clickCount: 1, pressure: 1)!
@@ -712,17 +737,16 @@ final class FloatingPanel: NSPanel {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             guard let self else { return }
             let w = mode.hasPrefix("analysis") ? self.analysisWindow : mode == "settings" ? self.settingsWindow : self.panel
-            let captureView = mode == "menu-popover" ? self.popover.contentViewController?.view : mode == "menu-bar" ? self.statusItem.button : w?.contentView
+            let captureView = mode == "menu-bar" ? self.statusItem.button : w?.contentView
             if let view = captureView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
                 view.cacheDisplay(in: view.bounds, to: rep)
                 if let data = rep.representation(using: .png, properties: [:]) { try? data.write(to: URL(fileURLWithPath: path)) }
             }
             if let panel = self.panel {
-                let popoverBefore = self.popover.isShown
                 let before = panel.isVisible
                 self.hidePanel(); let hidden = !panel.isVisible
                 self.togglePanel(); let restored = panel.isVisible
-                let report: [String: Any] = ["view": mode, "panelWidth": panel.frame.width, "panelHeight": panel.frame.height, "floatingLevel": panel.level == .floating, "joinsAllSpaces": panel.collectionBehavior.contains(.canJoinAllSpaces), "fullScreenAuxiliary": panel.collectionBehavior.contains(.fullScreenAuxiliary), "movable": panel.isMovableByWindowBackground, "visibleBefore": before, "hidePassed": hidden, "restorePassed": restored, "statusItem": self.statusItem.button != nil, "fixtureMode": self.store.isFixture, "scale": self.store.widgetScale, "popoverShown": popoverBefore, "displayMode": self.store.displayMode, "menuTitle": self.statusItem.button?.title ?? "", "capturedSize": [w?.contentView?.bounds.width ?? 0, w?.contentView?.bounds.height ?? 0]]
+                let report: [String: Any] = ["view": mode, "panelWidth": panel.frame.width, "panelHeight": panel.frame.height, "floatingLevel": panel.level == .floating, "joinsAllSpaces": panel.collectionBehavior.contains(.canJoinAllSpaces), "fullScreenAuxiliary": panel.collectionBehavior.contains(.fullScreenAuxiliary), "movable": panel.isMovableByWindowBackground, "visibleBefore": before, "hidePassed": hidden, "restorePassed": restored, "statusItem": self.statusItem.button != nil, "fixtureMode": self.store.isFixture, "scale": self.store.widgetScale, "menuClickShowsPanel": mode == "menu-widget" && before, "menuTooltip": self.statusItem.button?.toolTip ?? "", "displayMode": self.store.displayMode, "menuTitle": self.statusItem.button?.title ?? "", "capturedSize": [w?.contentView?.bounds.width ?? 0, w?.contentView?.bounds.height ?? 0]]
                 if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) {
                     try? data.write(to: URL(fileURLWithPath: path + ".json"))
                 }

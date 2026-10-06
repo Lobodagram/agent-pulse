@@ -1,24 +1,30 @@
-Agent Pulse v0.3.3 — Smaller widget / Маленькое табло
+Agent Pulse v0.4.0 — Rotating quota bar · MIT / Чередование лимитов · MIT
 
-80/90/100% widget sizes, continuous scaling and corner grip. Mac menu-bar-only mode with compact first-two-client values and click popover; icon-only saves space beside the camera. Windows offers smaller floating-widget sizes and system tray: hover counters, click to expand/collapse, right-click actions, Explorer restart recovery and visible fallback.
+Mac collapsed menu bar rotates one selected client every 8 seconds, showing two reported quota windows.
+Optional Follow the active app recognizes desktop bundle IDs; unknown apps/terminal CLIs fall back to rotation.
+Only app identity is read. Unknown quotas show —, never percentages inferred from tokens.
+Click opens the movable 80–100% widget; collapse preserves menu counters.
 
-Размеры 80/90/100%, плавное уменьшение и ручка в углу. На Mac можно убрать постоянное окно в строку меню, открывать табло по нажатию и оставить сверху только значок. Windows — уменьшение окна и системный трей: счётчики при наведении, табло по нажатию, меню правой кнопкой, восстановление после перезапуска Проводника. При недоступности трея окно остаётся видимым.
+Windows adds a small quota strip above the taskbar, pages all clients in groups of three and restores the full widget on click.
+Native tray mode remains available; Windows may hide its icon. This strip is a separate window, not embedded taskbar text.
 
-Missing Codex daily bucket is awaiting report, not zero. Optional local daily tokens are off by default: bounded recent token events, partial device-wide UTC-day coverage across logins. Account and local totals are not added. Raw conversation text/arguments/code are never retained; no model calls or telemetry upload.
+Original source is now MIT: free personal/company use, changes, integration and sale, with copyright and permission notice preserved.
+Earlier tags/archives remain unchanged; runtime licenses apply separately. Analytics and subscriptions remain distinct;
+no exact per-tool token billing or guaranteed savings. No badge-in-every-desktop-chat plugin is included; see docs/INTEGRATIONS.md.
 
-Отсутствующая строка за сегодня — ожидание отчёта, не ноль. Локальные токены включаются отдельно: ограниченные события, частичный охват устройства за день UTC. Тексты чатов и код не сохраняются, модели не вызываются.
+Сверху на Mac каждые 8 секунд чередуется один подключённый клиент с двумя переданными окнами лимитов.
+Настройка «Следовать за активным приложением» распознаёт десктопные идентификаторы;
+остальные приложения/CLI в терминале возвращают чередование. Читается только идентификатор приложения.
+Неизвестные лимиты — «—», проценты из токенов не вычисляются. Клик открывает подвижное табло
+с масштабом 80–100%; сворачивание сохраняет индикатор сверху.
 
-Python bundled. Mac 14+ ARM64/Intel: ad-hoc signed, not notarized. Windows 10/11 x64: unsigned preview, keep both exe files together. PolyForm Noncommercial 1.0.0; separate purchased written commercial license from Lobodagram. Source-available, not OSI open source.
+На Windows маленькая полоска над панелью задач листает всех клиентов по три и раскрывается по клику;
+отдельный режим трея сохранён. Полоска не встроена внутрь панели Windows.
 
+Собственный код теперь MIT: бесплатное личное/рабочее использование, изменения, встраивание и продажа
+с сохранением уведомления об авторстве и разрешении. Прежние теги/архивы сохранены.
+Точные токены каждого вызова и гарантированная экономия не заявлены; плагина в каждом десктопном чате пока нет.
 
-Explicit × exit, −/⌄ collapse, one production instance on both desktops. Явные кнопки выхода и сворачивания, защита от повторных экземпляров.
-
-
-0.3.2 fixes Windows 80% clipping with two quota-bearing clients. A dedicated hosted layout regression verifies this alongside normal resizing and tray behavior.
-
-0.3.2 исправляет обрезание полей Windows при 80% и двух клиентах с квотами. Добавлена отдельная проверка этого сценария вместе с размерами и треем.
-
-
-0.3.3 also fixes Russian Windows labels at minimum size: today tokens and reset times have separate rows. EN/RU source and frozen Windows fixtures are checked.
-
-0.3.3 исправляет длинные русские подписи Windows при 80%: токены за сегодня и даты сброса разделены. Проверяются EN/RU исходники и упакованное приложение.
+Mac 14+ ARM64/Intel: ad-hoc signed, not notarized. Windows 10/11 x64: unsigned preview; keep both executables together.
+Python bundled. Multi-monitor/Spaces/fullscreen/sleep-wake, Windows DPI and all live provider accounts need manual acceptance.
+Нужна ручная проверка разных экранов, Spaces, DPI и реальных аккаунтов всех провайдеров.

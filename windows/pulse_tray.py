@@ -110,6 +110,14 @@ class Tray:
         else:
             self.unavailable()
 
+    def work_area(self):
+        if not self.hwnd:return None
+        rect=w.RECT()
+        self.user.SystemParametersInfoW.argtypes=[w.UINT,w.UINT,c.c_void_p,w.UINT]
+        self.user.SystemParametersInfoW.restype=w.BOOL
+        if self.user.SystemParametersInfoW(0x30,0,c.byref(rect),0):return rect.left,rect.top,rect.right,rect.bottom
+        return None
+
     def update(self, text):
         if self.closed or not self.hwnd: return
         self.data.tip = text[:127]

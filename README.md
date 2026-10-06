@@ -4,7 +4,7 @@
 
 A small, local desktop dashboard for understanding your coding agents: remaining subscription quotas, reported tokens, reset times, manually entered billing dates and repeated tool calls. It sits above your windows without occupying your editor.
 
-**0.3.3 public preview.** macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not magically expose its private billing API.
+**0.4.0 public preview.** macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not magically expose its private billing API.
 
 ![Compact English widget — invented demo data](docs/screenshots/widget-en.png)
 ![Workflows — invented demo events](docs/screenshots/workflows-en.png)
@@ -43,7 +43,7 @@ Download the matching zip from [Releases](https://github.com/Lobodagram/agent-pu
 
 **macOS 14+:** unzip, move `Agent Pulse.app` to Applications, open it. This preview is ad-hoc signed, **not Apple notarized**. If macOS blocks it, inspect the source/checksum and use Apple's documented approval flow only if you trust the download; the project does not disable Gatekeeper. Release packages contain their own collector runtime; native clients still need to be installed and authenticated by you.
 
-**Windows 10/11 x64:** unzip into a folder you own and run `AgentPulse.exe`. No installer/admin permission needed. The executable is unsigned; SmartScreen reputation may be absent. Floating-window or system-tray mode is selectable in Settings. Hover the tray icon for counters and click to show/hide the widget; Windows may put the icon in its hidden-icons area. No automatic startup integration. Do not run a download you do not trust.
+**Windows 10/11 x64:** unzip into a folder you own and run `AgentPulse.exe`. No installer/admin permission needed. The executable is unsigned; SmartScreen reputation may be absent. Floating-window, compact-strip or system-tray mode is selectable in Settings. Hover the tray icon for counters and click to show/hide the widget; Windows may put the icon in its hidden-icons area. No automatic startup integration. Do not run a download you do not trust.
 
 Open Settings, choose clients, enable event observers separately if desired, configure optional adapters using the provider guide and enter billing dates if desired. Selecting import-only clients shows **unavailable** until you supply metrics. No dates are guessed from subscription names.
 
@@ -57,9 +57,7 @@ Optional Codex event analysis is **off by default**. When enabled, it transientl
 
 ## License
 
-**Source-available, free for noncommercial use. Commercial use requires a separately purchased written license from [Lobodagram](https://github.com/Lobodagram).** This is not an OSI open-source license.
-
-The code is under [PolyForm Noncommercial 1.0.0](LICENSE). Noncommercial personal use, changes and redistribution are permitted subject to its terms; the standard license also permits the noncommercial organizations it describes. Keep the license and Required Notice. [Commercial licensing](COMMERCIAL_LICENSE.md) · [Contributing](CONTRIBUTING.md).
+**Open source under [MIT](LICENSE), by [Lobodagram](https://github.com/Lobodagram).** Personal and commercial use, modification, integration and sale are permitted. Keep the copyright and permission notice; MIT does not require prominent UI credit or opening modifications. [Licensing details](COMMERCIAL_LICENSE.md) · [Contributing](CONTRIBUTING.md).
 
 The project is independent of OpenAI, Z.ai, Anthropic, Moonshot, Alibaba and other named vendors. Names identify compatible clients; no affiliation or endorsement is implied.
 
@@ -72,7 +70,7 @@ Work history remains continuous across account switches. The journal groups by p
 
 ### Smaller widget and menu bar
 
-Settings offers 80%, 90% and 100% sizes and a continuous slider; drag the lower-right grip to change the proportional size. The smallest Mac widget is 288×216 points, with all displayed fields preserved; details/analytics stay available. On macOS choose **Menu bar only**: click the status icon to open the full widget, right-click for actions. Compact values show the first two enabled clients; icon-only saves menu-bar space. macOS owns the position beside the camera. Windows supports floating-widget scaling (320×248 minimum) and system-tray mode beside the clock. Collapse hides the widget; click the tray icon to reopen it, hover for counters, right-click for actions. If the tray is unavailable the widget stays visible; the icon recovers after Explorer restarts.
+Settings offers 80%, 90% and 100% sizes and a continuous slider; drag the lower-right grip to change the proportional size. The smallest Mac widget is 288×216 points, with all displayed fields preserved; details/analytics stay available. On macOS choose **Menu bar only**: click the status icon to open the full widget, right-click for actions. The bar rotates **one enabled client every 8 seconds**, showing its first two reported quota windows. Enable **Follow the active app** to prioritize a recognized Codex, ZCode or Claude desktop app; unrecognized apps and terminal-hosted CLIs fall back to rotation. Only the foreground bundle identifier is used, never window/chat contents. Unknown quotas show —; token counts are not turned into percentages. Icon-only saves menu-bar space. macOS owns the position beside the camera. Windows supports floating-widget scaling (320×248 minimum) and system-tray mode beside the clock. Collapse opens a small quota strip above the taskbar, paging up to three clients every 8 seconds. Click a row or ↗ to restore the full widget; × quits. **Tray only** hides it instead; hover for bounded counters, click to reopen, right-click for actions. The strip is a separate window, not text embedded inside the Windows taskbar. If the tray is unavailable the widget stays visible; the icon recovers after Explorer restarts.
 
 A missing Codex daily bucket means **awaiting report**, not zero. Enable **Local Codex tokens today · partial** and Apply in Settings for bounded local token-count events when the account report lags. It is off by default; UTC day and partial device-wide coverage across logins. No account/local totals are added together.
 
@@ -81,4 +79,6 @@ A missing Codex daily bucket means **awaiting report**, not zero. Enable **Local
 ![Menu bar, invented counters](docs/screenshots/menu-bar-demo.png)
 
 
-The **−** button collapses into the menu/tray; **×** quits Agent Pulse. Reopening a production app does not create another instance. Test fixtures are isolated and automatically closed.
+The **− / ⌄** button collapses into the menu bar/compact strip; **×** quits Agent Pulse. Reopening a production app does not create another instance. Test fixtures are isolated and automatically closed.
+
+[Plugin and in-client integration feasibility](docs/INTEGRATIONS.md). No badge-in-every-desktop-chat plugin is included in this release.

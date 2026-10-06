@@ -1,9 +1,7 @@
-# Commercial licensing / Коммерческая лицензия
+# Licensing / Лицензирование
 
-The public grant is PolyForm Noncommercial 1.0.0. Commercial use is not granted by downloading, purchasing a provider subscription, starring this repository or paying an unspecified amount.
+From v0.4.0 Agent Pulse original source is available under MIT. Personal and company use, modification, redistribution, integration and sale are permitted without buying a separate license. Keep the copyright and permission notice in copies or substantial portions. MIT does not require prominent in-app attribution or publication of modifications. Third-party component licenses remain separate.
 
-To use Agent Pulse commercially, obtain a separately negotiated, paid, written license from the copyright owner **Lobodagram** before commercial deployment. Contact the owner via the public channels on [the GitHub profile](https://github.com/Lobodagram). No price, automatic checkout or commercial license grant is published in this preview. A commercial agreement must state the licensed version, permitted organization/users, duration, redistribution rights and price. Third-party component licenses continue to apply separately.
+Earlier tags and their original notices are preserved as published. The current MIT snapshot grants MIT rights to its included original code; earlier downloads retain their accompanying notices.
 
-Бесплатное разрешение — PolyForm Noncommercial 1.0.0. Загрузка, подписка на ИИ-сервис, звезда репозитория или произвольный платёж не дают коммерческой лицензии.
-
-Для коммерческого применения заранее получите у правообладателя **Lobodagram** отдельную платную письменную лицензию. Контакт — через публичные каналы [профиля GitHub](https://github.com/Lobodagram). В этой версии нет опубликованной цены, автоматической покупки или автоматического разрешения на коммерческое использование. В соглашении должны быть определены версия, организация/пользователи, срок, права распространения и цена. Лицензии сторонних компонентов действуют отдельно.
+С v0.4.0 собственный код Agent Pulse распространяется по MIT. Личное и рабочее использование, изменения, распространение, встраивание и продажа разрешены без покупки отдельной лицензии. В копиях или существенных частях сохраняйте уведомление об авторских правах и разрешении. MIT не требует заметной подписи в интерфейсе или открытия доработок. Лицензии сторонних компонентов действуют отдельно. Прежние теги и их исходные уведомления сохранены; текущий снимок кода предоставляет права MIT на включённый собственный код.

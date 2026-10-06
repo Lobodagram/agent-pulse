@@ -12,6 +12,7 @@ import tkinter.font as tkfont
 from tkinter import ttk, messagebox
 from pulse_tray import Tray, Instance
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from compact_summary import provider_line,quota_pages,tray_tooltip
 import collector
 import analytics
 import instrumentation
@@ -24,12 +25,16 @@ BG='#151a1d';FG='#f2f6f4';MINT='#a4e8cd';QUIET='#a6b4b0'
 class Pulse:
     def __init__(self,root,fixture=None,smoke=False,language='en'):
         self.root=root;self.state=state_directory();self.fixture=fixture;self.smoke=smoke;self.data={};self.loading=False;self.page=0;self.pending=queue.Queue();self.language=language;self.auth_revision=0;self.auth_marks={};self.reading_limits=False
+        self.collapsed=False;self.compact_page=0;self.full_position=(100,100);self.refresh_failed=False
         root.title('Agent Pulse');root.geometry('400x310+100+100');root.configure(bg=BG);root.overrideredirect(True);root.attributes('-topmost',True)
         header=tk.Frame(root,bg=BG);header.pack(fill='x',padx=14,pady=(8,4))
+        self.header=header;self.header_buttons=[]
         title=tk.Label(header,text='● AGENT PULSE'+(' · DEMO' if fixture else ''),bg=BG,fg=MINT,font=('Segoe UI',10,'bold'));title.pack(side='left')
+        self.header_title=title
         title.bind('<Button-1>',self.begin_drag);title.bind('<B1-Motion>',self.drag)
         for text,command in [('×',self.quit),('⌄',self.collapse),('⚙',self.settings),('▥',self.analysis),('↻',self.refresh)]:
-            tk.Button(header,text=text,command=command,bg=BG,fg=FG,bd=0,width=2).pack(side='right')
+            button=tk.Button(header,text=text,command=command,bg=BG,fg=FG,bd=0,width=2);button.pack(side='right');self.header_buttons.append(button)
+            if text=='⌄':self.collapse_button=button
         self.content=tk.Frame(root,bg=BG);self.content.pack(fill='both',expand=True,padx=16)
         self.footer=tk.Frame(root,bg=BG);self.footer.pack(fill='x',padx=16,pady=6)
         tk.Button(self.footer,text='‹',command=lambda:self.change_page(-1),bg=BG,fg=MINT,bd=0).pack(side='left')
@@ -48,7 +53,7 @@ class Pulse:
         except (OSError,AttributeError) as error:self.tray_initialization_error=str(error)
         root.protocol('WM_DELETE_WINDOW',self.quit)
         if not fixture:self.set_display_mode(providers.load_config(self.state).get('displayMode','floating'),save=False)
-        self.auth_marks=self.authentication_metadata();self.refresh();root.after(5000,self.check_authentication);root.after(100,self.poll);root.after(300000,self.periodic);root.after(60000,self.limits)
+        self.auth_marks=self.authentication_metadata();self.refresh();root.after(5000,self.check_authentication);root.after(100,self.poll);root.after(300000,self.periodic);root.after(60000,self.limits);root.after(8000,self.rotate_compact)
     def quit(self):
         if getattr(self,'tray',None):self.tray.close()
         self.root.destroy()
@@ -56,39 +61,50 @@ class Pulse:
         self.root.deiconify();self.display_mode='floating'
     def set_display_mode(self,mode,save=True):
         ready=bool(self.tray and self.tray.available)
-        self.display_mode='tray' if mode=='tray' and ready else 'floating'
+        self.display_mode=mode if mode in ('floating','compact') or mode=='tray' and ready else 'floating'
+        if not self.collapsed:self.full_position=(self.root.winfo_x(),self.root.winfo_y())
+        self.collapsed=self.display_mode=='compact'
+        self.render()
         if self.display_mode=='tray':self.root.withdraw()
         else:self.root.deiconify()
+        if self.collapsed:self.position_compact()
         if save and not self.fixture:
             config=providers.load_config(self.state);config['displayMode']=self.display_mode;providers.atomic_json(self.state/'config.json',config)
         return mode!='tray' or ready
+    def position_compact(self):
+        area=self.tray.work_area() if self.tray else None
+        left,top,right,bottom=area or (0,0,self.root.winfo_screenwidth(),self.root.winfo_screenheight()-48)
+        self.root.update_idletasks();self.root.geometry(f'+{max(left,right-self.root.winfo_width()-16)}+{max(top,bottom-self.root.winfo_height()-12)}')
     def collapse(self):
-        if not self.set_display_mode('tray'):
-            messagebox.showinfo('Agent Pulse',self.t('System tray unavailable; widget remains visible.','Трей недоступен; виджет остаётся видимым.'))
+        if self.collapsed:self.show_full()
+        else:self.set_display_mode('compact')
+    def show_full(self):
+        self.collapsed=False;self.root.deiconify();self.render()
+        x,y=self.full_position;self.root.geometry(f'+{x}+{y}');self.root.lift();self.root.focus_force()
     def toggle_widget(self):
-        if self.root.state()=='withdrawn':
-            self.root.deiconify();self.root.lift();self.root.focus_force()
-        else:self.root.withdraw()
+        if self.collapsed or self.root.state()=='withdrawn':self.show_full()
+        elif self.display_mode=='tray':self.root.withdraw()
+        else:self.collapse()
+    def rotate_compact(self):
+        if self.collapsed:
+            self.compact_page+=1;self.render()
+        self.root.after(8000,self.rotate_compact)
     def tray_menu(self):
         menu=tk.Menu(self.root,tearoff=False)
         for title,action in [(self.t('Show / hide widget','Показать / скрыть виджет'),self.toggle_widget),(self.t('Analytics','Аналитика'),self.analysis),(self.t('Settings','Настройки'),self.settings),(self.t('Refresh','Обновить'),self.refresh),(self.t('Quit','Выйти'),self.quit)]:menu.add_command(label=title,command=action)
         try:menu.tk_popup(self.root.winfo_pointerx(),self.root.winfo_pointery())
         finally:menu.grab_release()
     def update_tray(self):
-        if not self.tray:return
-        lines=['Agent Pulse']
-        for p in self.data.get('providers',[])[:2]:
-            quotas=p.get('quotas',[]);remaining=quotas[0].get('remainingPercent') if quotas else None;tokens=p.get('todayTokens')
-            value=f'{int(remaining)}%' if remaining is not None else f'{tokens:,.0f} '+self.t('tokens today','токенов сегодня') if tokens is not None else self.t('not reported','не передано')
-            lines.append(p['name']+': '+value)
-        self.tray.update('\n'.join(lines))
+        if self.tray:self.tray.update(tray_tooltip(self.data.get('providers',[]),self.language=='ru'))
     def begin_resize(self,e):self.resize_start=(e.x_root,self.root.winfo_width())
     def resize_drag(self,e):self.set_scale((self.resize_start[1]+e.x_root-self.resize_start[0])/400,save=False)
     def save_scale(self):
         if not self.fixture:
             config=providers.load_config(self.state);config['widgetScale']=self.scale;providers.atomic_json(self.state/'config.json',config)
     def set_scale(self,value,save=True):
-        self.scale=min(1,max(.8,float(value)));self.root.geometry(f'{round(400*self.scale)}x{round(310*self.scale)}')
+        self.scale=min(1,max(.8,float(value)))
+        if self.collapsed:return
+        self.root.geometry(f'{round(400*self.scale)}x{round(310*self.scale)}')
         def visit(w):
             if isinstance(w,tk.Toplevel):return
             if isinstance(w,tk.Label) and w.master is self.content:w.configure(bd=0,padx=0,pady=0)
@@ -164,8 +180,9 @@ class Pulse:
                 old=next((p for p in self.data.get('providers',[]) if p['id']=='codex'),None)
                 new=next((p for p in data.get('providers',[]) if p['id']=='codex'),None)
                 if old and new and old.get('accountScope')==new.get('accountScope') and (old.get('quotaObservedAt') or 0)>(new.get('quotaObservedAt') or 0):new.update(quotas=old['quotas'],quotaObservedAt=old['quotaObservedAt'])
-                self.data=data;self.status.config(text=self.t('Local counters · UTC','Локальные счётчики · UTC'));self.render()
-            else:self.status.config(text=self.t('Unavailable; retained last data','Нет связи; сохранены данные'))
+                self.refresh_failed=False;self.data=data;self.status.config(text=self.t('Local counters · UTC','Локальные счётчики · UTC'));self.render()
+            else:
+                self.refresh_failed=True;self.status.config(text=self.t('Unavailable; retained last data','Нет связи; сохранены данные'));self.render()
             if self.smoke:
                 try:
                     assert not self.tray_initialization_error,self.tray_initialization_error
@@ -191,13 +208,49 @@ class Pulse:
                     else:
                         assert self.root.state()!='withdrawn'
                         print('PASS: tray unavailable fallback; Explorer interaction unverified')
+                    self.set_display_mode('compact',save=False);self.root.update_idletasks()
+                    assert self.collapsed and self.root.state()!='withdrawn'
+                    assert self.content.winfo_reqheight()<=self.content.winfo_height(), 'Compact rows clipped'
+                    assert self.root.winfo_height()<180
+                    saved=self.data
+                    try:
+                        self.data=dict(saved,providers=[dict(saved['providers'][0],id='demo'+str(i),name='Demo '+str(i)) for i in range(13)])
+                        seen=[]
+                        for page in range(5):
+                            self.compact_page=page;self.render();self.root.update_idletasks()
+                            seen+=quota_pages(self.data['providers'],self.language=='ru')[page]
+                            assert self.content.winfo_reqheight()<=self.content.winfo_height()
+                        assert len(seen)==13
+                    finally:self.data=saved;self.compact_page=0;self.render()
+                    self.toggle_widget();self.root.update_idletasks();assert not self.collapsed and self.root.state()!='withdrawn'
                     self.set_display_mode('floating',save=False)
+                    print('PASS: compact quota strip, all-client pages, click restore')
                 except Exception as error:self.smoke_error=str(error)
                 self.root.after(100,self.quit)
         except queue.Empty:pass
         self.root.after(100,self.poll)
+    def render_compact(self):
+        pages=quota_pages(self.data.get('providers',[]),self.language=='ru')
+        index=self.compact_page%len(pages);lines=pages[index]
+        self.header_title.config(text=self.t('● AP · LEFT','● AP · ОСТАЛОСЬ')+(f' {index+1}/{len(pages)}' if len(pages)>1 else '')+(' · DEMO' if self.fixture else ''))
+        for button in self.header_buttons:button.pack_forget()
+        self.header_buttons[0].pack(side='right');self.collapse_button.pack(side='right');self.collapse_button.config(text='↗')
+        self.footer.pack_forget()
+        for text in lines or [self.t('Awaiting metrics','Ожидаю показатели')]:
+            label=tk.Label(self.content,text=('~' if self.refresh_failed else '')+text,bg=BG,fg=MINT,font=('Segoe UI',10),anchor='w',bd=0,padx=0,pady=0)
+            label.pack(fill='x',pady=2);label.bind('<Button-1>',lambda e:self.show_full())
+        self.root.update_idletasks()
+        font=tkfont.Font(family='Segoe UI',size=10)
+        width=min(600,max(320,max((font.measure(t)+40 for t in lines),default=320)))
+        height=self.header.winfo_reqheight()+self.content.winfo_reqheight()+12
+        self.root.geometry(f'{width}x{height}');self.update_tray()
     def render(self):
         for c in self.content.winfo_children():c.destroy()
+        if self.collapsed:
+            self.render_compact();return
+        self.header_title.config(text='● AGENT PULSE'+(' · DEMO' if self.fixture else ''))
+        for button in self.header_buttons:button.pack(side='right')
+        self.collapse_button.config(text='⌄');self.footer.pack(fill='x',padx=16,pady=6)
         allp=self.data.get('providers',[]);pages=max(1,(len(allp)+1)//2);self.page%=pages;self.page_label.config(text=f'{self.page+1}/{pages}')
         for p in allp[self.page*2:self.page*2+2]:
             tk.Label(self.content,text=p['name']+' · '+p['status'],bg=BG,fg=QUIET,font=('Segoe UI',10,'bold'),anchor='w').pack(fill='x',pady=(3,1))
@@ -305,8 +358,8 @@ class Pulse:
         ttk.Scale(f,from_=.8,to=1,variable=size,command=lambda v:self.set_scale(float(v),save=False)).pack(fill='x')
         label(self.t('Placement · tray icon opens the full widget','Размещение · значок в трее открывает полное табло'))
         placement=tk.StringVar(value=self.display_mode)
-        ttk.Combobox(f,textvariable=placement,values=['floating','tray'],state='readonly').pack(anchor='w')
-        label(self.t('Hover tray icon for counters. Windows may put it in the hidden-icons area.','Счётчики — при наведении на значок. Windows может убрать его под стрелку скрытых значков.'))
+        ttk.Combobox(f,textvariable=placement,values=['floating','compact','tray'],state='readonly').pack(anchor='w')
+        label(self.t('Compact keeps quota rows above the taskbar. Tray shows a bounded tooltip; Windows may hide its icon.','Compact — проценты над панелью задач. Tray — подсказка при наведении; значок может быть скрыт Windows.'))
         label(self.t('Clients · see provider guide for setup','Клиенты · настройка по инструкции'));enabled={p['id'] for p in self.data.get('providers',[])};flags={}
         for spec in providers.CATALOG:
             var=tk.BooleanVar(value=spec['id'] in enabled);flags[spec['id']]=var

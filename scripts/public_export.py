@@ -6,7 +6,7 @@ import json
 import re
 import shutil
 ROOT=Path(__file__).resolve().parents[1]
-FILES=['journal.py','analytics.py','journal_cli.py','instrumentation.py','mcp_server.py','collector.py','providers.py','platform_support.py','build.sh','requirements-build.txt','LICENSE','README.md','README.ru.md','PRIVACY.md','SECURITY.md','CONTRIBUTING.md','CHANGELOG.md','NOTICE','COMMERCIAL_LICENSE.md','.gitignore']
+FILES=['compact_summary.py','journal.py','analytics.py','journal_cli.py','instrumentation.py','mcp_server.py','collector.py','providers.py','platform_support.py','build.sh','requirements-build.txt','LICENSE','README.md','README.ru.md','PRIVACY.md','SECURITY.md','CONTRIBUTING.md','CHANGELOG.md','NOTICE','COMMERCIAL_LICENSE.md','.gitignore']
 DIRS=['script','Sources','windows','tests','scripts','docs','examples','.github','third_party']
 def export(destination):
     destination=Path(destination).resolve()
@@ -24,7 +24,7 @@ def export(destination):
             # Scanner patterns themselves are not credentials and intentionally remain public.
             if any(re.search(x,text) for x in patterns):raise ValueError('private_content_in_'+str(rel))
         target=destination/rel;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,target)
-    public_agent='''# Agent Pulse contributor instructions\n\nRead README.md, PRIVACY.md and docs/PROVIDERS.md. Keep native clients read-only. Never call models, scrape credentials, start sessions or upload telemetry. Preserve unknown values and source/coverage labels. Run `python -m unittest discover -s tests -v`. UI screenshots must use `examples/demo.json`; never publish account or conversation data. No company rules, private home paths or runtime state belongs in this repository. Commercial contributor rights are described in CONTRIBUTING.md.\n'''
+    public_agent='''# Agent Pulse contributor instructions\n\nRead README.md, PRIVACY.md and docs/PROVIDERS.md. Keep native clients read-only. Never call models, scrape credentials, start sessions or upload telemetry. Preserve unknown values and source/coverage labels. Run `python -m unittest discover -s tests -v`. UI screenshots must use `examples/demo.json`; never publish account or conversation data. No company rules, private home paths or runtime state belongs in this repository. MIT contributor rights are described in CONTRIBUTING.md.\n'''
     (destination/'AGENTS.md').write_text(public_agent)
     manifest={'files':sorted(str(p.relative_to(destination)) for p in destination.rglob('*') if p.is_file()),'privateHistoryIncluded':False,'demoOnly':True}
     return manifest

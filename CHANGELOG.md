@@ -18,7 +18,16 @@ Remove redundant native Tk label padding, preserving readable fonts and fitting 
 - Explain delayed Codex daily reporting; independent opt-in bounded local token projection supplies partial UTC-day counts without tool projection or double-counted account totals.
 - Native fixture matrix and token-only privacy/dedup/pending tests.
 
-# Changelog / Изменения
+# Changelog
+
+## 0.4.0 · 2026-10-06
+
+- MIT for the current original-source snapshot; copyright notice preserved. Earlier tags unchanged.
+- Mac collapsed bar rotates one selected client every 8 seconds, both reported quota windows; optional foreground desktop selection with rotation fallback. No token-to-quota inference.
+- Click opens the movable/resizable full widget; collapse keeps compact bar data.
+- Windows small strip above taskbar, all-client pages, restore controls and native tray option.
+- Integration feasibility documented; persistent injection into every desktop chat is not claimed.
+ / Изменения
 
 ## 0.3.0 — 2026-10-06
 
