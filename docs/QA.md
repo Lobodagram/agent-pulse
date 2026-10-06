@@ -1,3 +1,13 @@
+## 0.7.1 delivered packages · 2026-10-06
+
+[Source Checks 37513242771](https://github.com/Lobodagram/agent-pulse/actions/runs/37513242771) passed Linux/macOS/Windows, including isolated installed-wheel/console/hook verification. [Tagged packages/publication 37513613892](https://github.com/Lobodagram/agent-pulse/actions/runs/37513613892) passed Mac ARM64/Intel, Windows x64 and publication at 4c9c0b93f07d54a48ad0fc3da83fdd82766e9c4b. 161 tests. The immutable tag preserves tested source; final main-only evidence updates do not replace it.
+
+All three [0.7.1 archives](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.7.1) downloaded and matched SHA256SUMS; runtime/notices/path checks passed, Mac embedded versions checked. Windows binary execution on this Mac is not claimed. Downloaded ARM64 passed strict/deep signature, actual two-second frozen hook/journal/five-tool MCP, 15 own-widget cases and EN/RU model-history fixture renders; both downloaded renders inspected. Installed 0.7.1 / build 17, exactly one instance after duplicate launch, configuration unchanged, previous 0.7.0 preserved, observer helper path stable. Installed helper separately passed strict frozen smoke. No model calls, peer launch/runtime/profile/trust changes or permissions added.
+
+One intermediate consolidated local check returned failed tests without retaining the case; direct and final consolidated 161 tests passed, as did all source/platform CI. Its initial cause remains unconfirmed; no universal cold-start or stability guarantee. Physical Windows DPI/Intel charts/Spaces/fullscreen/multiple displays/sleep-wake and live installed UI clicks remain separate open gates.
+
+161 тест и проверки исходников/пакетов трёх платформ прошли. Архивы сверены, скачанная Mac-сборка проверена и установлена: один экземпляр, настройки и прежняя версия сохранены. Первый локальный сбой не воспроизводится в итоговых проверках; причина не установлена. Реальная полнота сбора и эффект улучшений остаются отдельной приёмкой.
+
 ## 0.7.1 audit follow-up · 2026-10-06
 
 161 local tests and isolated wheel build/install passed. Shared strict filters preserve finite nonnegative numbers and the journal's credential/path-label restrictions; collector no longer has weaker independent copies. One literal `pulse_version.__version__` drives dynamic wheel metadata, MCP and Mac bundle; package CI checks the tag against it. Wheel contains the runtime hook bridge and both CLI entries, not developer scripts. The source compatibility hook path remains usable; no existing native hook configuration is rewritten. Linux/headless instructions added.
