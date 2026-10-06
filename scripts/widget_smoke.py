@@ -10,7 +10,7 @@ with tempfile.TemporaryDirectory() as tmp:
     bundle=Path(tmp)/'AgentPulseFixture.app';shutil.copytree(binary.parents[2],bundle)
     info=bundle/'Contents/Info.plist';settings=plistlib.loads(info.read_bytes());settings['CFBundleIdentifier']='app.agentpulse.widgetsmoke';info.write_bytes(plistlib.dumps(settings))
     subprocess.run(['codesign','--force','--sign','-',str(bundle)],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-    for mode,width,height in [('compact',288,216),('expanded',288,344),('resize-check',348,261),('menu-widget',288,216),('menu-bar',288,216),('menu-next',288,216),('menu-timer',288,216),('menu-active',288,216),('menu-fallback',288,216),('two-quotas',288,216),('expanded-two-quotas',288,344),('pending',288,216),('compact-en',288,216),('single-instance',288,216)]:
+    for mode,width,height in [('compact',288,216),('expanded',288,344),('resize-check',348,261),('menu-widget',288,216),('menu-bar',288,216),('menu-next',288,216),('menu-timer',288,216),('menu-active',288,216),('menu-fallback',288,216),('two-quotas',288,216),('expanded-two-quotas',288,344),('pending',288,216),('compact-en',288,216),('single-instance',288,216),('window-focus',288,216)]:
         out=Path(tmp)/(mode+'.png')
         data=json.loads(fixture.read_text())
         if mode in ('two-quotas','expanded-two-quotas'):data['providers'][1]['quotas']=data['providers'][0]['quotas']
@@ -48,6 +48,7 @@ with tempfile.TemporaryDirectory() as tmp:
             assert 'Cdx 5ч' in r['menuTooltip'] and 'GLM —' in r['menuTooltip'],r
         if mode=='menu-bar':assert r['menuTitle'].startswith('Cdx 5ч') and 'GLM' not in r['menuTitle'],r
         assert r['hidePassed'] and r['restorePassed'],r
+        if mode=='window-focus':assert r['utilityRestorePassed'] and r['utilityFocusPassed'] and r['utilityPlacementPassed'],r
         if destination:
             shutil.copy2(out,destination/out.name);shutil.copy2(out.with_suffix('.png.json'),destination/(out.name+'.json'))
 print('PASS: minimum compact/detail, resize handler, menu-only launch, movable menu-click widget, rotating status buttons and foreground/fallback selection')

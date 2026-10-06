@@ -88,12 +88,13 @@ def scan_inventory(provider,skill_dirs=(),config_path=None):
             kind='other'
             if 'test' in name or 'qa' in name:kind='test'
             elif 'search' in name or 'context' in name:kind='search'
-            entries.append({'provider':provider,'id':name,'kind':'skill','category':kind,'status':'configured'})
+            entries.append({'provider':provider,'id':name,'kind':'skill','category':kind,'status':'configured','locator':str(f.absolute())})
     if config_path:
         p=Path(config_path)
         if p.is_symlink() or p.stat().st_size>1024*1024:raise ValueError('invalid_config')
         text=p.read_text();d=tomllib.loads(text) if p.suffix=='.toml' else json.loads(text)
-        servers=d.get('mcp_servers',d.get('mcpServers',{}))
+        servers=d.get('mcp_servers',d.get('mcpServers',d.get('mcp',{}).get('servers',{})))
+        if isinstance(servers,list):servers={r.get('name','other'):r for r in servers if isinstance(r,dict)}
         if isinstance(servers,dict):
             for name,r in list(servers.items())[:500]:
                 name=safe_name(name)

@@ -1,0 +1,19 @@
+{
+  "synthetic": true,
+  "cases": [
+    {"id":"serial-workflow","turns":3,"steps":[["Read",""],["Edit",""],["Bash","pytest"]],"expect":["sequence"]},
+    {"id":"failing-retries","turns":3,"steps":[["Bash","git status"]],"mode":"failed","expect":["retry"]},
+    {"id":"identical-inputs","turns":4,"steps":[["Bash","git status"]],"expect":["repeat_call"]},
+    {"id":"compound-operation-family","turns":12,"steps":[["Bash","git -C /invented/task{turn} status --short && pytest /invented/task{turn}"]],"expect":["template"]},
+    {"id":"different-unknown-commands","turns":12,"steps":[["Bash","echo {turn}"]],"expect":[]},
+    {"id":"parallel-tools","turns":3,"steps":[["Read",""],["Edit",""],["Bash","pytest"]],"mode":"parallel","expect":[]},
+    {"id":"unknown-turns","turns":3,"steps":[["Read",""],["Edit",""],["Bash","pytest"]],"mode":"unknown-turn","expect":[]},
+    {"id":"different-actors","turns":3,"steps":[["Read",""],["Edit",""],["Bash","pytest"]],"mode":"actors","expect":[]},
+    {"id":"failure-barrier","turns":3,"steps":[["Read",""],["Bash","git status"],["Edit",""]],"mode":"failure-barrier","expect":["retry"]},
+    {"id":"pending-barrier","turns":3,"steps":[["Read",""],["Bash","git status"],["Edit",""],["Bash","pytest"]],"mode":"pending-barrier","expect":[]},
+    {"id":"invalid-timeline","turns":3,"steps":[["Read",""],["Edit",""]],"mode":"invalid","expect":[]},
+    {"id":"different-git-operations","turns":3,"steps":[["Read",""],["Bash",["git status","git diff","git log"]]],"expect":[]},
+    {"id":"outer-parallel-process","turns":3,"steps":[["Bash","git status"],["Read",""],["Edit",""]],"mode":"outer-parallel","expect":[]},
+    {"id":"running-process-barrier","turns":3,"steps":[["Bash","git status"],["Read",""],["Edit",""]],"mode":"running","expect":[]}
+  ]
+}

@@ -4,9 +4,9 @@
 
 A local tool for improving coding-agent workspaces: collect sanitized tool events, inspect repeated workflows and failures, and review evidence before automating a task or adding a skill/MCP. The desktop widget also shows reported tokens and subscription quotas.
 
-**0.4.1 public preview.** macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
+**0.5.0 public preview.** macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
 
-**Confirm collection first:** configured observers are not proof of observation. After setup, start a new native session, review hook trust when required, perform an ordinary task, and check Workflows for actual paired calls. See the [readiness audit](docs/AUDIT.md). Skill names in inventory do not prove which skills were used or unused; current matching is by operation category, not semantic understanding of arbitrary code.
+**Confirm collection first:** configured observers are not proof of observation. After setup, start a new native session, review hook trust when required, perform an ordinary task, and check Workflows for actual paired calls. See the [readiness audit](docs/AUDIT.md). Capabilities separates exact registered skill-file loads, explicit invocations and manual declarations. No observed use is not proof of non-use; command families are bounded static classifications, not semantic understanding of arbitrary code.
 
 ![Compact English widget — invented demo data](docs/screenshots/widget-en.png)
 ![Workflows — invented demo events](docs/screenshots/workflows-en.png)
@@ -86,3 +86,7 @@ A missing Codex daily bucket means **awaiting report**, not zero. Enable **Local
 The **− / ⌄** button collapses into the menu bar/compact strip; **×** quits Agent Pulse. Reopening a production app does not create another instance. Test fixtures are isolated and automatically closed.
 
 [Plugin and in-client integration feasibility](docs/INTEGRATIONS.md). No badge-in-every-desktop-chat plugin is included in this release.
+
+[New evidence contracts, command families and review packs](docs/EVIDENCE.md). Mac Analytics/Settings restore and focus the existing window on the active Space above ordinary windows.
+
+![Capabilities demo](docs/screenshots/capabilities-en.png)

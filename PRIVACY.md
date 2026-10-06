@@ -1,5 +1,9 @@
 # Privacy / Приватность
 
+0.5.0 adds bounded sanitized operation families/operators, result-source labels and reviewed capability IDs with loaded/invoked/declared counts. Skill-file locators are keyed hashes; literal paths and instructions never persist. Evidence packs remain private local exports, never automatically uploaded.
+
+В 0.5.0 добавлены очищенные семейства операций, источники результатов и проверенные ID навыков. Пути файлов — HMAC; инструкции не сохраняются. Пакеты доказательств остаются локальными, без автоматической отправки.
+
 Agent Pulse does not invoke models, submit prompts, upload metrics, read browser cookies, capture screens/microphones, modify native client settings or directly read native SQLite databases. It is not employee-monitoring software.
 
 Stored locally: daily numeric token counters (180 days), provider counter samples (90 days), optional sanitized tool category counts (30 days), bounded-event hashed cursor IDs, cumulative numeric baselines and manual billing dates. Hashes/cursors are local and are not uploaded. Deleting the own state directory after quitting resets this history; deleting the app alone does not remove state. Linux/Windows/macOS paths are in README. The OS user must protect this directory; POSIX modes are 700/600, while Windows uses inherited NTFS permissions and should be installed in a private user profile, not a shared/public folder.

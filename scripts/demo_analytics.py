@@ -15,8 +15,9 @@ def demo():
         j=Journal(tmp)
         try:
             for provider in ['codex','glm']:
+                j.import_inventory([dict(r) for r in j.db.execute('SELECT * FROM inventory')]+[{'provider':provider,'id':'verify-module','kind':'skill','category':'test','status':'configured','locator':'/invented/verify-module/SKILL.md'},{'provider':provider,'id':'local-checks','kind':'mcp','category':'test','status':'configured'}])
                 for n in range(3):
-                    for i,(tool,args) in enumerate([('Read',{'path':'module.py'}),('Edit',{'path':'module.py'}),('Bash',{'command':'python -m unittest discover'})]):
+                    for i,(tool,args) in enumerate([('Read',{'path':'/invented/verify-module/SKILL.md'}),('Edit',{'path':'module.py'}),('Bash',{'command':'python -m unittest discover'}),('Skill',{'skill':'verify-module'}),('mcp__local-checks__verify',{})]):
                         at=epoch-240+n*30+i*4
                         for event,dt in [('PreToolUse',0),('PostToolUse',1)]:
                             raw={'hook_event_name':event,'session_id':provider+str(n),'turn_id':str(n),'tool_use_id':str(i),'tool_name':tool,'tool_input':args,'cwd':'/invented/demo','timestamp':at+dt,'tool_response':{'exit_code':0},'model':'demo-model'}

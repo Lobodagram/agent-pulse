@@ -1,5 +1,13 @@
 # Analytics readiness audit · 2026-10-06
 
+## 0.5.0 update
+
+**7/10 against the primary analytics goal**: collection 6, bounded mechanics 8, capability attribution 6, effect evaluation 5, privacy 8, delivery 8. Engineering judgements, not certification. Representative reviewed real repeated tasks, completed ZCode shell outcomes and physical Windows acceptance remain missing. Synthetic precision is not production accuracy.
+
+115 tests and 14 invented labeled mechanics cases cover operation distinctions, strict outcomes, parallel/nested barriers, registered capability evidence, provider isolation, retention and review packs. [OpenAI native payload code](https://github.com/openai/codex/blob/main/codex-rs/core/src/tools/context.rs) can deliver stdout-only shell hook responses; those deliberately remain unknown. See [current evidence contracts](EVIDENCE.md).
+
+The 0.4.1 sections below are historical. Generic compound grouping and absent capability attribution are superseded by bounded families and registered evidence. Semantic code interpretation and universal non-use proof remain unavailable.
+
 [Русский](AUDIT.ru.md)
 
 The product's primary goal is evidence for improving agent workspaces, not a quota meter. Readiness must include a real event path, useful findings and verified effects of subsequent changes. Current status: **public preview; not yet a complete continuous agent-work analysis system**.

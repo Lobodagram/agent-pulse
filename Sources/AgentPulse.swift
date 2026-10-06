@@ -55,17 +55,20 @@ struct Snapshot: Codable {
 }
 struct EventCoverage: Codable, Identifiable {
     var provider: String; var state: String; var calls: Int; var pairedCalls: Int; var rejected: Int
+    var knownOutcomes: Int?; var unknownOutcomes: Int?; var collectionGaps: Int?
     var id: String { provider }
 }
 struct WorkflowFinding: Codable, Identifiable {
     var id: String; var provider: String; var kind: String; var title: String; var titleRu: String
     var suggestion: String; var suggestionRu: String; var occurrences: Int; var sessions: Int
     var sequence: [String]; var evidenceSessions: [String]?; var evidenceIds: [String]; var inventoryStatus: String; var confidence: String
+    var operations: [String]?; var sequenceBasis: String?
 }
 struct JournalCall: Codable, Identifiable {
     var id: String; var provider: String; var session: String; var tool: String; var category: String
     var template: String; var outcome: String; var durationMs: Double?; var durationSource: String
     var startedAt: Double?; var endedAt: Double?; var paired: Bool; var source: String; var turn_source: String
+    var outcomeSource: String?; var collectionIssue: String?
 }
 struct JournalSession: Codable, Identifiable {
     var id: String; var provider: String; var calls: Int; var failed: Int; var pending: Int; var paired: Int
@@ -74,6 +77,16 @@ struct JournalSession: Codable, Identifiable {
 struct AnalyticsReport: Codable {
     var calls: Int; var inventoryCount: Int; var eventLimitReached: Bool
     var coverage: [EventCoverage]; var findings: [WorkflowFinding]; var sessions: [JournalSession]; var recentCalls: [JournalCall]
+    var capabilities: [CapabilityStat]?; var toolUsage: [ToolStat]?
+}
+struct CapabilityStat: Codable {
+    var provider: String; var id: String; var kind: String; var status: String; var evidenceStatus: String
+    var loaded: Int; var invoked: Int; var declared: Int; var inventoryFresh: Bool
+    var identity: String { provider + "." + kind + "." + id }
+}
+struct ToolStat: Codable {
+    var provider: String; var tool: String; var calls: Int; var failed: Int; var unknown: Int; var pending: Int
+    var identity: String { provider + "." + tool }
 }
 func categoryText(_ code: String) -> String {
     let ru = ["read":"чтение", "search":"поиск", "edit":"изменение", "test":"проверка", "build":"сборка", "inspect":"осмотр", "remote":"внешний инструмент", "shell":"команда", "other":"прочее", "delegate":"делегирование", "environment":"среда"]
@@ -392,6 +405,7 @@ struct AnalysisView: View {
             Picker("View", selection: $tab) {
                 Text(tr("Overview", "Обзор")).tag("overview"); Text(tr("Workflows", "Сценарии")).tag("workflows")
                 Text(tr("Sessions", "Сессии")).tag("sessions"); Text(tr("Compare", "Сравнение")).tag("compare")
+                Text(tr("Capabilities", "Навыки")).tag("capabilities")
             }.pickerStyle(.segmented).labelsHidden()
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -400,6 +414,7 @@ struct AnalysisView: View {
                         else if let report = snapshot.analytics {
                             if tab == "workflows" { workflows(report) }
                             else if tab == "sessions" { sessions(report) }
+                            else if tab == "capabilities" { capabilities(report) }
                             else { comparison(report) }
                         } else { Text(tr("No event journal yet. Enable a local observer in Settings.", "Журнал ещё пуст. Включите локальный наблюдатель в настройках.")).foregroundStyle(quiet) }
                     }
@@ -408,6 +423,8 @@ struct AnalysisView: View {
             Text(tr("Local evidence · partial coverage · no model calls or per-tool token estimates", "Локальные данные · частичный охват · без вызовов моделей и оценки токенов каждого инструмента")).font(.system(size: 10)).foregroundStyle(quiet)
         }.padding(24).background(bg).foregroundStyle(ink).colorScheme(.dark)
         .onAppear {
+            let args = CommandLine.arguments
+            if store.isFixture, let i = args.firstIndex(of: "--analysis-tab"), i+1 < args.count, ["overview", "workflows", "sessions", "compare", "capabilities"].contains(args[i+1]) { tab = args[i+1] }
             if CommandLine.arguments.contains("--session-demo"), let first = store.snapshot?.analytics?.sessions.first { select(first) }
         }
     }
@@ -443,9 +460,34 @@ struct AnalysisView: View {
             ForEach(report.coverage) { c in
                 HStack { Text(c.provider.uppercased()).font(.system(size: 11, weight: .semibold, design: .monospaced)); Spacer(); Text(coverageText(c.state)).foregroundStyle(c.state == "receiving" ? mint : amber) }
                 Text("\(c.pairedCalls)/\(c.calls) " + tr("paired calls · ", "пар вызовов · ") + "\(c.rejected) " + tr("rejected events", "отклонённых событий")).font(.system(size: 10)).foregroundStyle(quiet)
+                if let known = c.knownOutcomes {
+                    Text("\(known) " + tr("known results · ", "известных результатов · ") + "\(c.unknownOutcomes ?? 0) " + tr("unknown · ", "неизвестных · ") + "\(c.collectionGaps ?? 0) " + tr("collection gaps", "пропусков сбора")).font(.system(size: 10)).foregroundStyle(quiet)
+                }
             }
             if report.eventLimitReached { Text(tr("Analysis limited to the latest 20,000 events", "Анализ ограничен последними 20 000 событиями")).foregroundStyle(amber) }
         }.font(.system(size: 11))
+    }
+    func capabilities(_ report: AnalyticsReport) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(tr("Read ≠ invoked ≠ manually declared. No observed use does not prove non-use.", "Чтение ≠ вызов ≠ ручная отметка. Отсутствие наблюдения не доказывает неиспользование.")).font(.system(size: 12)).foregroundStyle(quiet)
+            Text(tr("Reviewed skills and MCP", "Учтённые скиллы и MCP")).font(.system(size: 16, weight: .semibold))
+            if (report.capabilities ?? []).isEmpty { Text(tr("Scan or import a reviewed inventory first.", "Сначала отсканируйте или импортируйте проверенный каталог.")).foregroundStyle(quiet) }
+            ForEach(report.capabilities ?? [], id: \.identity) { row in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(row.provider.uppercased() + " · " + row.kind + " · " + row.id).font(.system(size: 12, design: .monospaced)).fixedSize(horizontal: false, vertical: true)
+                    Text("\(row.loaded) " + tr("loaded · ", "чтений · ") + "\(row.invoked) " + tr("invoked · ", "вызовов · ") + "\(row.declared) " + tr("declared", "отметок")).font(.system(size: 11)).foregroundStyle(mint)
+                    Text(row.status + (row.inventoryFresh ? "" : tr(" · inventory needs refresh", " · обновите каталог"))).font(.system(size: 10)).foregroundStyle(quiet)
+                }.padding(.vertical, 4)
+                Divider()
+            }
+            Text(tr("Observed tools", "Наблюдаемые инструменты")).font(.system(size: 16, weight: .semibold))
+            ForEach(report.toolUsage ?? [], id: \.identity) { row in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(row.provider.uppercased() + " · " + row.tool).font(.system(size: 12, design: .monospaced))
+                    Text("\(row.calls) " + tr("calls · ", "вызовов · ") + "\(row.failed) " + tr("failed · ", "ошибок · ") + "\(row.unknown) " + tr("unknown · ", "неизвестных · ") + "\(row.pending) " + tr("pending", "незавершённых")).font(.system(size: 11)).foregroundStyle(quiet)
+                }
+            }
+        }
     }
     func workflows(_ report: AnalyticsReport) -> some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -456,6 +498,7 @@ struct AnalysisView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack { Text(russian ? finding.titleRu : finding.title).font(.system(size: 15, weight: .semibold)); Spacer(); Text(finding.provider.uppercased()).font(.system(size: 10, design: .monospaced)).foregroundStyle(mint) }
                     if !finding.sequence.isEmpty { Text(finding.sequence.map(categoryText).joined(separator: " → ")).font(.system(size: 12, design: .monospaced)).foregroundStyle(mint) }
+                    if let operations = finding.operations { Text(operations.joined(separator: " → ")).font(.system(size: 10, design: .monospaced)).foregroundStyle(quiet).fixedSize(horizontal: false, vertical: true) }
                     Text("\(finding.occurrences) " + tr("occurrences · ", "повторов · ") + "\(finding.sessions) " + tr("sessions", "сессий")).font(.system(size: 11)).foregroundStyle(quiet)
                     Text(russian ? finding.suggestionRu : finding.suggestion).font(.system(size: 12))
                     Text(finding.inventoryStatus == "inventory_unknown" ? tr("Inventory unknown: no claim that a tool is missing", "Каталог неизвестен: отсутствие инструмента не установлено") : finding.inventoryStatus == "configured_unverified" ? tr("Candidate configured; live availability unverified", "Кандидат настроен; доступность не проверена") : tr("Category match requires manual review", "Совпадение категорий требует ручной проверки")).font(.system(size: 10)).foregroundStyle(amber)
@@ -512,6 +555,7 @@ struct AnalysisView: View {
         return
                     VStack(alignment: .leading, spacing: 4) {
                         HStack { Text(categoryText(call.category).uppercased()).font(.system(size: 10, weight: .bold)).foregroundStyle(evidence.contains(call.id) ? mint : quiet); Text(call.tool).font(.system(size: 11, design: .monospaced)); Spacer(); Text(outcomeText(call.outcome)).font(.system(size: 11)).foregroundStyle(call.outcome == "failed" ? amber : quiet) }
+                        if let source = call.outcomeSource { Text(tr("Result source: ", "Источник результата: ") + source + (call.collectionIssue.map { " · " + $0 } ?? "")).font(.system(size: 10)).foregroundStyle(quiet) }
                         Text(call.template).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
                         Text(metadata).font(.system(size: 10)).foregroundStyle(quiet)
                     }.padding(.vertical, 6)
@@ -696,13 +740,23 @@ final class FloatingPanel: NSPanel {
         store.expanded.toggle(); resizePanel()
     }
     @objc func openAnalysis() { showAnalysis() }
+    func presentUtilityWindow(_ window: NSWindow?) {
+        guard let window else { return }
+        // A click in the nonactivating widget must restore and focus its utility.
+        window.level = .floating
+        window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+        if window.isMiniaturized { window.deminiaturize(nil) }
+        window.orderFrontRegardless()
+        NSApp.activate(ignoringOtherApps: true)
+        DispatchQueue.main.async { window.makeKeyAndOrderFront(nil) }
+    }
     func showAnalysis() {
         if analysisWindow == nil {
             let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 620), styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
             w.title = tr("Agent Pulse · analytics", "Agent Pulse · аналитика"); w.isReleasedWhenClosed = false; w.minSize = NSSize(width: 620, height: 520)
             w.contentView = NSHostingView(rootView: AnalysisView(store: store)); w.center(); analysisWindow = w
         }
-        NSApp.activate(ignoringOtherApps: true); analysisWindow?.makeKeyAndOrderFront(nil)
+        presentUtilityWindow(analysisWindow)
     }
     @objc func openSettings() { showSettings() }
     func showSettings() {
@@ -711,7 +765,7 @@ final class FloatingPanel: NSPanel {
             w.title = tr("Agent Pulse · settings", "Agent Pulse · настройки"); w.isReleasedWhenClosed = false
             w.contentView = NSHostingView(rootView: SettingsView(store: store, actions: self)); w.center(); settingsWindow = w
         }
-        NSApp.activate(ignoringOtherApps: true); settingsWindow?.makeKeyAndOrderFront(nil)
+        presentUtilityWindow(settingsWindow)
     }
     func handleSnapshotArguments() {
         let args = CommandLine.arguments
@@ -727,6 +781,10 @@ final class FloatingPanel: NSPanel {
         if mode.hasPrefix("analysis") { showAnalysis() }
         if mode == "analysis-small" { analysisWindow?.setContentSize(NSSize(width: 620, height: 520)) }
         if mode == "settings" { showSettings() }
+        if mode == "window-focus", store.isFixture {
+            showAnalysis(); analysisWindow?.miniaturize(nil); showAnalysis()
+            showSettings(); settingsWindow?.orderOut(nil); showSettings()
+        }
         if mode == "menu-widget" { setDisplayMode("menu"); DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { self.statusClicked() } }
         if mode == "resize-check", store.isFixture {
             let grip = ResizeGrip.Grip(); grip.actions = self
@@ -746,7 +804,7 @@ final class FloatingPanel: NSPanel {
                 let before = panel.isVisible
                 self.hidePanel(); let hidden = !panel.isVisible
                 self.togglePanel(); let restored = panel.isVisible
-                let report: [String: Any] = ["view": mode, "panelWidth": panel.frame.width, "panelHeight": panel.frame.height, "floatingLevel": panel.level == .floating, "joinsAllSpaces": panel.collectionBehavior.contains(.canJoinAllSpaces), "fullScreenAuxiliary": panel.collectionBehavior.contains(.fullScreenAuxiliary), "movable": panel.isMovableByWindowBackground, "visibleBefore": before, "hidePassed": hidden, "restorePassed": restored, "statusItem": self.statusItem.button != nil, "fixtureMode": self.store.isFixture, "scale": self.store.widgetScale, "menuClickShowsPanel": mode == "menu-widget" && before, "menuTooltip": self.statusItem.button?.toolTip ?? "", "displayMode": self.store.displayMode, "menuTitle": self.statusItem.button?.title ?? "", "capturedSize": [w?.contentView?.bounds.width ?? 0, w?.contentView?.bounds.height ?? 0]]
+                let report: [String: Any] = ["view": mode, "utilityRestorePassed": mode != "window-focus" || (self.analysisWindow?.isVisible == true && self.analysisWindow?.isMiniaturized == false && self.settingsWindow?.isVisible == true), "utilityFocusPassed": mode != "window-focus" || (self.settingsWindow?.isKeyWindow == true && NSApp.isActive), "utilityPlacementPassed": mode != "window-focus" || (self.settingsWindow?.level == .floating && self.settingsWindow?.collectionBehavior.contains(.moveToActiveSpace) == true), "panelWidth": panel.frame.width, "panelHeight": panel.frame.height, "floatingLevel": panel.level == .floating, "joinsAllSpaces": panel.collectionBehavior.contains(.canJoinAllSpaces), "fullScreenAuxiliary": panel.collectionBehavior.contains(.fullScreenAuxiliary), "movable": panel.isMovableByWindowBackground, "visibleBefore": before, "hidePassed": hidden, "restorePassed": restored, "statusItem": self.statusItem.button != nil, "fixtureMode": self.store.isFixture, "scale": self.store.widgetScale, "menuClickShowsPanel": mode == "menu-widget" && before, "menuTooltip": self.statusItem.button?.toolTip ?? "", "displayMode": self.store.displayMode, "menuTitle": self.statusItem.button?.title ?? "", "capturedSize": [w?.contentView?.bounds.width ?? 0, w?.contentView?.bounds.height ?? 0]]
                 if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) {
                     try? data.write(to: URL(fileURLWithPath: path + ".json"))
                 }

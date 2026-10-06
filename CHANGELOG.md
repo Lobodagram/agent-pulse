@@ -1,5 +1,13 @@
 # Changelog / Изменения
 
+## 0.5.0 · 2026-10-06
+
+- Strict result provenance, structured exits, running-process states, conflicting-delivery reconciliation and collection gaps.
+- Bounded compound-command families; parallel/nested/failed/pending calls break sequences; tool frequencies and cross-client candidates.
+- Capability evidence separates registered skill loads, explicit invocations and declarations; inventory freshness and local CLI/MCP review packs.
+- Mac Analytics/Settings restore and focus the existing window above ordinary windows on the active Space.
+- 115 tests and 14 invented labeled mechanics cases; no full coverage, exact per-tool billing or savings claim.
+
 ## 0.4.1 · 2026-10-06
 
 - Directory-based observer runtime removes per-event extraction; packaged hooks must pass the native two-second deadline.

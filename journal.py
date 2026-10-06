@@ -56,26 +56,8 @@ def timestamp(raw,now):
     if raw.get('timestamp',raw.get('at')) is not None and (v is None or not now-31*86400<=v<=now+60):raise ValueError('invalid_event_time')
     return v if v is not None else now
 
-def command_shape(command):
-    if not isinstance(command,str) or len(command)>32768:return 'shell', 'shell <unparsed>'
-    if any(x in command for x in ['\n','&&','||',';','`','$(','<<','>','|']):return 'shell', 'shell <compound>'
-    try:tokens=shlex.split(command)
-    except ValueError:return 'shell','shell <unparsed>'
-    if not tokens:return 'shell','shell <empty>'
-    exe=Path(tokens[0]).name
-    known={'python','python3','pytest','npm','pnpm','bun','cargo','swiftc','git','rg','grep','cat','sed','head','tail','which','sw_vers','node','build.sh'}
-    if exe not in known:return 'shell','shell <command>'
-    words={'-m','unittest','pytest','discover','test','run','build','status','diff','log','show','rev-parse','--version','-s','-v','-q','-n','--files','-c','--check','--stat','install'}
-    template=' '.join([exe]+[v if v in words else '<arg>' for v in tokens[1:20]])
-    if exe=='pytest' or exe in {'python','python3'} and len(tokens)>2 and tokens[1:3] in [['-m','unittest'],['-m','pytest']]:kind='test'
-    elif exe in {'npm','pnpm','bun'} and 'test' in tokens[1:3]:kind='test'
-    elif exe=='swiftc' or exe=='build.sh' or exe=='cargo' and tokens[1:2]==['build'] or exe in {'npm','pnpm','bun'} and 'build' in tokens[1:3]:kind='build'
-    elif exe=='git' and tokens[1:2] and tokens[1] in {'status','diff','log','show','rev-parse'}:kind='inspect'
-    elif exe in {'rg','grep'}:kind='search'
-    elif exe in {'cat','sed','head','tail'}:kind='read'
-    elif '--version' in tokens or exe in {'which','sw_vers'}:kind='environment'
-    else:kind='shell'
-    return kind,template
+from command_profile import command_shape, profile
+from result_metadata import classify
 
 def category(tool,args):
     name=tool.lower()
@@ -88,28 +70,8 @@ def category(tool,args):
     return command_shape(command)[0] if command else 'shell' if any(x in name for x in ['bash','shell','exec']) else 'other'
 
 def outcome(event,raw):
-    if event=='PostToolUseFailure':return 'failed',None
-    if event!='PostToolUse':return 'unknown',None
-    response=raw.get('tool_response',raw.get('toolResponse'))
-    code=None;failed=None
-    tool=safe_name(raw.get('tool_name',raw.get('toolName'))).lower()
-    shell=tool in {'bash','shell','exec_command','functions.exec_command','functions.exec','exec'}
-    if isinstance(response,dict):
-        if any(response.get(k) is True for k in ['isError','is_error','failed']):failed=True
-        for k in ['exit_code','exitCode']:
-            v=response.get(k)
-            if isinstance(v,int) and not isinstance(v,bool) and -255<=v<=255:code=v;break
-        if code is None and shell:
-            # Native MCP text wrappers can contain a JSON result or a shell exit marker.
-            for block in (response.get('content') or [])[:10] if isinstance(response.get('content'),list) else []:
-                text=block.get('text') if isinstance(block,dict) else None
-                if isinstance(text,str):
-                    m=re.search(r'(?:"exit_code"\s*:\s*|Process exited with code\s+)(-?\d{1,3})\b',text[:128*1024])
-                    if m:code=int(m.group(1));break
-    if failed:return 'failed',code
-    if code is not None:return ('success' if code==0 else 'failed'),code
-    # A completed shell tool can still mean an ongoing process. Do not invent exit status.
-    return ('unknown' if shell else 'success'),None
+    status,code,_=classify(event,raw,safe_name(raw.get('tool_name',raw.get('toolName'))))
+    return status,code
 
 class Journal:
     def __init__(self,state):
@@ -158,6 +120,10 @@ class Journal:
         CREATE TABLE IF NOT EXISTS annotation(session TEXT PRIMARY KEY, label TEXT, outcome TEXT, variant TEXT, observed REAL);
         CREATE TABLE IF NOT EXISTS turn_usage(provider TEXT,session TEXT,turn TEXT,input REAL,cached_input REAL,
           output REAL,source TEXT,at REAL,PRIMARY KEY(provider,session,turn,source));
+        CREATE TABLE IF NOT EXISTS call_metadata(event TEXT PRIMARY KEY, signature TEXT, outcome_source TEXT);
+        CREATE TABLE IF NOT EXISTS capability_locator(provider TEXT,id TEXT,locator TEXT,PRIMARY KEY(provider,id,locator));
+        CREATE TABLE IF NOT EXISTS capability_evidence(provider TEXT,session TEXT,turn TEXT,call TEXT,
+          id TEXT,kind TEXT,evidence TEXT,at REAL,PRIMARY KEY(provider,session,call,id,evidence));
         ''')
         self.db.commit()
     def close(self):self.db.close()
@@ -207,7 +173,7 @@ class Journal:
                 if cwd and target.resolve().is_relative_to(Path(cwd).resolve()) and not target.is_symlink():
                     st=target.stat();revision=self.digest('revision',[st.st_mtime_ns,st.st_size])
             except (OSError,ValueError):pass
-        status,code=outcome(event,raw)
+        status,code,osource=classify(event,raw,tool)
         duration=number(raw.get('durationMs',raw.get('duration_ms')))
         if duration is not None and duration>86400000:duration=None
         duration_source='native' if duration is not None else 'unknown'
@@ -215,6 +181,25 @@ class Journal:
         values=(eid,provider,session,turn,project,actor,call,phase,at,now,tool,kind,fingerprint,template,resource,revision,status,code,duration,duration_source,safe_name(source),turn_source,safe_name(raw.get('model')))
         # Retry deliveries deduplicate. Hook and historical projection remain distinct; no claims of complete coverage.
         self.db.execute('INSERT OR IGNORE INTO observation VALUES ('+','.join('?' for _ in values)+')',values)
+        p=profile(command) if command else None
+        signature='unknown' if p and (not p['operations'] or any(o['family']=='unknown' for o in p['operations'])) else (
+            ' '.join(o['category']+'.'+o['family']+(' '+p['operators'][i] if i<len(p['operators']) else '')
+                     for i,o in enumerate(p['operations'])) if p else kind)
+        self.db.execute('INSERT OR IGNORE INTO call_metadata VALUES (?,?,?)',(eid,signature,osource))
+        if phase=='finish':
+            previous=self.db.execute('SELECT outcome,exit_code,at,outcome_source FROM observation JOIN call_metadata ON observation.id=call_metadata.event WHERE id=?',(eid,)).fetchone()
+            if previous and at>=previous['at']:
+                if previous['outcome']=='unknown' and previous['outcome_source']!='conflicting-deliveries' and status in {'success','failed'}:
+                    self.db.execute('UPDATE observation SET outcome=?,exit_code=?,at=?,received=?,duration_ms=?,duration_source=? WHERE id=?',
+                                    (status,code,at,now,duration,duration_source,eid))
+                    self.db.execute('UPDATE call_metadata SET outcome_source=? WHERE event=?',(osource,eid))
+                elif previous['outcome'] in {'success','failed'} and status in {'success','failed'} and (previous['outcome']!=status or previous['exit_code']!=code):
+                    self.db.execute('UPDATE observation SET outcome=?,exit_code=NULL WHERE id=?',('unknown',eid))
+                    self.db.execute('UPDATE call_metadata SET outcome_source=? WHERE event=?',('conflicting-deliveries',eid))
+        if istool and phase=='finish':
+            stored=self.db.execute('SELECT outcome FROM observation WHERE id=?',(eid,)).fetchone()
+            if stored and stored['outcome']=='success':self.observe_capabilities(provider,session,turn,call,tool,args,cwd,at)
+            else:self.db.execute("DELETE FROM capability_evidence WHERE provider=? AND session=? AND call=? AND evidence!='declared'",(provider,session,call))
         self.db.execute('INSERT INTO health(provider,last_event,rejected) VALUES (?,?,0) ON CONFLICT(provider) DO UPDATE SET last_event=max(coalesce(last_event,0),excluded.last_event)',(provider,now))
         if event in {'Stop','Interrupt','SessionEnd'}:self.db.execute('DELETE FROM live_turn WHERE session=?',(lane,))
         self.db.commit()
@@ -235,19 +220,60 @@ class Journal:
         label=safe_name(label);variant=safe_name(variant)
         if label=='other' or variant=='other':raise ValueError('use_non_sensitive_slug')
         self.db.execute('INSERT OR REPLACE INTO annotation VALUES (?,?,?,?,?)',(session,label,outcome,variant,time.time()));self.db.commit()
+    def locator(self,path,cwd=''):
+        # Lexical path normalization only; no skill content or symlink target reads.
+        if not isinstance(path,str) or not path or len(path)>4096:return None
+        return self.digest('capability-location',os.path.normcase(os.path.abspath(os.path.join(cwd,path))))
+    def observe_capabilities(self,provider,session,turn,call,tool,args,cwd,at):
+        args=args if isinstance(args,dict) else {}
+        entries=self.db.execute('SELECT id,kind FROM inventory WHERE provider=?',(provider,)).fetchall()
+        path=args.get('file_path',args.get('path'))
+        loc=self.locator(path,cwd) if tool.lower() in {'read','read_file','cat_file'} else None
+        loaded={r['id'] for r in self.db.execute('SELECT id FROM capability_locator WHERE provider=? AND locator=?',(provider,loc))} if loc else set()
+        explicit=args.get('skill',args.get('skill_name',args.get('name'))) if tool.lower() in {'skill','use_skill'} else None
+        for entry in entries:
+            name,kind=entry['id'],entry['kind'];evidence=None
+            if kind=='skill':
+                if explicit==name:evidence='invoked'
+                elif name in loaded:evidence='loaded'
+            elif kind=='mcp' and tool.startswith('mcp__'+name+'__'):evidence='invoked'
+            elif kind=='tool' and tool==name:evidence='invoked'
+            if evidence:
+                self.db.execute('INSERT OR IGNORE INTO capability_evidence VALUES (?,?,?,?,?,?,?,?)',
+                                (provider,session,turn,call,name,kind,evidence,at))
+    def declare_capability(self,provider,session,name,kind):
+        if not isinstance(session,str) or not re.fullmatch('[a-f0-9]{32}',session):raise ValueError('invalid_session')
+        if not self.db.execute('SELECT 1 FROM observation WHERE provider=? AND session=?',(provider,session)).fetchone():raise ValueError('unknown_session')
+        if not self.db.execute('SELECT 1 FROM inventory WHERE provider=? AND id=? AND kind=?',(provider,name,kind)).fetchone():raise ValueError('unknown_capability')
+        self.db.execute('INSERT OR REPLACE INTO capability_evidence VALUES (?,?,?,?,?,?,?,?)',
+                        (provider,session,'manual','',name,kind,'declared',time.time()));self.db.commit()
     def import_inventory(self,raw):
         if not isinstance(raw,list) or len(raw)>1000:raise ValueError('invalid_inventory')
-        entries=[]
+        entries=[];locators=[]
         for r in raw:
             if not isinstance(r,dict) or r.get('provider') not in PROVIDERS or r.get('kind') not in {'skill','tool','mcp'} or r.get('category') not in CATEGORIES or r.get('status') not in {'available','configured','disabled','unavailable'}:raise ValueError('invalid_inventory')
             name=safe_name(r.get('id'))
             if name=='other':raise ValueError('invalid_inventory_name')
             entries.append((r['provider'],name,r['kind'],r['category'],r['status'],number(r.get('observed')) or time.time()))
-        self.db.execute('DELETE FROM inventory');self.db.executemany('INSERT OR REPLACE INTO inventory VALUES (?,?,?,?,?,?)',entries);self.db.commit()
+            if r.get('locator') is not None:
+                if r['kind']!='skill' or not isinstance(r['locator'],str) or not os.path.isabs(r['locator']):raise ValueError('invalid_locator')
+                locator=self.locator(r['locator'])
+                if not locator:raise ValueError('invalid_locator')
+                locators.append((r['provider'],name,locator))
+        # A provider-only rescan preserves peers' existing hashed bindings.
+        peers={(e[0],e[1]) for e in entries}
+        old=[tuple(r) for r in self.db.execute('SELECT provider,id,locator FROM capability_locator') if (r['provider'],r['id']) in peers and not any(x[:2]==(r['provider'],r['id']) for x in locators)]
+        self.db.execute('DELETE FROM inventory');self.db.executemany('INSERT OR REPLACE INTO inventory VALUES (?,?,?,?,?,?)',entries)
+        self.db.execute('DELETE FROM capability_locator');self.db.executemany('INSERT OR IGNORE INTO capability_locator VALUES (?,?,?)',locators+old);self.db.commit()
     def calls(self,session=None,days=30):
         args=[time.time()-days*86400];where='received>=?'
         if session:where+=' AND session=?';args.append(session)
-        rows=self.db.execute('SELECT * FROM observation WHERE '+where+' ORDER BY received DESC LIMIT 20000',args).fetchall()
+        rows=self.db.execute('SELECT observation.*,call_metadata.signature,call_metadata.outcome_source FROM observation LEFT JOIN call_metadata ON observation.id=call_metadata.event WHERE '+where+' ORDER BY received DESC LIMIT 20000',args).fetchall()
+        boundaries={}
+        for r in rows:
+            if r['phase'] in {'Stop','Interrupt','SessionEnd'}:
+                key=(r['provider'],r['session'],r['actor'])
+                boundaries[key]=max(boundaries.get(key,0),r['at'])
         paired={}
         for r in rows:
             if not r['call']:continue
@@ -262,6 +288,9 @@ class Journal:
             result.append({k:r[k] for k in ['provider','session','turn','project','actor','call','tool','category','fingerprint','template','resource','revision','source','turn_source','model']} | {
                 'id':r['call'],'startedAt':start['at'] if start else None,'endedAt':end['at'] if end else None,
                 'outcome':status,'exitCode':end['exit_code'] if end else None,'durationMs':duration,'durationSource':dsource,
+                'operation':r['signature'] or 'legacy','outcomeSource':end['outcome_source'] or 'legacy' if end else 'not-finished',
+                'collectionIssue':('missing-finish-after-boundary' if boundaries.get((r['provider'],r['session'],r['actor']),0)>=r['at'] else
+                                   'stale-unpaired' if time.time()-r['received']>600 else 'awaiting-finish') if not end else 'missing-start' if not start else None,
                 'evidence':[v['id'] for v in [start,end] if v], 'paired':bool(start and end)})
         return sorted(result,key=lambda x:x['startedAt'] or x['endedAt'] or 0)
     def prune(self):
@@ -271,6 +300,9 @@ class Journal:
         self.db.execute('DELETE FROM annotation WHERE session NOT IN (SELECT session FROM observation)')
         self.db.execute('DELETE FROM live_turn WHERE turn NOT IN (SELECT DISTINCT turn FROM observation)')
         self.db.execute('DELETE FROM observation WHERE id IN (SELECT id FROM observation ORDER BY received DESC LIMIT -1 OFFSET ?)',(MAX_EVENTS,))
+        self.db.execute('DELETE FROM call_metadata WHERE event NOT IN (SELECT id FROM observation)')
+        self.db.execute('DELETE FROM capability_evidence WHERE at<? OR session NOT IN (SELECT session FROM observation)',(cutoff,))
+        self.db.execute('DELETE FROM capability_evidence WHERE rowid IN (SELECT rowid FROM capability_evidence ORDER BY at DESC LIMIT -1 OFFSET ?)',(MAX_EVENTS,))
         self.db.commit()
         self.db.execute('PRAGMA wal_checkpoint(PASSIVE)')
     def stats(self):

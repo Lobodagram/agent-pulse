@@ -1,6 +1,10 @@
 # Verification — 2026-10-06 / Проверка
 
-## Current: 0.4.1 analytics audit
+## 0.5.0 local verification
+
+115 unit tests pass. Fourteen invented labeled mechanics cases pass (5 expected positive kinds, 0 false positives/misses within this suite only). Mac 15-case own-widget checks pass, including restoring minimized Analytics, hidden Settings, application focus and active-Space/floating placement flags. Real multi-display/fullscreen/DPI and sustained native outcomes remain incomplete.
+
+## Historical: 0.4.1 analytics audit
 
 83 tests passed locally and in [Checks 37462875308](https://github.com/Lobodagram/agent-pulse/actions/runs/37462875308) on Linux/macOS/Windows (one POSIX-only Windows skip). [Release packages 37463258460](https://github.com/Lobodagram/agent-pulse/actions/runs/37463258460) passed Mac ARM64/Intel and Windows x64, including actual two-second frozen hook deadlines and native demo UI checks. All three [0.4.1 archives](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.4.1) were downloaded and matched SHA256SUMS; directory runtimes and license notices were present. Downloaded ARM64 passed strict/deep signature verification, synthetic hook → journal → MCP and the 14-case own-widget matrix. Local directory-runtime observer starts measured 0.065–0.145 seconds, versus 6.179–6.981 seconds for the previous one-file package on the same Mac.
 

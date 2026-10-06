@@ -4,11 +4,16 @@ from pathlib import Path
 from analytics import report, compare
 from journal import Journal, atomic_json
 from instrumentation import configure_hooks, scan_inventory
+from evidence_pack import evidence_pack
 
 def run(args):
     j=Journal(args.state)
     try:
         if args.action=='report':return report(j)
+        if args.action=='evidence':
+            result=evidence_pack(j,args.finding)
+            if args.file:atomic_json(args.file,result);return {'saved':True,'localOnly':True}
+            return result
         if args.action=='session':
             import re
             if not isinstance(args.session,str) or not re.fullmatch('[a-f0-9]{32}',args.session):raise ValueError('invalid_session')
@@ -24,6 +29,9 @@ def run(args):
             j.import_inventory(current+data);return {'saved':True,'entries':len(data),'availability':'configured, not live verified'}
         if args.action=='annotate':
             j.annotate(args.session,args.label,args.outcome,args.variant);return {'saved':True}
+        if args.action=='declare':
+            j.declare_capability(args.provider,args.session,args.capability,args.kind)
+            return {'saved':True,'evidence':'manual declaration, not native invocation'}
         if args.action=='compare':return compare(j,args.label,args.before,args.after)
         if args.action=='export':
             if not args.file:raise ValueError('missing_file')

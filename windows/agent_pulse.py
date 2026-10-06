@@ -285,13 +285,23 @@ class Pulse:
         def textview(f,lines):
             t=tk.Text(f,bg=BG,fg=FG,wrap='word',font=('Consolas',11));scroll=ttk.Scrollbar(f,command=t.yview);t.configure(yscrollcommand=scroll.set);scroll.pack(side='right',fill='y');t.pack(expand=True,fill='both',padx=8,pady=8);t.insert('1.0','\n'.join(str(x) for x in lines));t.configure(state='disabled');return t
         overview=page(self.t('Overview','Обзор'));workflows=page(self.t('Workflows','Сценарии'));sessions=page(self.t('Sessions','Сессии'));comparison=page(self.t('Compare','Сравнение'))
+        capabilities=page(self.t('Capabilities','Навыки'))
         report=self.data.get('analytics',{});lines=[self.t('Tokens, quotas and billing dates are separate. Missing is unknown.','Токены, лимиты и даты оплаты различаются. Пропуск неизвестен.'),'']
         for p in self.data.get('providers',[]):
             lines += [p['name']+' · '+p['status'],self.t('Tokens today: ','Токены сегодня: ')+str(p.get('todayTokens')),p.get('tokenCoverage',''),'']
         for d in self.data.get('history',[]):lines.append(f"{d['date']}  {d['provider']:10}  {d['tokens']:>12,.0f}")
         lines+=['',self.t('OBSERVED COVERAGE','НАБЛЮДАЕМЫЙ ОХВАТ')]
-        for c in report.get('coverage',[]):lines.append(f"{c['provider']}: {c['state']} · {c['pairedCalls']}/{c['calls']} · rejected {c['rejected']}")
+        for c in report.get('coverage',[]):
+            lines.append(f"{c['provider']}: {c['state']} · {c['pairedCalls']}/{c['calls']} · rejected {c['rejected']}")
+            lines.append(self.t('Known results / unknown / collection gaps: ','Результат известен / неизвестен / пропуски: ')+f"{c.get('knownOutcomes','—')} / {c.get('unknownOutcomes','—')} / {c.get('collectionGaps','—')}")
         textview(overview,lines)
+        lines=[self.t('Read ≠ invoked ≠ declared. No observation does not prove non-use.','Чтение ≠ вызов ≠ отметка. Отсутствие наблюдения не доказывает неиспользование.'),'']
+        for r in report.get('toolUsage',[]):
+            lines.append(f"{r['provider']} · {r['tool']} · {r['calls']} "+self.t('calls','вызовов')+f" · {r['failed']} failed · {r['unknown']} unknown · {r['pending']} pending")
+        lines+=['',self.t('REVIEWED SKILLS AND MCP','УЧТЁННЫЕ СКИЛЛЫ И MCP')]
+        for r in report.get('capabilities',[]):
+            lines += [f"{r['provider']} · {r['kind']} · {r['id']}",f"{r['loaded']} "+self.t('loaded','чтений')+f" · {r['invoked']} "+self.t('invoked','вызовов')+f" · {r['declared']} "+self.t('declared','отметок'),r['status']+('' if r['inventoryFresh'] else self.t(' · refresh inventory',' · обновите каталог')),'']
+        textview(capabilities,lines)
         tk.Label(workflows,text=self.t('Suggestions need review; repeated does not mean waste.','Предложения требуют проверки; повтор не доказывает лишнюю работу.'),bg=BG,fg=QUIET,wraplength=670).pack(anchor='w',padx=8,pady=8)
         finder=ttk.Treeview(workflows,columns=('provider','repeats'),show='tree headings',height=7);finder.heading('#0',text=self.t('Workflow','Сценарий'));finder.heading('provider',text=self.t('Client','Клиент'));finder.heading('repeats',text=self.t('Occurrences','Повторы'));finder.column('provider',width=90,stretch=False);finder.column('repeats',width=80,stretch=False);finder.pack(fill='x',padx=8)
         findings=report.get('findings',[])
@@ -300,7 +310,7 @@ class Pulse:
         def finding_selected(_):
             if not finder.selection():return
             r=findings[int(finder.selection()[0])];calls=[c for c in report.get('recentCalls',[]) if c['id'] in r['evidenceIds']]
-            lines=[r['suggestionRu'] if self.language=='ru' else r['suggestion'],' → '.join(r['sequence']),r['inventoryStatus'],self.t('No per-tool token estimate.','Токены каждому инструменту не приписываются.'),'']+[f"{c['tool']} · {c['template']} · {c['outcome']} · {c['durationMs']} ms" for c in calls]
+            lines=[r['suggestionRu'] if self.language=='ru' else r['suggestion'],' → '.join(r['sequence']),' → '.join(r.get('operations',[])),r['inventoryStatus'],self.t('No per-tool token estimate.','Токены каждому инструменту не приписываются.'),'']+[f"{c['tool']} · {c['template']} · {c['outcome']} · {c['durationMs']} ms · {c.get('outcomeSource','legacy')}" for c in calls]
             if not calls:lines.append(self.t('Use local MCP/CLI for evidence outside recent preview.','Примеры вне свежего списка доступны через локальный MCP/CLI.'))
             info.configure(state='normal');info.delete('1.0','end');info.insert('1.0','\n'.join(lines));info.configure(state='disabled')
         finder.bind('<<TreeviewSelect>>',finding_selected)
