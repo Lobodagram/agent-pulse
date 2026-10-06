@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0 — 2026-10-06
+
+- Persistent Limits / Today widget switch on macOS and Windows; daily tokens never substituted by week/context totals. Menu/tray summaries retain quotas.
+- Opt-in personal Z.ai Coding Plan quota adapter with masked own-state key entry/removal, five-hour/week remaining percentages, native reset times and no monthly MCP confusion. No native credentials extracted; configured-key scope is explicit; live verification awaits user connection.
+- Переключатель «Лимиты / Сегодня», безопасное подключение личного ключа GLM, честные неизвестные значения.
+
 ## 0.7.2 — 2026-10-06
 
 - Equal-window finding rechecks use the same detection/ranking/overlap rules with summary-only cards; no unnecessary inventory/capability SQL or display metadata. Separate windows are still evaluated separately.

@@ -237,7 +237,7 @@ def collect_codex(day, config=None, read_patterns=False, quota_only=False, direc
         if rpc:rpc.close()
 
 
-def collect_glm(day, config=None):
+def collect_glm(day, config=None, directory=None):
     config=config or {}
     NODE=config.get('nodePath') or find_node()
     ZENTRY,ZBUILTIN=zcode_paths(config)
@@ -261,6 +261,11 @@ def collect_glm(day, config=None):
         base['sourceStatus']=[str(e) if isinstance(e,Unavailable) else 'runtime_unavailable']
     finally:
         if rpc:rpc.close()
+    import glm_quota
+    quota=glm_quota.collect(directory or DEFAULT_STATE)
+    base.update(quota)
+    base['sourceStatus'].append('glm_quota_'+quota['quotaStatus'])
+    if quota['quotaStatus']=='ready':base['status']='ready'
     return base
 
 
@@ -492,7 +497,7 @@ def snapshot(directory, collect_patterns=None):
     items=[];threads=[]
     def fetch(ident):
         if ident=='codex': return collect_codex(day,config,collect_patterns,directory=directory,read_local_tokens=collect_tokens)
-        if ident=='glm': return collect_glm(day,config),[]
+        if ident=='glm': return collect_glm(day,config,directory),[]
         return adapters.collect_extra(ident,directory,config),[]
     with ThreadPoolExecutor(max_workers=4) as pool:
         results=list(pool.map(fetch,enabled))
@@ -503,7 +508,7 @@ def snapshot(directory, collect_patterns=None):
         elif item['status']=='unavailable':
             cached=store.latest(item['id'])
             # Never reuse an account-specific Codex cache when current identity is unknown/mismatched.
-            if item['id']=='codex' and (not item.get('accountScope') or not cached or cached.get('accountScope')!=item['accountScope']):cached=None
+            if item['id'] in ('codex','glm') and (not item.get('accountScope') or not cached or cached.get('accountScope')!=item['accountScope']):cached=None
             if cached:
                 errors=item.get('sourceStatus',[]);item.update(cached);item['sourceStatus']=errors+['cached_previous_read']
                 if item.get('measurementDay')!=day:item['todayTokens']=None
@@ -539,6 +544,7 @@ def main():
     q=sub.add_parser('subscription');q.add_argument('--provider',choices=sorted(adapters.IDS),required=True);q.add_argument('--date',default='');q.add_argument('--kind',choices=['renewal','expiry','none'],required=True)
     sub.add_parser('catalog')
     sub.add_parser('limits')
+    sub.add_parser('glm-key',help='Save/remove own Coding Plan key from bounded JSON on stdin; never use command-line key arguments')
     c=sub.add_parser('configure');c.add_argument('--providers',required=True);c.add_argument('--local-patterns',choices=['on','off'],default='off');c.add_argument('--local-tokens',choices=['on','off'])
     i=sub.add_parser('ingest');i.add_argument('--provider',choices=sorted(adapters.IDS),required=True);i.add_argument('--file',type=Path,required=True)
     h=sub.add_parser('hook');h.add_argument('--provider',choices=sorted(journal.PROVIDERS),required=True)
@@ -564,7 +570,12 @@ def main():
         return
     if a.command=='mcp':mcp_server.serve(a.state);return
     try:
-        if a.command=='journal':result=journal_cli.run(a)
+        if a.command=='glm-key':
+            import glm_quota
+            body=sys.stdin.buffer.read(8193)
+            if len(body)>8192:raise ValueError('oversize')
+            result=glm_quota.save_key(a.state,json.loads(body).get('key'))
+        elif a.command=='journal':result=journal_cli.run(a)
         elif a.command=='hooks':result=instrumentation.configure_hooks(a.provider,a.state,a.action=='install')
         elif a.command=='subscription':
             s=Store(a.state);s.set_subscription(a.provider,a.date,a.kind);s.db.close();result={'saved':True}

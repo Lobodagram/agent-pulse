@@ -10,16 +10,19 @@ with tempfile.TemporaryDirectory() as tmp:
     bundle=Path(tmp)/'AgentPulseFixture.app';shutil.copytree(binary.parents[2],bundle)
     info=bundle/'Contents/Info.plist';settings=plistlib.loads(info.read_bytes());settings['CFBundleIdentifier']='app.agentpulse.widgetsmoke';info.write_bytes(plistlib.dumps(settings))
     subprocess.run(['codesign','--force','--sign','-',str(bundle)],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-    for mode,width,height in [('compact',288,216),('expanded',288,344),('resize-check',348,261),('menu-widget',288,216),('menu-bar',288,216),('menu-next',288,216),('menu-timer',288,216),('menu-active',288,216),('menu-fallback',288,216),('two-quotas',288,216),('expanded-two-quotas',288,344),('pending',288,216),('compact-en',288,216),('single-instance',288,216),('window-focus',288,216)]:
+    for mode,width,height in [('compact',288,216),('expanded',288,344),('resize-check',348,261),('menu-widget',288,216),('menu-bar',288,216),('menu-next',288,216),('menu-timer',288,216),('menu-active',288,216),('menu-fallback',288,216),('two-quotas',288,216),('expanded-two-quotas',288,344),('pending',288,216),('compact-en',288,216),('single-instance',288,216),('window-focus',288,216),('today',288,216),('today-en',288,216),('today-two-quotas',288,216),('today-pending',288,216),('glm-menu-quotas',288,216)]:
         out=Path(tmp)/(mode+'.png')
         data=json.loads(fixture.read_text())
-        if mode in ('two-quotas','expanded-two-quotas'):data['providers'][1]['quotas']=data['providers'][0]['quotas']
-        if mode=='pending':data['providers'][0].update(todayTokens=None,todayTokenStatus='account-day-pending')
+        if mode in ('two-quotas','expanded-two-quotas','today-two-quotas','glm-menu-quotas'):data['providers'][1]['quotas']=data['providers'][0]['quotas']
+        if mode in ('pending','today-pending'):data['providers'][0].update(todayTokens=None,todayTokenStatus='account-day-pending')
         demo.write_text(json.dumps(data))
         view='menu-bar' if mode in ('menu-next','menu-timer','menu-active','menu-fallback') else 'expanded' if mode=='expanded-two-quotas' else mode if mode not in ('two-quotas','pending','compact-en','single-instance') else 'compact'
+        if mode.startswith('today') or mode=='glm-menu-quotas':view='compact' if mode.startswith('today') else 'menu-bar'
         ready=Path(tmp)/(mode+'.ready')
         executable=bundle/'Contents/MacOS/AgentPulse'
-        args=[str(executable),'--fixture',str(demo),'--language','en' if mode=='compact-en' else 'ru','--scale','.8','--view',view,'--snapshot',str(out),'--ready-file',str(ready)]
+        args=[str(executable),'--fixture',str(demo),'--language','en' if mode in ('compact-en','today-en') else 'ru','--scale','.8','--metric-mode','limits','--view',view,'--snapshot',str(out),'--ready-file',str(ready)]
+        if mode.startswith('today'):args[args.index('--metric-mode')+1]='today'
+        if mode=='glm-menu-quotas':args+=['--menu-only','--status-page','1']
         if mode.startswith('menu'):args.append('--menu-only')
         # Focus/restore is a window test, independent of GPU chart rendering.
         # Set the initial tab before view construction on headless Intel runners.
@@ -58,6 +61,8 @@ with tempfile.TemporaryDirectory() as tmp:
             assert r['menuTitle'].startswith('GLM —') and '/' not in r['menuTitle'],r
             assert 'CODEX 5ч' in r['menuTooltip'] and 'GLM —' in r['menuTooltip'],r
         if mode=='menu-bar':assert r['menuTitle'].startswith('CODEX 5ч') and 'GLM' not in r['menuTitle'] and '/' not in r['menuTitle'],r
+        if mode.startswith('today'):assert r['metricMode']=='today',r
+        if mode=='glm-menu-quotas':assert r['menuTitle'].startswith('GLM 5ч') and '7д' in r['menuTitle'],r
         assert r['hidePassed'] and r['restorePassed'],r
         if mode=='window-focus':assert r['utilityRestorePassed'] and r['utilityFocusPassed'] and r['utilityPlacementPassed'],r
         if destination:

@@ -41,6 +41,8 @@ class Pulse:
         self.page_label=tk.Label(self.footer,bg=BG,fg=QUIET);self.page_label.pack(side='left')
         tk.Button(self.footer,text='›',command=lambda:self.change_page(1),bg=BG,fg=MINT,bd=0).pack(side='left')
         self.status=tk.Label(self.footer,text='Loading…',bg=BG,fg=QUIET,font=('Segoe UI',9));self.status.pack(side='right')
+        self.metric_mode='limits' if fixture else ('today' if providers.load_config(self.state).get('metricMode')=='today' else 'limits')
+        self.metric_button=tk.Button(self.footer,text='',command=self.toggle_metric,bg=BG,fg=MINT,bd=0);self.metric_button.pack(side='left')
         self.scale=1.0
         if not fixture:
             value=providers.load_config(self.state).get('widgetScale',1)
@@ -54,6 +56,11 @@ class Pulse:
         root.protocol('WM_DELETE_WINDOW',self.quit)
         if not fixture:self.set_display_mode(providers.load_config(self.state).get('displayMode','floating'),save=False)
         self.auth_marks=self.authentication_metadata();self.refresh();root.after(5000,self.check_authentication);root.after(100,self.poll);root.after(300000,self.periodic);root.after(60000,self.limits);root.after(8000,self.rotate_compact)
+    def toggle_metric(self):
+        self.metric_mode='today' if self.metric_mode=='limits' else 'limits'
+        if not self.fixture:
+            config=providers.load_config(self.state);config['metricMode']=self.metric_mode;providers.atomic_json(self.state/'config.json',config)
+        self.render()
     def quit(self):
         if getattr(self,'tray',None):self.tray.close()
         self.root.destroy()
@@ -194,10 +201,14 @@ class Pulse:
                     try:assert third.owns
                     finally:third.close()
                     self.analysis();self.root.update_idletasks();assert self.data.get('providers') and self.root.attributes('-topmost')
-                    for size in (.8,.9,1):
-                        self.set_scale(size,save=False);self.root.update_idletasks()
-                        assert self.root.winfo_width()==round(400*size)
-                        assert self.content.winfo_reqheight()<=self.content.winfo_height(), f'Widget fields clipped at {size}: requested {self.content.winfo_reqheight()}, available {self.content.winfo_height()}'
+                    self.toggle_metric();assert self.metric_mode=='today';self.toggle_metric();assert self.metric_mode=='limits'
+                    for metric in ('limits','today'):
+                        self.metric_mode=metric;self.render()
+                        for size in (.8,.9,1):
+                            self.set_scale(size,save=False);self.root.update_idletasks()
+                            assert self.root.winfo_width()==round(400*size)
+                            assert self.content.winfo_reqheight()<=self.content.winfo_height(), f'Widget fields clipped in {metric} at {size}: requested {self.content.winfo_reqheight()}, available {self.content.winfo_height()}'
+                    self.metric_mode='limits';self.render()
                     if self.set_display_mode('tray',save=False):
                         assert self.root.state()=='withdrawn'
                         self.tray.user.SendMessageW(self.tray.hwnd,self.tray.MESSAGE,1,0x202)
@@ -245,6 +256,7 @@ class Pulse:
         height=self.header.winfo_reqheight()+self.content.winfo_reqheight()+12
         self.root.geometry(f'{width}x{height}');self.update_tray()
     def render(self):
+        self.metric_button.configure(text=self.t('Limits ⇄','Лимиты ⇄') if self.metric_mode=='limits' else self.t('Today ⇄','Сегодня ⇄'))
         for c in self.content.winfo_children():c.destroy()
         if self.collapsed:
             self.render_compact();return
@@ -255,12 +267,11 @@ class Pulse:
         for p in allp[self.page*2:self.page*2+2]:
             tk.Label(self.content,text=p['name']+' · '+p['status'],bg=BG,fg=QUIET,font=('Segoe UI',10,'bold'),anchor='w').pack(fill='x',pady=(3,1))
             q=p.get('quotas',[])[:2]
-            if q:
+            if q and self.metric_mode=='limits':
                 text='  '.join(('—' if x.get('remainingPercent') is None else f"{int(x['remainingPercent'])}%")+' '+(self.t('week','неделя') if (x.get('durationMinutes') or 0)>=10080 else self.t('window','окно')) for x in q)
             else:
-                v=p.get('todayTokens');label=self.t('tokens today','токены сегодня')
-                if v is None:v=p.get('periodTokens');label=self.t('local period tokens','локальные токены периода')
-                if v is None:v=p.get('contextTokens');label=self.t('context size, not spend','контекст, не расход')
+                v=p.get('todayTokens') if self.metric_mode=='today' else None
+                label=self.t('tokens today · UTC','токены сегодня · UTC') if self.metric_mode=='today' else self.t('limits not reported','лимиты не переданы')
                 text=('—' if v is None else f'{v:,.0f}')+' · '+label
             tk.Label(self.content,text=text,bg=BG,fg=MINT,font=('Segoe UI',14),anchor='w').pack(fill='x')
             if q:
@@ -443,6 +454,20 @@ class Pulse:
         placement=tk.StringVar(value=self.display_mode)
         ttk.Combobox(f,textvariable=placement,values=['floating','compact','tray'],state='readonly').pack(anchor='w')
         label(self.t('Compact keeps quota rows above the taskbar. Tray shows a bounded tooltip; Windows may hide its icon.','Compact — проценты над панелью задач. Tray — подсказка при наведении; значок может быть скрыт Windows.'))
+        label(self.t('GLM Coding Plan · personal Z.ai key','GLM Coding Plan · личный ключ Z.ai'))
+        glm_key=tk.StringVar();ttk.Entry(f,textvariable=glm_key,show='•',width=40).pack(anchor='w')
+        def save_glm(remove=False):
+            if self.fixture:return
+            try:
+                from glm_quota import save_key
+                save_key(self.state,'' if remove else glm_key.get());glm_key.set('');self.auth_revision+=1
+                for provider in self.data.get('providers',[]):
+                    if provider['id']=='glm':provider.update(quotas=[],quotaObservedAt=None)
+                self.render();self.refresh()
+            except Exception:messagebox.showerror('Agent Pulse',self.t('Could not save GLM key','Не удалось сохранить ключ GLM'))
+        ttk.Button(f,text=self.t('Save key','Сохранить ключ'),command=save_glm).pack(anchor='w')
+        ttk.Button(f,text=self.t('Disconnect quotas','Отключить квоты'),command=lambda:save_glm(True)).pack(anchor='w')
+        label(self.t('Quotas belong to this key; local tokens belong to ZCode on this device. Stored in private Secrets.json; native keys are never read.','Квоты относятся к ключу; локальные токены — к ZCode на устройстве. Хранение в Secrets.json; ключи ZCode не читаются.'))
         label(self.t('Clients · see provider guide for setup','Клиенты · настройка по инструкции'));enabled={p['id'] for p in self.data.get('providers',[])};flags={}
         for spec in providers.CATALOG:
             var=tk.BooleanVar(value=spec['id'] in enabled);flags[spec['id']]=var

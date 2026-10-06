@@ -1,5 +1,7 @@
 # Agent Pulse
 
+Widget: **Limits ⇄ / Today ⇄**, persisted per device; opt-in personal GLM Coding Plan quotas via a masked Settings field. [Setup and coverage](docs/PROVIDERS.md).
+
 [Reading empty values and continuing long sessions](docs/READING_ANALYTICS.md). Compact names are CODEX, CLAUDE, KIMI, GLM, etc.; the Mac menu has no page counter.
 
 [Русский](README.ru.md) · [Downloads](https://github.com/Lobodagram/agent-pulse/releases) · [Provider setup](docs/PROVIDERS.md) · [Workflow analytics](docs/ANALYTICS.md)
@@ -8,7 +10,7 @@ A local tool for improving coding-agent workspaces: collect sanitized tool event
 
 [Linux/headless runtime](docs/HEADLESS.md) · Runtime wheel: Python 3.11+
 
-**0.7.2 public preview.** macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
+**0.8.0 public preview.** macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
 
 **Confirm collection first:** configured observers are not proof of observation. After setup, start a new native session, review hook trust when required, perform an ordinary task, and check Workflows for actual paired calls. See the [readiness audit](docs/AUDIT.md). Capabilities separates exact registered skill-file loads, explicit invocations and manual declarations. No observed use is not proof of non-use; command families are bounded static classifications, not semantic understanding of arbitrary code.
 
@@ -18,6 +20,9 @@ A local tool for improving coding-agent workspaces: collect sanitized tool event
 ![Observed model history — invented demo events](docs/screenshots/models-en.png)
 
 [Model evidence and limitations](docs/MODELS.md). Per-call models and observed changes are shown only where native events report them; current UI selection never backfills history.
+
+![Limits — invented demo data](docs/screenshots/limits-ru.png)
+![Today — invented demo data](docs/screenshots/today-en.png)
 
 ## What it does
 
@@ -39,7 +44,7 @@ A local tool for improving coding-agent workspaces: collect sanitized tool event
 | Client | Adapter | Available data | Verification |
 | --- | --- | --- | --- |
 | Codex | Native read-only app-server | Account quotas/resets; account tokens when supplied; optional partial local event projection | Live macOS + fixtures |
-| GLM / ZCode | Native usage/stats | Local tokens, sessions and tool aggregates; **no remote paid-plan quota adapter** | Live macOS + fixtures |
+| GLM / ZCode | Native usage/stats | Local tokens, sessions and tool aggregates; opt-in personal Z.ai quotas with own key (live macOS verified) | Live macOS + fixtures |
 | Claude Code | Opt-in official status-line bridge | Reported plan quotas and current context size; **context is not cumulative spend** | Contract + fixtures; no live account test |
 | Kimi Code | Opt-in read-only quota endpoint | Reported quota percentages/resets; no inferred token spend | Experimental contract + fixtures |
 | Qwen Code | Opt-in existing loopback dashboard | Native daily token/skill aggregates; no subscription quota API | Experimental contract + fixtures |

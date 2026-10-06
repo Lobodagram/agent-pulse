@@ -6,7 +6,7 @@ Enable only the clients you use in Settings. Modes are visible in the catalog. D
 
 ## Own configuration
 
-Use `collector.py` from a source checkout with Python 3.10+:
+Use `collector.py` from a source checkout with Python 3.11+:
 
 ```sh
 python3 collector.py catalog
@@ -38,7 +38,7 @@ Source contract: [official Codex app-server](https://developers.openai.com/codex
 
 Uses Node on PATH and the installed ZCode app's CLI to request read-only `usage/stats` for seven days in UTC. macOS default app path is `/Applications/ZCode.app/Contents/Resources`. On Windows the packaging layout may differ: explicitly configure `zcodeResources` or `zcodeCli` + `zcodeBuiltin`, and `nodePath` if necessary. The native resolver receives its installed built-in provider path and its own personal config path; Agent Pulse does not parse its credentials. No native DB is opened directly.
 
-These are **local ZCode records**, not all GLM use on other devices or IDEs. Zero recorded sessions does not establish zero global consumption. Remote subscription quotas/reset dates are not connected in this adapter. Enter billing dates or “No plan” manually.
+These are **local ZCode records**, not all GLM use on other devices or IDEs. Zero recorded sessions does not establish zero global consumption. Account-login-only remote quotas are not exposed by this CLI; the separate opt-in adapter is described below. Enter billing dates or “No plan” manually.
 
 Source: [ZCode usage statistics](https://zcode.z.ai/en/docs/usage-stats).
 
@@ -116,3 +116,13 @@ Replace the demo epoch with the actual observation time in **seconds**, not mill
 - Patterns: hints for human review, not a recommendation to automatically install a skill/MCP or a measurement of per-tool cost.
 
 Codex daily reporting may omit the current UTC day. `todayTokenStatus=account-day-pending` means waiting, not zero. Settings → Local Codex tokens today is a separate default-off option (`configure --local-tokens on`). Bounded native token events can fill a missing bucket; `todayTokenCoverage=partial-local` explicitly labels device-wide partial records across logins. Account totals take precedence when present; never add local and account figures.
+
+### GLM remaining quotas · opt in
+
+In Agent Pulse Settings, enter your own **personal Z.ai Coding Plan** key in the masked field and Save. Disconnect removes only this provider's key. It is stored with mode 600 in own-state `Secrets.json`, never command-line arguments, Git or telemetry. Windows users should restrict the file's NTFS access to their account. No ZCode credential is extracted; account login alone cannot connect this adapter.
+
+The independent adapter reads only `GET https://api.z.ai/api/monitor/usage/quota/limit`, the endpoint used by the [official usage plugin](https://docs.z.ai/devpack/extension/usage-query-plugin). Redirects and environment proxies are disabled. Five-hour and week rows follow native `TOKENS_LIMIT`/`CREDIT_LIMIT` unit/window fields; percentages are **remaining**, native resets are milliseconds converted to seconds. Monthly MCP `TIME_LIMIT` is excluded. Missing/ambiguous/invalid windows remain unknown; failed reads clear quota values rather than reusing another key's data. The endpoint is experimental, not a guaranteed stable analytics API.
+
+Quotas belong to the **configured key**, while local tokens belong to **ZCode records on this device**; these may cover different accounts. Token/task history continues across account changes. Changing ZCode login does not switch the separately configured key. Manual subscription dates remain separate. Remote quotas refresh with the five-minute snapshot or Refresh; Codex's existing minute refresh remains. Without a key, local ZCode tokens still work and quota values show unavailable. Live five-hour/week quota and reset fields were verified on the development Mac using a user-configured personal key; this is not a guarantee for every account or regional endpoint.
+
+The widget's **Limits ⇄ / Today ⇄** button selects remaining subscription percentages or today's reported tokens (UTC), and retains the choice after restart. Today never substitutes a seven-day total/context gauge. The menu bar/Windows compact mode and tray tooltip always keep quota summaries.

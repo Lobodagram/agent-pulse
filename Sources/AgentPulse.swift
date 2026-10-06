@@ -172,6 +172,8 @@ func subscriptionText(_ s: Subscription) -> String {
     @Published var language: String = UserDefaults.standard.string(forKey: "language") ?? "en" { didSet { UserDefaults.standard.set(language, forKey: "language") } }
     @Published var widgetScale: Double = min(1, max(0.8, UserDefaults.standard.double(forKey: "widgetScale") == 0 ? 1 : UserDefaults.standard.double(forKey: "widgetScale"))) { didSet { if !isFixture { UserDefaults.standard.set(widgetScale, forKey: "widgetScale") } } }
     @Published var displayMode: String = UserDefaults.standard.string(forKey: "displayMode") ?? "floating" { didSet { if !isFixture { UserDefaults.standard.set(displayMode, forKey: "displayMode") } } }
+    @Published var glmKeySaving = false
+    @Published var metricMode: String = UserDefaults.standard.string(forKey: "metricMode") == "today" ? "today" : "limits" { didSet { if !isFixture { UserDefaults.standard.set(metricMode, forKey: "metricMode") } } }
     @Published var menuNumbers: Bool = UserDefaults.standard.object(forKey: "menuNumbers") as? Bool ?? true { didSet { if !isFixture { UserDefaults.standard.set(menuNumbers, forKey: "menuNumbers") } } }
     @Published var menuFollowActive: Bool = UserDefaults.standard.bool(forKey: "menuFollowActive") { didSet { if !isFixture { UserDefaults.standard.set(menuFollowActive, forKey: "menuFollowActive") } } }
     let fixture: String?; private var timer: Timer?; private var limitTimer: Timer?; private var readingLimits = false; private var authTimer: Timer?; private var authMarks: [String: String] = [:]; private var authRevision = 0
@@ -180,6 +182,7 @@ func subscriptionText(_ s: Subscription) -> String {
         fixture = args.firstIndex(of: "--fixture").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
         if let i = args.firstIndex(of: "--language"), i + 1 < args.count { language = args[i + 1]; UserDefaults.standard.set(language, forKey: "language") }
         if let i = args.firstIndex(of: "--scale"), i + 1 < args.count, let value = Double(args[i + 1]) { widgetScale = min(1, max(0.8, value)) }
+        if let i = args.firstIndex(of: "--metric-mode"), i + 1 < args.count { metricMode = args[i + 1] == "today" ? "today" : "limits" }
         if args.contains("--menu-only") { displayMode = "menu" }
         if let fixture {
             do { snapshot = try JSONDecoder().decode(Snapshot.self, from: Data(contentsOf: URL(fileURLWithPath: fixture))) }
@@ -195,7 +198,7 @@ func subscriptionText(_ s: Subscription) -> String {
     var isFixture: Bool { fixture != nil }
     var pages: Int { max(1, ((snapshot?.providers.count ?? 0) + 1) / 2) }
     var visibleProviders: [Provider] { Array((snapshot?.providers ?? []).dropFirst(min(page, pages - 1) * 2).prefix(2)) }
-    func run(_ arguments: [String], completion: @escaping @MainActor (Result<Data, Error>) -> Void) {
+    func run(_ arguments: [String], input: Data? = nil, completion: @escaping @MainActor (Result<Data, Error>) -> Void) {
         let resources = Bundle.main.resourceURL!
         DispatchQueue.global(qos: .utility).async {
             do {
@@ -206,10 +209,17 @@ func subscriptionText(_ s: Subscription) -> String {
                 env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + (env["PATH"] ?? "/usr/bin:/bin")
                 process.environment = env
                 let output = Pipe(); process.standardOutput = output; process.standardError = FileHandle.nullDevice
-                try process.run(); let data = output.fileHandleForReading.readDataToEndOfFile(); process.waitUntilExit()
+                let stdin = input == nil ? nil : Pipe(); if let stdin { process.standardInput = stdin }
+                try process.run(); if let input, let stdin { stdin.fileHandleForWriting.write(input); try? stdin.fileHandleForWriting.close() }; let data = output.fileHandleForReading.readDataToEndOfFile(); process.waitUntilExit()
                 guard process.terminationStatus == 0 else { throw NSError(domain: "AgentPulse", code: Int(process.terminationStatus)) }
                 Task { @MainActor in completion(.success(data)) }
             } catch { Task { @MainActor in completion(.failure(error)) } }
+        }
+    }
+    func saveGLMKey(_ key: String) {
+        guard !isFixture, !glmKeySaving, let body = try? JSONSerialization.data(withJSONObject: ["key":key]) else { return }; glmKeySaving = true
+        run(["glm-key"], input: body) { [weak self] result in
+            guard let self else { return }; self.glmKeySaving = false; if case .success(let data) = result, let value = try? JSONSerialization.jsonObject(with: data) as? [String:Any], value["saved"] is Bool { self.authRevision += 1; if let idx = self.snapshot?.providers.firstIndex(where: { $0.id == "glm" }) { self.snapshot?.providers[idx].quotas = []; self.snapshot?.providers[idx].quotaObservedAt = nil }; self.settingsMessage = tr("GLM connection saved. Refreshing…", "Подключение GLM сохранено. Обновляю…"); self.refresh() } else { self.settingsMessage = tr("Could not save GLM connection", "Не удалось сохранить подключение GLM") }
         }
     }
     func refresh() {
@@ -342,6 +352,7 @@ struct ResizeGrip: NSViewRepresentable {
 }
 struct ProviderLine: View {
     let provider: Provider
+    var metricMode: String = "limits"
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack {
@@ -349,7 +360,7 @@ struct ProviderLine: View {
                 Spacer()
                 Text(provider.status == "ready" ? tr("reported", "получено") : provider.status == "stale" ? tr("stale", "устарело") : tr("unavailable", "нет данных")).font(.system(size: 10)).foregroundStyle(provider.status == "ready" ? quiet : amber)
             }
-            if !provider.quotas.isEmpty {
+            if metricMode == "limits" && !provider.quotas.isEmpty {
                 HStack(spacing: 18) {
                     ForEach(provider.quotas.prefix(2)) { q in
                         HStack(alignment: .firstTextBaseline, spacing: 5) {
@@ -358,16 +369,16 @@ struct ProviderLine: View {
                         }
                     }
                 }
-                Text(tr("Limit read: ", "Лимит получен: ") + stamp(provider.quotaObservedAt ?? provider.observedAt, compact: true)).font(.system(size: 11)).foregroundStyle(quiet).help(tr("Independent quota snapshot; refresh to compare with the native client", "Независимый снимок лимита; обновите для сравнения с клиентом"))
                 Text(tr("Today · UTC: ", "Сегодня · UTC: ") + todayText(provider)).font(.system(size: 10)).foregroundStyle(quiet)
             } else {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(shortNumber(provider.todayTokens ?? provider.periodTokens ?? provider.contextTokens)).font(.system(size: 23, weight: .medium, design: .monospaced))
-                    Text(provider.contextTokens != nil && provider.todayTokens == nil && provider.periodTokens == nil ? tr("context size", "размер контекста") : provider.todayTokens != nil ? tr("tokens today · UTC", "токены сегодня · UTC") : provider.periodTokens != nil ? tr("local tokens · 7 days", "локально · 7 дней") : tr("not reported", "не передано")).font(.system(size: 10)).foregroundStyle(quiet)
+                    Text(metricMode == "today" ? shortNumber(provider.todayTokens) : "—").font(.system(size: 23, weight: .medium, design: .monospaced))
+                    Text(metricMode == "today" ? tr("tokens today · UTC", "токены сегодня · UTC") : tr("limits not reported", "лимиты не переданы")).font(.system(size: 10)).foregroundStyle(quiet)
                 }
+                Text(metricMode == "today" ? (provider.todayTokenCoverage == "partial-local" ? tr("Partial local count", "Частичный локальный счётчик") : provider.id == "glm" ? tr("Local ZCode records", "Локальные записи ZCode") : tr("Reported day count", "Переданный счётчик дня")) : provider.id == "glm" ? tr("Connect GLM in Settings", "GLM: подключить в настройках") : tr("No reported account quota", "Квота аккаунта не передана")).font(.system(size: 10)).foregroundStyle(quiet)
                 Text(subscriptionText(provider.subscription)).font(.system(size: 10)).foregroundStyle(quiet)
             }
-        }.foregroundStyle(ink)
+        }.foregroundStyle(ink).lineLimit(1).minimumScaleFactor(0.8)
     }
 }
 struct WidgetView: View {
@@ -387,7 +398,7 @@ struct WidgetView: View {
                 ActionButton(symbol: "xmark", help: tr("Quit Agent Pulse", "Завершить Agent Pulse"), action: { actions.quit() })
             }
             if let snapshot = store.snapshot {
-                ForEach(store.visibleProviders) { p in ProviderLine(provider: p); Rectangle().fill(divider).frame(height: 1) }
+                ForEach(store.visibleProviders) { p in ProviderLine(provider: p, metricMode: store.metricMode).frame(height: 78, alignment: .topLeading); Rectangle().fill(divider).frame(height: 1) }
                 if store.visibleProviders.isEmpty { Text(tr("Choose clients in Settings", "Выберите клиентов в настройках")).foregroundStyle(quiet); Spacer() }
                 if store.expanded {
                     ForEach(store.visibleProviders) { p in
@@ -402,6 +413,7 @@ struct WidgetView: View {
                 }
                 Spacer(minLength: 0)
                 HStack(spacing: 8) {
+                    Button(store.metricMode == "limits" ? tr("Limits ⇄", "Лимиты ⇄") : tr("Today ⇄", "Сегодня ⇄")) { store.metricMode = store.metricMode == "limits" ? "today" : "limits" }.buttonStyle(.plain).foregroundStyle(mint).help(tr("Switch remaining quotas / tokens today · menu bar keeps quotas", "Переключить остаток лимитов / токены сегодня · сверху остаются лимиты")).accessibilityLabel(tr("Switch widget metric", "Переключить показатель виджета"))
                     if store.pages > 1 { Button("‹") { store.page = (store.page + store.pages - 1) % store.pages }.buttonStyle(.plain); Text("\(store.page + 1)/\(store.pages)"); Button("›") { store.page = (store.page + 1) % store.pages }.buttonStyle(.plain) }
                     Text(store.error ?? (store.loading ? tr("Updating…", "Обновление…") : stamp(snapshot.generatedAt, compact: true))).lineLimit(1)
                     Spacer(); Button(store.expanded ? tr("Less ↑", "Меньше ↑") : tr("Details ↓", "Детали ↓")) { actions.toggleExpanded() }.buttonStyle(.plain).foregroundStyle(mint)
@@ -739,6 +751,7 @@ struct SubscriptionRow: View {
 }
 struct SettingsView: View {
     @ObservedObject var store: PulseStore; var actions: AppDelegate
+    @State var glmKey = ""
     @State var selected: Set<String> = []; @State var patterns = false; @State var tokens = false
     var body: some View {
         ScrollView {
@@ -757,6 +770,11 @@ struct SettingsView: View {
                 Toggle(tr("Follow the active app in the menu bar", "Следовать за активным приложением сверху"), isOn: $store.menuFollowActive)
                 Text(tr("Recognizes Codex, ZCode and Claude desktop app IDs only. Terminals and other windows use rotation; no window titles or chat content are read.", "Распознаёт идентификаторы приложений Codex, ZCode и Claude. В терминалах и других окнах — чередование; заголовки окон и чаты не читаются.")).font(.system(size: 11)).foregroundStyle(quiet)
                 Text(tr("Remaining percentages for selected clients; one client at a time, rotating every 8 seconds. Click to show/hide the movable widget; — means unavailable.", "Проценты остатка выбранных клиентов; один клиент за раз, смена каждые 8 секунд. Нажатие показывает/скрывает подвижное табло; — значит нет данных.")).font(.system(size: 11)).foregroundStyle(quiet)
+                Picker(tr("Widget metric", "Показатель виджета"), selection: $store.metricMode) { Text(tr("Remaining limits", "Остаток лимитов")).tag("limits"); Text(tr("Tokens today · UTC", "Токены сегодня · UTC")).tag("today") }.frame(width: 350)
+                Text(tr("GLM Coding Plan connection", "Подключение GLM Coding Plan")).font(.system(size: 16, weight: .semibold))
+                SecureField(tr("Own Z.ai Coding Plan key", "Личный ключ Z.ai Coding Plan"), text: $glmKey).textFieldStyle(.roundedBorder).frame(width: 350)
+                HStack { Button(tr("Save key", "Сохранить ключ")) { store.saveGLMKey(glmKey); glmKey = "" }.disabled(glmKey.isEmpty || store.isFixture || store.glmKeySaving); Button(tr("Disconnect quotas", "Отключить квоты")) { store.saveGLMKey(""); glmKey = "" }.disabled(store.isFixture || store.glmKeySaving) }
+                Text(tr("Personal Z.ai plan only. Quotas belong to this key; local token records belong to ZCode on this device. The key stays in private Secrets.json, outside Git. No native credentials are read.", "Личный план Z.ai. Квоты относятся к этому ключу; локальные токены — к ZCode на устройстве. Ключ хранится в закрытом Secrets.json вне Git. Ключи ZCode не читаются.")).font(.system(size: 11)).foregroundStyle(quiet)
                 Text(tr("Clients", "Клиенты")).font(.system(size: 16, weight: .semibold))
                 ForEach(store.snapshot?.catalog ?? []) { spec in
                     Toggle(isOn: Binding(get: { selected.contains(spec.id) }, set: { on in if on { selected.insert(spec.id) } else { selected.remove(spec.id) } })) { VStack(alignment: .leading, spacing: 2) { Text(spec.name); Text(spec.mode == "import" ? tr("Import only; no automatic quota adapter", "Только импорт; автоматических лимитов нет") : spec.mode == "native" ? tr("Built-in client statistics", "Штатная статистика клиента") : spec.mode == "statusline" ? tr("Local status-line bridge", "Локальный мост status-line") : spec.mode == "loopback" ? tr("Existing local dashboard", "Уже запущенное локальное табло") : tr("Optional quota API", "Опциональное чтение квот")).font(.system(size: 10)).foregroundStyle(quiet) } }
@@ -954,7 +972,7 @@ final class FloatingPanel: NSPanel {
                 let before = panel.isVisible
                 self.hidePanel(); let hidden = !panel.isVisible
                 self.togglePanel(); let restored = panel.isVisible
-                let report: [String: Any] = ["view": mode, "utilityRestorePassed": mode != "window-focus" || (self.analysisWindow?.isVisible == true && self.analysisWindow?.isMiniaturized == false && self.settingsWindow?.isVisible == true), "utilityFocusPassed": mode != "window-focus" || (self.settingsWindow?.isKeyWindow == true && NSApp.isActive), "utilityPlacementPassed": mode != "window-focus" || (self.settingsWindow?.level == .floating && self.settingsWindow?.collectionBehavior.contains(.moveToActiveSpace) == true), "panelWidth": panel.frame.width, "panelHeight": panel.frame.height, "floatingLevel": panel.level == .floating, "joinsAllSpaces": panel.collectionBehavior.contains(.canJoinAllSpaces), "fullScreenAuxiliary": panel.collectionBehavior.contains(.fullScreenAuxiliary), "movable": panel.isMovableByWindowBackground, "visibleBefore": before, "hidePassed": hidden, "restorePassed": restored, "statusItem": self.statusItem.button != nil, "fixtureMode": self.store.isFixture, "scale": self.store.widgetScale, "menuClickShowsPanel": mode == "menu-widget" && before, "menuTooltip": self.statusItem.button?.toolTip ?? "", "displayMode": self.store.displayMode, "menuTitle": self.statusItem.button?.title ?? "", "capturedSize": [w?.contentView?.bounds.width ?? 0, w?.contentView?.bounds.height ?? 0]]
+                let report: [String: Any] = ["view": mode, "utilityRestorePassed": mode != "window-focus" || (self.analysisWindow?.isVisible == true && self.analysisWindow?.isMiniaturized == false && self.settingsWindow?.isVisible == true), "utilityFocusPassed": mode != "window-focus" || (self.settingsWindow?.isKeyWindow == true && NSApp.isActive), "utilityPlacementPassed": mode != "window-focus" || (self.settingsWindow?.level == .floating && self.settingsWindow?.collectionBehavior.contains(.moveToActiveSpace) == true), "panelWidth": panel.frame.width, "panelHeight": panel.frame.height, "floatingLevel": panel.level == .floating, "joinsAllSpaces": panel.collectionBehavior.contains(.canJoinAllSpaces), "fullScreenAuxiliary": panel.collectionBehavior.contains(.fullScreenAuxiliary), "movable": panel.isMovableByWindowBackground, "visibleBefore": before, "hidePassed": hidden, "restorePassed": restored, "statusItem": self.statusItem.button != nil, "fixtureMode": self.store.isFixture, "metricMode": self.store.metricMode, "scale": self.store.widgetScale, "menuClickShowsPanel": mode == "menu-widget" && before, "menuTooltip": self.statusItem.button?.toolTip ?? "", "displayMode": self.store.displayMode, "menuTitle": self.statusItem.button?.title ?? "", "capturedSize": [w?.contentView?.bounds.width ?? 0, w?.contentView?.bounds.height ?? 0]]
                 if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) {
                     try? data.write(to: URL(fileURLWithPath: path + ".json"))
                 }

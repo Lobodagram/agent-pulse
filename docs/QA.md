@@ -1,3 +1,7 @@
+## 0.8.0 GLM quotas and metric selection · 2026-10-06
+
+178 tests and isolated wheel/console/hook/MCP pass. Source Mac strict two-second frozen helper and 20 own-widget cases pass, EN/RU model-history fixtures inspected. Live personal Z.ai five-hour/week quota percentages and native reset fields verified on the development Mac. Source CI and release-package verification remain independent gates. Local tokens and configured-key quotas remain separate. No native credentials/config/session or model calls changed. No subscription savings claim; analytics effectiveness remains 7/10 and cold-start/physical/signing risks stay open.
+
 ## 0.7.2 review qualification checks · 2026-10-06
 
 Five focused regressions pass for equivalent lightweight/full findings, all five pattern kinds, the top-30 cap, pending/unknown calls and separate provider/project/half-open time windows. The previous committed full finding and review outputs were independently compared in a private invented fixture: 19,980 calls / 30 distinct completed review windows, exact equality. No production telemetry was injected; no peer client was started or modified.

@@ -1,3 +1,7 @@
+## 0.8.0 GLM quotas and metric selection · 2026-10-06
+
+178 tests and isolated wheel/console/hook/MCP pass. Source Mac strict two-second frozen helper and 20 own-widget cases pass, EN/RU model-history fixtures inspected. Live personal Z.ai five-hour/week quota percentages and native reset fields verified on the development Mac. Source CI and release-package verification remain independent gates. Local tokens and configured-key quotas remain separate. No native credentials/config/session or model calls changed. No subscription savings claim; analytics effectiveness remains 7/10 and cold-start/physical/signing risks stay open.
+
 ## 0.7.2 window review · 2026-10-06
 
 Third peer audit verified against canonical 0.7.1. A global finding list cannot replace separate provider/project/time-window detections: it would change qualification. Rechecks now use lightweight cards through the same detector, rank, overlap suppression and top-30 limit. Complete display cards remain unchanged. Session pagination imports the numeric sanitizer directly from its source.

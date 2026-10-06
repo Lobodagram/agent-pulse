@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 
 CATALOG=[
  {'id':'codex','name':'Codex','mode':'native','support':'Native account quotas, account tokens and optional partial local events'},
- {'id':'glm','name':'GLM / ZCode','mode':'native','support':'Native local ZCode statistics; paid remote quota not connected'},
+ {'id':'glm','name':'GLM / ZCode','mode':'native','support':'Native local ZCode statistics; opt-in Z.ai Coding Plan quotas with own key'},
  {'id':'claude','name':'Claude Code','mode':'statusline','support':'Official status-line bridge: quotas and context size, not cumulative token spend'},
  {'id':'kimi','name':'Kimi Code','mode':'api','support':'Opt-in read-only quota API; own key in local Secrets.json; no token-spend API assumed'},
  {'id':'qwen','name':'Qwen Code','mode':'loopback','support':'Opt-in existing local qwen serve usage dashboard; no daemon is started'},
