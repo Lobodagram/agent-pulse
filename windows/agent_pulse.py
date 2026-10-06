@@ -91,6 +91,7 @@ class Pulse:
         self.scale=min(1,max(.8,float(value)));self.root.geometry(f'{round(400*self.scale)}x{round(310*self.scale)}')
         def visit(w):
             if isinstance(w,tk.Toplevel):return
+            if isinstance(w,tk.Label) and w.master is self.content:w.configure(bd=0,padx=0,pady=0)
             if 'font' in w.keys():
                 if not hasattr(w,'_pulse_font'):w._pulse_font=tkfont.Font(font=w.cget('font')).actual()
                 f=w._pulse_font;w.configure(font=(f['family'],max(8,round(abs(f['size'])*self.scale)),f['weight']))
