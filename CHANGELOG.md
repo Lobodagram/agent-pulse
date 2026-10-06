@@ -1,5 +1,7 @@
 ## 0.3.3 · 2026-10-06
 
+Remove redundant native Tk label padding, preserving readable fonts and fitting both English/Russian two-quota layouts at 80%.
+
 - Keep Windows today tokens and quota resets on separate short rows so Russian two-client content fits at 80%. Test English/Russian source and packaged layouts. Windows supports `--language en|ru`.
 
 ## 0.3.2 · 2026-10-06

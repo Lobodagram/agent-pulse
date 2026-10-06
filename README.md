@@ -4,7 +4,7 @@
 
 A small, local desktop dashboard for understanding your coding agents: remaining subscription quotas, reported tokens, reset times, manually entered billing dates and repeated tool calls. It sits above your windows without occupying your editor.
 
-**0.3.0 public preview.** macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not magically expose its private billing API.
+**0.3.3 public preview.** macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not magically expose its private billing API.
 
 ![Compact English widget — invented demo data](docs/screenshots/widget-en.png)
 ![Workflows — invented demo events](docs/screenshots/workflows-en.png)
