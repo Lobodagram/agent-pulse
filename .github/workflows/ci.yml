@@ -21,7 +21,7 @@ jobs:
       - if: runner.os == 'Windows'
         run: |
           python windows/agent_pulse.py --fixture examples/demo.json --smoke
-          python -c "import json,pathlib; p=pathlib.Path('.build'); p.mkdir(exist_ok=True); d=json.loads(pathlib.Path('examples/demo.json').read_text()); d['providers'][1]['quotas']=d['providers'][0]['quotas']; (p/'two-quotas.json').write_text(json.dumps(d))"
+          python -c "import json,pathlib; p=pathlib.Path('.build'); p.mkdir(exist_ok=True); d=json.loads(pathlib.Path('examples/demo.json').read_text(encoding='utf-8')); d['providers'][1]['quotas']=d['providers'][0]['quotas']; (p/'two-quotas.json').write_text(json.dumps(d),encoding='utf-8')"
           python windows/agent_pulse.py --fixture .build/two-quotas.json --smoke
       - if: runner.os == 'macOS'
         run: |
