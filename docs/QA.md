@@ -11,3 +11,9 @@ Prepublication evidence, public counters excluded:
 - Public images use invented 2027 demo counters, not user screenshots or telemetry. Publication tree is allowlisted and starts a fresh Git history.
 
 До публикации пройдены 26 тестов, сборка macOS и просмотр реальных изображений собственного окна. Штатная статистика Codex/ZCode на Mac ответила; личные значения не публикуются. Claude/Kimi/Qwen пока проверены на контрактах и вымышленных примерах. Windows проверяется workflow; ручная приёмка DPI/fullscreen/живых клиентов остаётся отдельной работой. Это предварительный релиз, не обещание полной проверки всех аккаунтов и ОС.
+
+## Public CI
+
+[Checks run 37422139777](https://github.com/Lobodagram/agent-pulse/actions/runs/37422139777) passed on Linux, macOS and Windows. Windows source demo UI smoke and macOS build/native fixture render passed. Package verification is recorded by the Release packages workflow; interactive acceptance and experimental live accounts remain pending.
+
+Публичный CI прошёл на трёх ОС, включая запуск Windows-демо и сборку/изображение macOS. Упакованные сборки проверяет workflow релиза; ручная приёмка и экспериментальные аккаунты остаются открытыми.
