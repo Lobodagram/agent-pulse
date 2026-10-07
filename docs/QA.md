@@ -1,6 +1,10 @@
-## 0.9.5 candidate · 2026-10-07
+## 0.9.5 delivered · 2026-10-07
 
-Two additional regressions test real held-lock stdio MCP, continued ping, unchanged config bytes, successful retry after release, typed-only classification and exception-canary omission. Packaged smoke adds the same busy/recovery gate. Existing production Mac polling was accepted live without restart/manual refresh and the original metric mode was restored. UI rendering is unchanged; existing invented-data screenshots remain representative. Publication/download gates follow completion.
+200tests; [source CI37606792500](https://github.com/Lobodagram/agent-pulse/actions/runs/37606792500) passed all4platforms; [tagged packages37607259728](https://github.com/Lobodagram/agent-pulse/actions/runs/37607259728) passed all3binaries/publication.130public hashes/modes verified. All downloaded archives passed SHA/runtime/license/version/path checks and in-memory raw/base64/hex credential comparisons including4decoded archive surfaces. Downloaded ARM64 passed strict/deep signature, first strict2s hook/journal/MCP, real packaged busy→ping→retry,20widgetcases and5chartcases. Downloaded0.9.5/build26 installed at the existing development path with keybytes/0600/config semantics preserved and prior0.9.4 retained. No fresh physical Windows/Intel/Spaces or true cold-launch claim.
+
+Windows packaged log explicitly reports `mcpConfigBusyRetry: passed`. Main-only release workflow follow-up adds immediate exit-code checking after frozen smoke; current tag is unchanged. This prevents future PowerShell commands masking a failure, rather than assuming an overall green job proves every external command succeeded.
+
+Two additional regressions test real held-lock stdio MCP, continued ping, unchanged config bytes, successful retry after release, typed-only classification and exception-canary omission. Packaged smoke tests the same busy/recovery path. Existing production Mac polling was accepted live without restart/manual refresh and the original metric mode was restored. UI rendering is unchanged; existing invented-data screenshots remain representative.
 
 ## 0.9.4 delivered acceptance · 2026-10-07
 

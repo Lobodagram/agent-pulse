@@ -1,8 +1,12 @@
-## 0.9.5 candidate · 2026-10-07
+## 0.9.5 delivered · 2026-10-07
+
+[Source checks37606792500](https://github.com/Lobodagram/agent-pulse/actions/runs/37606792500) passed Linux, Windows, Mac ARM64 and Intel; [packages37607259728](https://github.com/Lobodagram/agent-pulse/actions/runs/37607259728) passed all three binaries/publication. Immutable tag59cd2fe1809da89b222930c3d8d7453066089303;130public hashes/modes verified.200tests, all3downloaded archive hashes/version26/notices/paths and two own credential stores raw/base64/hex over source/entries/four decoded runtimes passed with zero matches. Downloaded ARM64 strict/deep ad-hoc signature, first strict2s hook/journal/MCP, actual frozen busy/ping/retry,20widgetcases and5chartcases passed. Installed downloaded0.9.5 with prior0.9.4 retained, local keybytes0600/config semantics/observer path preserved. First native UI lookup timed out while exactly one app ran; exact-path retry succeeded.
+
+Windows job112745666986 log contains parsed `mcpConfigBusyRetry: passed`, with no traceback. Code review also found that its next command could overwrite the smoke exit code: the main-only workflow follow-up now immediately throws on a nonzero smoke result. It does not rewrite the immutable tag or claim that this additional guard was used in0.9.5. No production payloads/events or client/model configuration changes. Current runtime and UI screenshots are unchanged apart from the stated MCP error semantics/version.
 
 The Mac polling suspicion was disproved: the existing five-second timer calls `loadPreferences()`. Installed0.9.4 accepted Limits→Today→Limits via local MCP without restart/manual refresh; the requested field was restored and revision advanced normally. MCP lock contention was confirmed and corrected to a retryable fixed-literal tool execution result; only typed ConfigBusy is classified. Generic timeouts remain generic. Tests use actual independent processes, verify unchanged bytes and continued ping/retry. [MCP tool errors](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#error-handling) distinguish execution failures from protocol errors.
 
-Prospective benefit gates below remain unchanged and precede any human-reviewed corpus. No causal/subscription-saving claim. Code remains9/10; analytical effectiveness7/10. Cold-first-launch cause, signing and physical acceptance remain open. Publication/download gates follow completion.
+Prospective benefit gates below remain unchanged and precede any human-reviewed corpus. No causal/subscription-saving claim. Code remains9/10; analytical effectiveness7/10. Cold-first-launch cause, signing and physical acceptance remain open.
 
 Подозрение о настройках Mac не подтвердилось; автоматическое переключение проверено в работающем виджете. Ошибка занятой блокировки исправлена без выдачи приватных данных. Критерии пользы не изменены и заданы до эксперимента.
 

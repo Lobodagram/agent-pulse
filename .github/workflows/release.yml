@@ -51,6 +51,7 @@ jobs:
           Copy-Item .build/pulse-collector/* dist/ -Recurse -Force
           & ./dist/pulse-collector.exe catalog
           python scripts/frozen_smoke.py dist/pulse-collector.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Frozen hook/journal/MCP smoke failed' }
           & ./dist/pulse-collector.exe tls-check
           if ($LASTEXITCODE -ne 0) { throw "Frozen Windows TLS verification failed" }
           if ($LASTEXITCODE -ne 0) { throw "Frozen collector failed" }
