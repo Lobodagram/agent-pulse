@@ -1,3 +1,10 @@
+## 0.10.0 acceptance scope · 2026-10-07
+
+This iteration adds explicit Kimi Code 2.x TOML observation and masked own-key quota configuration. 219 source tests and isolated Mac controls establish contract/privacy/inverse-removal correctness. Official CLI 2.1.1 is installed and help/doctor verified; no login, model calls or sessions were started. The owner cannot access a friend's account and explicitly waives this live acceptance: do not call Kimi account quotas or real hook delivery field-tested. Explicit .com/.ai selection does not prove both live schemas; wrong account/region returns safe unavailable rather than sending a key to another host.
+
+A reopened old UI was reported. Multiple same-name historical development copies are indexed, but the closed instance's identity is unknown. Canonical installation and relaunch must be evidenced separately. Assessment remains code9/10 and analytical usefulness7/10; fixtures/quotas do not create accepted task pairs or measured savings. Windows user-machine DPI/tray/sleep-wake, physical Intel/Spaces/multi-display, true cold first-start and signing/notarization remain open. GitHub secret scanning/push protection were verified enabled; private vulnerability reporting was enabled. Public reachable-history scan covered65commits/274trees/692blobs/28refs with no credential-pattern or exact own-key raw/base64/hex matches; this does not inspect unreachable GitHub objects.
+
+
 ## 0.9.7 first-start concurrency correction — delivered · 2026-10-07
 
 A fresh documentation-only source run [37619013943](https://github.com/Lobodagram/agent-pulse/actions/runs/37619013943) exposed a real Windows initialization race in the unchanged 0.9.6 runtime: `lock.write`/`flush` attempted access to a byte range held by a peer process and raised PermissionError. Local focused verification then reproduced a separate simultaneous WAL-negotiation OperationalError. Passing older runs did not rule out either timing-sensitive defect.

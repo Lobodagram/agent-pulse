@@ -12,7 +12,7 @@ import tkinter.font as tkfont
 from tkinter import ttk, messagebox, filedialog
 from pulse_tray import Tray, Instance
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from compact_summary import provider_line,quota_pages,tray_tooltip
+from compact_summary import provider_line,quota_pages,tray_tooltip,window_label
 import collector
 import analytics
 import instrumentation
@@ -131,7 +131,7 @@ class Pulse:
     def change_page(self,n):self.page=(self.page+n)%max(1,(len(self.data.get('providers',[]))+1)//2);self.render()
     def periodic(self):self.refresh();self.root.after(300000,self.periodic)
     def authentication_metadata(self):
-        home=Path.home();paths={'codex':Path(os.environ.get('CODEX_HOME',str(home/'.codex')))/'auth.json','glm':home/'.zcode/v2/provider_config.json','claude':home/'.claude/.credentials.json','kimi':home/'.kimi/config.toml','qwen':home/'.qwen/oauth_creds.json'}
+        home=Path.home();paths={'codex':Path(os.environ.get('CODEX_HOME',str(home/'.codex')))/'auth.json','glm':home/'.zcode/v2/provider_config.json','claude':home/'.claude/.credentials.json','kimi':Path(os.environ.get('KIMI_CODE_HOME',str(home/'.kimi-code')))/'config.toml','qwen':home/'.qwen/oauth_creds.json'}
         selected={p['id'] for p in self.data.get('providers',[])} or {'codex','glm'};result={}
         for provider,path in paths.items():
             if provider not in selected:continue
@@ -301,7 +301,7 @@ class Pulse:
             tk.Label(self.content,text=p['name']+' · '+p['status'],bg=BG,fg=QUIET,font=('Segoe UI',10,'bold'),anchor='w').pack(fill='x',pady=(3,1))
             q=p.get('quotas',[])[:2]
             if q and self.metric_mode=='limits':
-                text='  '.join(('—' if x.get('remainingPercent') is None else f"{int(x['remainingPercent'])}%")+' '+(self.t('week','неделя') if (x.get('durationMinutes') or 0)>=10080 else self.t('window','окно')) for x in q)
+                text='  '.join(('—' if x.get('remainingPercent') is None else f"{int(x['remainingPercent'])}%")+' '+window_label(x.get('durationMinutes'),self.language=='ru') for x in q)
             else:
                 v=p.get('todayTokens') if self.metric_mode=='today' else None
                 label=self.t('tokens today · UTC','токены сегодня · UTC') if self.metric_mode=='today' else self.t('limits not reported','лимиты не переданы')
@@ -537,22 +537,27 @@ class Pulse:
         placement=tk.StringVar(value=self.display_mode)
         ttk.Combobox(f,textvariable=placement,values=['floating','compact','tray'],state='readonly').pack(anchor='w')
         label(self.t('Compact keeps quota rows above the taskbar. Tray shows a bounded tooltip; Windows may hide its icon.','Compact — проценты над панелью задач. Tray — подсказка при наведении; значок может быть скрыт Windows.'))
-        label(self.t('GLM Coding Plan · personal Z.ai key','GLM Coding Plan · личный ключ Z.ai'))
-        quota_error=next((p.get('quotaError') for p in self.data.get('providers',[]) if p['id']=='glm'),None)
-        if quota_error:label(self.t('Quota unavailable: ','Квоты недоступны: ')+quota_error)
-        glm_key=tk.StringVar();ttk.Entry(f,textvariable=glm_key,show='•',width=40).pack(anchor='w')
-        def save_glm(remove=False):
-            if self.fixture:return
-            try:
-                from glm_quota import save_key
-                save_key(self.state,'' if remove else glm_key.get());glm_key.set('');self.auth_revision+=1
-                for provider in self.data.get('providers',[]):
-                    if provider['id']=='glm':provider.update(quotas=[],quotaObservedAt=None)
-                self.render();self.refresh()
-            except Exception:messagebox.showerror('Agent Pulse',self.t('Could not save GLM key','Не удалось сохранить ключ GLM'))
-        ttk.Button(f,text=self.t('Save key','Сохранить ключ'),command=save_glm).pack(anchor='w')
-        ttk.Button(f,text=self.t('Disconnect quotas','Отключить квоты'),command=lambda:save_glm(True)).pack(anchor='w')
-        label(self.t('Quotas belong to this key; local tokens belong to ZCode on this device. Stored in private Secrets.json; native keys are never read.','Квоты относятся к ключу; локальные токены — к ZCode на устройстве. Хранение в Secrets.json; ключи ZCode не читаются.'))
+        def key_controls(ident,title):
+            label(title)
+            region=tk.StringVar(value='kimi.com')
+            if ident=='kimi':
+                label(self.t('Kimi key region','Регион ключа Kimi'))
+                ttk.Combobox(f,textvariable=region,values=['kimi.com','kimi.ai'],state='readonly').pack(anchor='w')
+            key=tk.StringVar();ttk.Entry(f,textvariable=key,show='•',width=40).pack(anchor='w')
+            def save(remove=False):
+                if self.fixture:return
+                try:
+                    from provider_secrets import save_key
+                    save_key(self.state,'' if remove else key.get(),ident,'global' if ident=='kimi' and region.get()=='kimi.ai' else 'mainland-cn');key.set('');self.auth_revision+=1
+                    for provider in self.data.get('providers',[]):
+                        if provider['id']==ident:provider.update(quotas=[],quotaObservedAt=None,status='unavailable')
+                    self.render();self.refresh()
+                except Exception:messagebox.showerror('Agent Pulse',self.t('Could not save provider key','Не удалось сохранить ключ провайдера'))
+            ttk.Button(f,text=self.t('Save key','Сохранить ключ'),command=save).pack(anchor='w')
+            ttk.Button(f,text=self.t('Disconnect quotas','Отключить квоты'),command=lambda:save(True)).pack(anchor='w')
+        key_controls('glm','GLM Coding Plan · Z.ai')
+        key_controls('kimi','Kimi Code · API key')
+        label(self.t('Own keys stay in private Secrets.json. Native credentials are not read. Kimi Chat/Work login is not a Kimi Code key; quotas are not token spend.','Ключи — только в закрытом Secrets.json. Ключи приложений не читаются. Вход в Kimi Chat/Work не заменяет ключ Kimi Code; квоты не равны расходу токенов.'))
         label(self.t('Clients · see provider guide for setup','Клиенты · настройка по инструкции'));enabled={p['id'] for p in self.data.get('providers',[])};flags={}
         for spec in providers.CATALOG:
             var=tk.BooleanVar(value=spec['id'] in enabled);flags[spec['id']]=var
@@ -574,7 +579,7 @@ class Pulse:
                 instrumentation.configure_hooks(provider,self.state,enabled)
                 messagebox.showinfo('Agent Pulse',self.t('Configured. Start a new session; native hook trust review may be required.','Настроено. Начните новую сессию; клиент может запросить доверие хуку.'))
             except Exception:messagebox.showerror('Agent Pulse',self.t('Configuration failed','Настройка не удалась'))
-        for provider in ['codex','glm','claude']:
+        for provider in ['codex','glm','claude','kimi']:
             row=tk.Frame(f,bg=BG);row.pack(fill='x',pady=3);tk.Label(row,text=provider.upper(),bg=BG,fg=FG,width=12,anchor='w').pack(side='left')
             ttk.Button(row,text=self.t('Enable','Включить'),command=lambda p=provider:observer(p,True)).pack(side='left');ttk.Button(row,text=self.t('Remove','Удалить'),command=lambda p=provider:observer(p,False)).pack(side='left')
         label(self.t('Billing dates are manual: YYYY-MM-DD','Даты подписки вручную: ГГГГ-ММ-ДД'))

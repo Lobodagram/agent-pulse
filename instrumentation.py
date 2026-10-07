@@ -9,7 +9,8 @@ from journal import Journal, atomic_json, safe_name, PROVIDERS
 
 NATIVE_EVENTS={'codex':['SessionStart','UserPromptSubmit','PreToolUse','PostToolUse','Stop','Interrupt','SessionEnd'],
  'glm':['SessionStart','UserPromptSubmit','PreToolUse','PostToolUse','PostToolUseFailure','Stop'],
- 'claude':['SessionStart','UserPromptSubmit','PreToolUse','PostToolUse','PostToolUseFailure','Stop','SessionEnd']}
+ 'claude':['SessionStart','UserPromptSubmit','PreToolUse','PostToolUse','PostToolUseFailure','Stop','SessionEnd'],
+ 'kimi':['SessionStart','UserPromptSubmit','PreToolUse','PostToolUse','PostToolUseFailure','Stop','Interrupt','SessionEnd']}
 
 def command_argv(provider,state):
     if getattr(sys,'frozen',False):
@@ -21,11 +22,13 @@ def command_argv(provider,state):
 def is_ours(h):return isinstance(h,dict) and h.get('agentPulseObserver') is True
 
 def native_path(provider,home=None):
+    if provider=='kimi':return (Path(home)/'.kimi-code' if home is not None else Path(os.environ.get('KIMI_CODE_HOME',str(Path.home()/'.kimi-code'))))/'config.toml'
     home=Path(home) if home else Path.home()
     return home/('.codex/hooks.json' if provider=='codex' else '.zcode/cli/config.json' if provider=='glm' else '.claude/settings.json')
 
 def configure_hooks(provider,state,enable=True,home=None):
     if provider not in NATIVE_EVENTS:raise ValueError('unsupported_hook_client')
+    if provider=='kimi':return configure_kimi_hooks(state,enable,home)
     # Initialize the key and DB before concurrent hook processes start.
     j=Journal(state);j.close()
     path=native_path(provider,home)
@@ -73,6 +76,48 @@ def configure_hooks(provider,state,enable=True,home=None):
     if (path.read_bytes() if path.exists() else None)!=original:raise ValueError('config_changed_retry')
     atomic_json(path,raw)
     return {'provider':provider,'configured':enable,'requiresNewSession':True,'nativeTrustReviewMayBeRequired':provider=='codex','events':NATIVE_EVENTS[provider] if enable else [],'modelCalls':0}
+
+KIMI_BEGIN='# BEGIN Agent Pulse observer\n'
+KIMI_END='# END Agent Pulse observer\n'
+
+def configure_kimi_hooks(state,enable=True,home=None):
+    """Kimi Code 2.x TOML hooks; preserve native bytes and remove only our block."""
+    import subprocess
+    import tempfile
+    path=native_path('kimi',home)
+    if path.is_symlink() or path.parent.is_symlink():raise ValueError('symlink_config')
+    if path.exists() and path.stat().st_size>65536:raise ValueError('invalid_config')
+    original=path.read_bytes() if path.exists() else b''
+    text=original.decode('utf-8')
+    parsed=tomllib.loads(text)
+    if not isinstance(parsed.get('hooks',[]),list):raise ValueError('invalid_hooks')
+    if text.count(KIMI_BEGIN)!=text.count(KIMI_END) or text.count(KIMI_BEGIN)>1:raise ValueError('invalid_observer_block')
+    base=text
+    if KIMI_BEGIN in text:
+        start=text.index(KIMI_BEGIN);end=text.index(KIMI_END)+len(KIMI_END)
+        if end<start:raise ValueError('invalid_observer_block')
+        if start>0 and text[start-1]=='\n':start-=1
+        base=text[:start]+text[end:]
+    if enable:
+        j=Journal(state);j.close()
+        argv=command_argv('kimi',state)
+        command=subprocess.list2cmdline(argv) if os.name=='nt' else shlex.join(argv)
+        block=KIMI_BEGIN+''.join('[[hooks]]\nevent = '+json.dumps(event)+'\ncommand = '+json.dumps(command)+'\ntimeout = 2\n' for event in NATIVE_EVENTS['kimi'])+KIMI_END
+        updated=base+('\n' if base else '')+block
+    else:updated=base
+    if len(updated.encode('utf-8'))>65536:raise ValueError('invalid_config')
+    tomllib.loads(updated)
+    # No native credential backups or TOML reserialization; the rest stays byte-exact.
+    if (path.read_bytes() if path.exists() else b'')!=original:raise ValueError('config_changed_retry')
+    if updated.encode('utf-8')!=original:
+        path.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
+        fd,tmp=tempfile.mkstemp(prefix='.pulse-',dir=path.parent)
+        try:
+            with os.fdopen(fd,'w',encoding='utf-8',newline='') as stream:stream.write(updated)
+            os.replace(tmp,path)
+        finally:
+            if Path(tmp).exists():Path(tmp).unlink()
+    return {'provider':'kimi','configured':enable,'requiresNewSession':True,'nativeTrustReviewMayBeRequired':True,'events':NATIVE_EVENTS['kimi'] if enable else [],'modelCalls':0,'clientFamily':'kimi-code-2.x'}
 
 def scan_inventory(provider,skill_dirs=(),config_path=None):
     if provider not in PROVIDERS:raise ValueError('invalid_provider')

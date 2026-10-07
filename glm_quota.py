@@ -1,7 +1,4 @@
 """Opt-in Coding Plan quotas. No native credentials, sessions or reset operations."""
-import json
-import os
-from pathlib import Path
 import time
 import ssl
 from urllib.error import HTTPError, URLError
@@ -9,25 +6,7 @@ from sanitizers import number
 
 URL='https://api.z.ai/api/monitor/usage/quota/limit'
 
-def secrets(directory):
-    path=Path(directory)/'Secrets.json'
-    if not path.exists():return {}
-    if path.is_symlink() or path.stat().st_size>65536:raise ValueError('invalid_secret_file')
-    if os.name!='nt' and path.stat().st_mode & 0o077:raise ValueError('secret_permissions')
-    value=json.loads(path.read_text(encoding='utf-8'))
-    if not isinstance(value,dict):raise ValueError('invalid_secret_file')
-    return value
-
-def save_key(directory,key):
-    from providers import atomic_json
-    if not isinstance(key,str) or len(key)>4096:raise ValueError('invalid_key')
-    key=key.strip()
-    if any(c.isspace() for c in key):raise ValueError('invalid_key')
-    value=secrets(directory)
-    if key:value['glm']={'api_key':key}
-    else:value.pop('glm',None)
-    atomic_json(Path(directory)/'Secrets.json',value)
-    return {'saved':bool(key)}
+from provider_secrets import secrets, save_key
 
 def windows(raw):
     if not isinstance(raw,dict) or isinstance(raw.get('code'),bool) or raw.get('code') not in (None,0,200) or raw.get('success') is False:raise ValueError('quota_response_unavailable')

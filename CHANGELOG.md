@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased · 0.10.0 candidate · 2026-10-07
+
+- Add opt-in Kimi Code 2.x TOML observers and masked own-key controls on both UIs. Native snake-case tool-call IDs and numeric turns pair correctly; absent shell exits and per-call token/model fields remain unknown. Legacy Python kimi-cli and Kimi Work/Chat are separate, unverified integrations.
+- Recognize declared Kimi quota windows; reject conflicting, duplicate and oversized window evidence. No quota-to-token conversion. Missing/failed/disconnected keys never restore another connection's cached quotas.
+- Share the journal initialization lock with own GLM/Kimi key updates, preserving the journal HMAC and other providers. Existing glm-key CLI remains compatible; generic provider-key accepts bounded stdin only.
+- Add bilingual architecture and setup boundaries, correct stale paid-plan/MCP documentation, and use precise window labels on Windows/Mac.
+- Добавлены добровольные наблюдатели Kimi Code 2.x и защищённое поле ключа. Это проверенная локальная сборка-кандидат; живое подключение Kimi, платформенный CI и публикация ещё не завершены. Данные аккаунта и секреты в GitHub не переносились.
+
 ## 0.9.7 · 2026-10-07
 
 - Fix Windows first-start contention: lock the byte range without writing a marker into an already locked region. Empty and legacy lock files both work; configuration locking follows the same rule. Journal key and SQLite WAL/schema preparation share one initialization lock. Windows acquisition polls with a bounded 750ms budget rather than one-second CRT retry intervals. Native hook deadlines remain two seconds.

@@ -10,9 +10,9 @@ A local tool for improving coding-agent workspaces: collect sanitized tool event
 
 [Agent setup: OS, dependencies, skills and MCP](docs/AGENT_SETUP.md)
 
-[Linux/headless runtime](docs/HEADLESS.md) · Runtime wheel: Python 3.11+
+[Architecture and module ownership](docs/ARCHITECTURE.md) · [Linux/headless runtime](docs/HEADLESS.md) · Runtime wheel: Python 3.11+
 
-**0.9.7 preview.** Downloadable packages and their verification are linked below and recorded in [QA](docs/QA.md). macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
+**0.10.0 development candidate — not released.** The published downloadable version is 0.9.7; Kimi live account acceptance was not performed; configuration and fixtures are verified. Downloadable packages and their verification are linked below and recorded in [QA](docs/QA.md). macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
 
 **Confirm collection first:** configured observers are not proof of observation. After setup, start a new native session, review hook trust when required, perform an ordinary task, and check Workflows for actual paired calls. See the [readiness audit](docs/AUDIT.md). Capabilities separates exact registered skill-file loads, explicit invocations and manual declarations. No observed use is not proof of non-use; command families are bounded static classifications, not semantic understanding of arbitrary code.
 
@@ -36,7 +36,7 @@ Open Analytics → Tokens: readable token units, hover preview, click a day or u
 - Show native remaining quota percentages and reset dates when a provider reports them.
 - Keep reported daily tokens and local history, with explicit missing/stale/partial coverage.
 - Record renewal or expiry dates locally, manually; these are separate from quota reset times.
-- Opt into silent local Codex, ZCode or Claude hooks: pair tool starts/completions, outcomes, wall durations and task boundaries without saving raw payloads.
+- Opt into silent local Codex, ZCode, Claude or Kimi Code 2.x hooks: pair tool starts/completions, outcomes, wall durations and task boundaries without saving raw payloads.
 - Discover repeated 2–4 step workflows across at least three observed turns; inspect repeated identical inputs, failing retries and file-metadata repetition.
 - Inspect sanitized session timelines and evidence behind each finding; manually label accepted/failed/rework outcomes and compare variants.
 - Import or explicitly scan skill/MCP names; configured, available and unknown are distinct. Category matching does not prove a missing capability.
@@ -52,7 +52,8 @@ Open Analytics → Tokens: readable token units, hover preview, click a day or u
 | Codex | Native read-only app-server | Account quotas/resets; account tokens when supplied; optional partial local event projection | Live macOS + fixtures |
 | GLM / ZCode | Native usage/stats | Local tokens, sessions and tool aggregates; opt-in personal Z.ai quotas with own key (live macOS verified) | Live macOS + fixtures |
 | Claude Code | Opt-in official status-line bridge | Reported plan quotas and current context size; **context is not cumulative spend** | Contract + fixtures; no live account test |
-| Kimi Code | Opt-in read-only quota endpoint | Reported quota percentages/resets; no inferred token spend | Experimental contract + fixtures |
+| Kimi Code 2.x | Own quota key + opt-in TOML hooks | Quotas/resets and tool events; quota units are not token spend | Contracts + fixtures; live account acceptance separate |
+| Kimi Work/Chat | Separate application | Its login/subscription does not automatically connect Kimi Code | Automatic collection not established |
 | Qwen Code | Opt-in existing loopback dashboard | Native daily token/skill aggregates; no subscription quota API | Experimental contract + fixtures |
 | Gemini CLI, Cursor, Copilot, Windsurf, DeepSeek, OpenRouter | Local normalized import | Only counters you explicitly export | Import + fixture tests; no automatic account connection |
 

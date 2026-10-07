@@ -86,26 +86,8 @@ class Journal:
         # Keep key and schema initialization in one cross-process critical
         # section. WAL negotiation can fail immediately on simultaneous opens.
         # The separate lock survives atomic replacement of Secrets.json.
-        lockpath=self.state/'.journal-key.lock'
-        if lockpath.is_symlink():raise ValueError('symlink_lock')
-        with open(lockpath,'a+b') as lock:
-            if os.name=='nt':
-                import msvcrt
-                # Windows can lock beyond EOF. Writing a marker first races
-                # with another process already holding this mandatory byte lock.
-                lock.seek(0)
-                deadline=time.monotonic()+.75
-                while True:
-                    try:
-                        lock.seek(0);msvcrt.locking(lock.fileno(),msvcrt.LK_NBLCK,1)
-                        break
-                    except OSError:
-                        if time.monotonic()>=deadline:raise
-                        time.sleep(.01)
-            else:
-                import fcntl
-                fcntl.flock(lock,fcntl.LOCK_EX)
-                os.chmod(lockpath,0o600)
+        from provider_secrets import secret_lock
+        with secret_lock(self.state):
             secret=json.loads(keyfile.read_text()) if keyfile.exists() else {}
             if not isinstance(secret,dict):raise ValueError('invalid_secrets')
             key=secret.get('journalHmacKey')
@@ -177,6 +159,7 @@ class Journal:
         lane=self.digest('lane',[session,actor])
         cwd=raw.get('cwd','');project=self.digest('project',cwd) if isinstance(cwd,str) and cwd else 'unknown'
         supplied=raw.get('turn_id',raw.get('turnId'))
+        if provider=='kimi' and type(supplied) is int and 0<=supplied<2**53:supplied=str(supplied)
         existing=self.db.execute('SELECT turn,source FROM live_turn WHERE session=?',(lane,)).fetchone()
         if supplied and isinstance(supplied,str):turn=self.digest('turn',[provider,sid,supplied]);turn_source='native'
         elif event=='UserPromptSubmit':turn=self.digest('turn',[lane,at]);turn_source='hook-boundary'
@@ -184,7 +167,7 @@ class Journal:
         else:turn=self.digest('turn',[lane,'unscoped']);turn_source='unknown'
         if event=='UserPromptSubmit' or supplied:
             self.db.execute('INSERT OR REPLACE INTO live_turn VALUES (?,?,?)',(lane,turn,turn_source))
-        callraw=raw.get('tool_use_id',raw.get('toolCallId'))
+        callraw=raw.get('tool_use_id',raw.get('toolCallId',raw.get('tool_call_id') if provider=='kimi' else None))
         istool=event in {'PreToolUse','PostToolUse','PostToolUseFailure'}
         if istool and (not isinstance(callraw,str) or not callraw or len(callraw)>1000):raise ValueError('missing_call_id')
         call=self.digest('call',[provider,sid,callraw]) if istool else ''

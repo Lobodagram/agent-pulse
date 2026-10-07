@@ -9,7 +9,13 @@ struct Quota: Codable, Identifiable {
     var bucket: String; var kind: String; var durationMinutes: Double?; var remainingPercent: Double?; var resetsAt: Double?
     var id: String { bucket + kind + String(durationMinutes ?? 0) }
     var label: String {
-        if let m = durationMinutes, m.isFinite, m > 0, m <= 525600 { return m >= 10080 ? tr("Week", "Неделя") : m == 300 ? tr("5 hours", "5 часов") : "\(Int(m / 60)) h" }
+        if let m = durationMinutes, m.isFinite, m > 0, m <= 525600 {
+            if m == 10080 { return tr("Week", "Неделя") }
+            if m == 300 { return tr("5 hours", "5 часов") }
+            if m.truncatingRemainder(dividingBy: 1440) == 0 { return "\(Int(m / 1440)) " + tr("days", "дней") }
+            if m.truncatingRemainder(dividingBy: 60) == 0 { return "\(Int(m / 60)) " + tr("hours", "часов") }
+            return "\(Int(m)) " + tr("minutes", "минут")
+        }
         return tr("Window", "Окно")
     }
 }
@@ -172,7 +178,7 @@ func subscriptionText(_ s: Subscription) -> String {
     @Published var language: String = UserDefaults.standard.string(forKey: "language") ?? "en" { didSet { pulseLanguageOverride = language; savePreference("language", language) } }
     @Published var widgetScale: Double = min(1, max(0.8, UserDefaults.standard.double(forKey: "widgetScale") == 0 ? 1 : UserDefaults.standard.double(forKey: "widgetScale"))) { didSet { savePreference("widgetScale", widgetScale) } }
     @Published var displayMode: String = UserDefaults.standard.string(forKey: "displayMode") ?? "floating" { didSet { savePreference("displayMode", displayMode) } }
-    @Published var glmKeySaving = false
+    @Published var providerKeySaving = false
     @Published var metricMode: String = UserDefaults.standard.string(forKey: "metricMode") == "today" ? "today" : "limits" { didSet { savePreference("metricMode", metricMode) } }
     @Published var menuNumbers: Bool = UserDefaults.standard.object(forKey: "menuNumbers") as? Bool ?? true { didSet { savePreference("menuNumbers", menuNumbers) } }
     @Published var menuFollowActive: Bool = UserDefaults.standard.bool(forKey: "menuFollowActive") { didSet { savePreference("menuFollowActive", menuFollowActive) } }
@@ -253,10 +259,10 @@ func subscriptionText(_ s: Subscription) -> String {
             } catch { Task { @MainActor in completion(.failure(error)) } }
         }
     }
-    func saveGLMKey(_ key: String) {
-        guard !isFixture, !glmKeySaving, let body = try? JSONSerialization.data(withJSONObject: ["key":key]) else { return }; glmKeySaving = true
-        run(["glm-key"], input: body) { [weak self] result in
-            guard let self else { return }; self.glmKeySaving = false; if case .success(let data) = result, let value = try? JSONSerialization.jsonObject(with: data) as? [String:Any], value["saved"] is Bool { self.authRevision += 1; if let idx = self.snapshot?.providers.firstIndex(where: { $0.id == "glm" }) { self.snapshot?.providers[idx].quotas = []; self.snapshot?.providers[idx].quotaObservedAt = nil }; self.settingsMessage = tr("GLM connection saved. Refreshing…", "Подключение GLM сохранено. Обновляю…"); self.refresh() } else { self.settingsMessage = tr("Could not save GLM connection", "Не удалось сохранить подключение GLM") }
+    func saveProviderKey(_ provider: String, _ key: String, region: String = "mainland-cn") {
+        guard !isFixture, !providerKeySaving, let body = try? JSONSerialization.data(withJSONObject: ["key":key]) else { return }; providerKeySaving = true
+        run(["provider-key", "--provider", provider, "--region", region], input: body) { [weak self] result in
+            guard let self else { return }; self.providerKeySaving = false; if case .success(let data) = result, let value = try? JSONSerialization.jsonObject(with: data) as? [String:Any], value["saved"] is Bool { self.authRevision += 1; if let idx = self.snapshot?.providers.firstIndex(where: { $0.id == provider }) { self.snapshot?.providers[idx].quotas = []; self.snapshot?.providers[idx].quotaObservedAt = nil }; self.settingsMessage = tr("Provider connection saved. Refreshing…", "Подключение сохранено. Обновляю…"); self.refresh() } else { self.settingsMessage = tr("Could not save provider connection", "Не удалось сохранить подключение") }
         }
     }
     func refresh() {
@@ -282,7 +288,7 @@ func subscriptionText(_ s: Subscription) -> String {
         let roots = ["codex": ProcessInfo.processInfo.environment["CODEX_HOME"].map { URL(fileURLWithPath: $0).appendingPathComponent("auth.json") } ?? home.appendingPathComponent(".codex/auth.json"),
                      "glm": home.appendingPathComponent(".zcode/v2/provider_config.json"),
                      "claude": home.appendingPathComponent(".claude/.credentials.json"),
-                     "kimi": home.appendingPathComponent(".kimi/config.toml"),
+                     "kimi": URL(fileURLWithPath: ProcessInfo.processInfo.environment["KIMI_CODE_HOME"] ?? home.appendingPathComponent(".kimi-code").path).appendingPathComponent("config.toml"),
                      "qwen": home.appendingPathComponent(".qwen/oauth_creds.json")]
         var result: [String: String] = [:]
         let selected = Set(snapshot?.providers.map { $0.id } ?? ["codex", "glm"])
@@ -927,7 +933,8 @@ struct SubscriptionRow: View {
 }
 struct SettingsView: View {
     @ObservedObject var store: PulseStore; var actions: AppDelegate
-    @State var glmKey = ""
+    @State var providerKeys: [String:String] = [:]
+    @State var kimiRegion = "mainland-cn"
     @State var selected: Set<String> = []; @State var patterns = false; @State var tokens = false
     var body: some View {
         ScrollView {
@@ -947,11 +954,16 @@ struct SettingsView: View {
                 Text(tr("Recognizes Codex, ZCode and Claude desktop app IDs only. Terminals and other windows use rotation; no window titles or chat content are read.", "Распознаёт идентификаторы приложений Codex, ZCode и Claude. В терминалах и других окнах — чередование; заголовки окон и чаты не читаются.")).font(.system(size: 11)).foregroundStyle(quiet)
                 Text(tr("Remaining percentages for selected clients; one client at a time, rotating every 8 seconds. Click to show/hide the movable widget; — means unavailable.", "Проценты остатка выбранных клиентов; один клиент за раз, смена каждые 8 секунд. Нажатие показывает/скрывает подвижное табло; — значит нет данных.")).font(.system(size: 11)).foregroundStyle(quiet)
                 Picker(tr("Widget metric", "Показатель виджета"), selection: $store.metricMode) { Text(tr("Remaining limits", "Остаток лимитов")).tag("limits"); Text(tr("Tokens today · UTC", "Токены сегодня · UTC")).tag("today") }.frame(width: 350)
-                Text(tr("GLM Coding Plan connection", "Подключение GLM Coding Plan")).font(.system(size: 16, weight: .semibold))
-                if let code = store.snapshot?.providers.first(where: { $0.id == "glm" })?.quotaError { Text(tr("Quota unavailable: ", "Квоты недоступны: ") + code).font(.system(size: 11)).foregroundStyle(quiet) }
-                SecureField(tr("Own Z.ai Coding Plan key", "Личный ключ Z.ai Coding Plan"), text: $glmKey).textFieldStyle(.roundedBorder).frame(width: 350)
-                HStack { Button(tr("Save key", "Сохранить ключ")) { store.saveGLMKey(glmKey); glmKey = "" }.disabled(glmKey.isEmpty || store.isFixture || store.glmKeySaving); Button(tr("Disconnect quotas", "Отключить квоты")) { store.saveGLMKey(""); glmKey = "" }.disabled(store.isFixture || store.glmKeySaving) }
-                Text(tr("Personal Z.ai plan only. Quotas belong to this key; local token records belong to ZCode on this device. The key stays in private Secrets.json, outside Git. No native credentials are read.", "Личный план Z.ai. Квоты относятся к этому ключу; локальные токены — к ZCode на устройстве. Ключ хранится в закрытом Secrets.json вне Git. Ключи ZCode не читаются.")).font(.system(size: 11)).foregroundStyle(quiet)
+                ForEach(["glm", "kimi"], id: \.self) { id in
+                    Text(id == "glm" ? "GLM Coding Plan · Z.ai" : "Kimi Code · API key").font(.system(size: 16, weight: .semibold))
+                    if id == "kimi" { Picker(tr("Kimi key region", "Регион ключа Kimi"), selection: $kimiRegion) { Text("kimi.com").tag("mainland-cn"); Text("kimi.ai").tag("global") }.frame(width: 350) }
+                    SecureField(tr("Own provider key", "Личный ключ провайдера"), text: Binding(get: { providerKeys[id] ?? "" }, set: { providerKeys[id] = $0 })).textFieldStyle(.roundedBorder).frame(width: 350)
+                    HStack {
+                        Button(tr("Save key", "Сохранить ключ")) { store.saveProviderKey(id, providerKeys[id] ?? "", region: id == "kimi" ? kimiRegion : "mainland-cn"); providerKeys[id] = "" }.disabled((providerKeys[id] ?? "").isEmpty || store.isFixture || store.providerKeySaving)
+                        Button(tr("Disconnect quotas", "Отключить квоты")) { store.saveProviderKey(id, ""); providerKeys[id] = "" }.disabled(store.isFixture || store.providerKeySaving)
+                    }
+                }
+                Text(tr("Own keys stay in private Secrets.json, outside Git. Native credentials are never read. Kimi Chat/Work login is not a Kimi Code key; quotas do not report token spend.", "Личные ключи хранятся в закрытом Secrets.json вне Git. Ключи приложений не читаются. Вход в Kimi Chat/Work не заменяет ключ Kimi Code; квоты не передают расход токенов.")).font(.system(size: 11)).foregroundStyle(quiet)
                 Text(tr("Clients", "Клиенты")).font(.system(size: 16, weight: .semibold))
                 ForEach(store.snapshot?.catalog ?? []) { spec in
                     Toggle(isOn: Binding(get: { selected.contains(spec.id) }, set: { on in if on { selected.insert(spec.id) } else { selected.remove(spec.id) } })) { VStack(alignment: .leading, spacing: 2) { Text(spec.name); Text(spec.mode == "import" ? tr("Import only; no automatic quota adapter", "Только импорт; автоматических лимитов нет") : spec.mode == "native" ? tr("Built-in client statistics", "Штатная статистика клиента") : spec.mode == "statusline" ? tr("Local status-line bridge", "Локальный мост status-line") : spec.mode == "loopback" ? tr("Existing local dashboard", "Уже запущенное локальное табло") : tr("Optional quota API", "Опциональное чтение квот")).font(.system(size: 10)).foregroundStyle(quiet) } }
@@ -964,7 +976,7 @@ struct SettingsView: View {
                 Divider().overlay(divider)
                 Text(tr("Local event observers · opt in", "Локальные наблюдатели · по выбору")).font(.system(size: 16, weight: .semibold))
                 Text(tr("Records sanitized metadata only. Start a new client session after setup; native hook trust review may be required. Existing hooks are preserved.", "Записываются только очищенные метаданные. После настройки начните новую сессию; клиент может запросить доверие хуку. Существующие хуки сохраняются.")).font(.system(size: 11)).foregroundStyle(quiet)
-                ForEach(["codex", "glm", "claude"], id: \.self) { id in
+                ForEach(["codex", "glm", "claude", "kimi"], id: \.self) { id in
                     HStack { Text(id.uppercased()).frame(width: 70, alignment: .leading); Button(tr("Enable", "Включить")) { store.observer(id, enable: true) }; Button(tr("Remove", "Удалить")) { store.observer(id, enable: false) } }
                 }
                 Divider().overlay(divider)

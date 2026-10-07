@@ -1,4 +1,4 @@
-# Client adapters — reviewed 2026-10-06
+# Client adapters — reviewed 2026-10-07
 
 [Русский](CLIENT_ADAPTERS.ru.md). Proposal, not installed plugins. See [current integrations](INTEGRATIONS.md) and [model evidence](MODELS.md).
 
@@ -7,9 +7,9 @@ Use one local Agent Pulse journal/collector with small host-specific adapters. T
 | Client | Verified extension candidate | Current Agent Pulse status |
 | --- | --- | --- |
 | Codex | Plugin lifecycle hooks and local MCP; native account usage RPC | Own observers/read-only MCP exist; no separately published plugin or billing renewal API established. [Official plugin packaging](https://developers.openai.com/plugins/build/plugins) |
-| ZCode | Plugin hooks/MCP; native app and Coding Plan aggregate statistics | Local observers work. Per-call model/change and paid-plan adapter still incomplete. [Plugins](https://zcode.z.ai/en/docs/plugin), [hooks](https://zcode.z.ai/en/docs/hooks) |
+| ZCode | Plugin hooks/MCP; native app and Coding Plan aggregate statistics | Local observers and opt-in Z.ai plan quotas are delivered. Per-call model coverage remains partial. [Plugins](https://zcode.z.ai/en/docs/plugin), [hooks](https://zcode.z.ai/en/docs/hooks) |
 | Claude Code | `PostModelSwitch` in v2.1.251+ | Future session-model transition adapter. This event does not cover every per-turn fallback, so session-selected and actual call models must stay separate. [Hooks](https://code.claude.com/docs/en/hooks#postmodelswitch) |
-| Kimi Code | Authenticated local `GET /api/v1/oauth/usage` | Future native OAuth quota adapter; documented windows/reset dates, no renewal date established. Installed Kimi Work/Chat compatibility not proved. [Server API](https://www.kimi.com/code/docs/en/kimi-code-cli/reference/server-api.html) |
+| Kimi Code | Authenticated local `GET /api/v1/oauth/usage` | OAuth quota adapter remains a proposal. Own-key quota adapter and Kimi Code 2.x TOML observers are implemented; live acceptance separate. Kimi Work/Chat compatibility not proved. [Server API](https://www.kimi.com/code/docs/en/kimi-code-cli/reference/server-api.html) |
 
 ## Proposed implementation gates
 

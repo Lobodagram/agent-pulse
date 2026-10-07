@@ -61,19 +61,21 @@ Windows: use a suitable Python path and quote paths containing spaces. This repl
 
 Contract: [official Claude status-line JSON](https://code.claude.com/docs/en/statusline).
 
-## Kimi Code: experimental quota API
+<a id="kimi-code"></a>
 
-Opt in by enabling Kimi and creating a private own-state `Secrets.json`:
+## Kimi Code 2.x: separate quota and event connections
 
-```json
-{"kimi":{"api_key":"YOUR_OWN_KIMI_CODE_KEY"}}
-```
+Select the account region explicitly in Settings: .com (mainland-cn) or .ai (global). The same key is never retried against a different regional host. Official Kimi Code 2.1.1 was installed/help-checked here, but the owner cannot log into the friend-owned account; actual account quotas/native events remain unverified.
 
-On POSIX protect it with mode 600. On Windows restrict its NTFS access to your user. The literal placeholder is not a usable key; obtain your own key through the native vendor flow. Do not send it in an issue, screenshot or repository.
+Enable Kimi in the client selection. Enter your **own Kimi Code key** in the masked Settings field and Save. It stays in local `Secrets.json` (0600 on POSIX; restrict NTFS access on Windows). A Kimi Work/Chat login is not a Kimi Code key. Agent Pulse does not extract native keys, cookies or passwords.
 
-Reads only `GET https://api.kimi.com/coding/v1/usages`, the endpoint used by the official client. Redirects and environment proxies are disabled. Missing/changed schema or a failed request yields unavailable. Usage units are quotas, **not token-spend budgets**. This endpoint is an experimental integration based on the maintained client contract, not a promised stable public analytics API; live account verification is pending.
+Only GET `https://api.kimi.com/coding/v1/usages` is used. The summary reports the weekly quota; short windows require explicit `duration/timeUnit`, never array order. Invalid/conflicting values remain unknown. A failed/disconnected key cannot resurrect previous cached percentages. Quota units are not daily token spend; a missing counter is not zero. Surrounding pasted whitespace is trimmed; internal whitespace is rejected. [Official client quota contract](https://github.com/MoonshotAI/kimi-cli/blob/main/src/kimi_cli/ui/shell/usage.py).
 
-Contracts: [official CLI usage command](https://www.kimi.com/code/docs/en/kimi-code-cli/reference/kimi-command), [official quota parser](https://github.com/MoonshotAI/kimi-cli/blob/main/src/kimi_cli/ui/shell/usage.py). Referenced contracts; no client implementation is copied.
+For analytics separately enable the KIMI observer or run `agent-pulse hooks --provider kimi --action install`. The Kimi Code 2.x TOML contract uses `~/.kimi-code/config.toml`, respecting explicit `KIMI_CODE_HOME`. Start a new native session after configuration. Silent handlers have a two-second deadline; other native bytes/handlers are preserved. Removal deletes only the marked Agent Pulse block. Legacy Python kimi-cli (`~/.kimi`) is not reconfigured automatically. [Official hooks](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/hooks.html).
+
+Tool events establish paired calls and repetition evidence. Shell outcomes without structured exit metadata remain unknown; output text is never interpreted as success. A session-selected model is not inherited by calls without model evidence. These events do not establish daily token spend.
+
+Kimi Work/Chat, Kimi Code Desktop and terminal Kimi Code are separate surfaces. Login/subscription in one does not establish access to another's events. The development Mac has Kimi Work/Chat; separate Kimi Code and its authenticated account still require live acceptance. Schema fixtures are not that acceptance. Automatic Work/Chat collection is not claimed. See [integrations](INTEGRATIONS.md) for terminal/IDE boundaries.
 
 ## Qwen Code: existing loopback dashboard
 

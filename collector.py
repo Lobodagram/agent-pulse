@@ -522,7 +522,7 @@ def snapshot(directory, collect_patterns=None):
         elif item['status']=='unavailable':
             cached=store.latest(item['id'])
             # Never reuse an account-specific Codex cache when current identity is unknown/mismatched.
-            if item['id'] in ('codex','glm') and (not item.get('accountScope') or not cached or cached.get('accountScope')!=item['accountScope']):cached=None
+            if item['id'] in ('codex','glm','kimi') and (not item.get('accountScope') or not cached or cached.get('accountScope')!=item['accountScope']):cached=None
             if cached:
                 errors=item.get('sourceStatus',[]);item.update(cached);item['sourceStatus']=errors+['cached_previous_read']
                 if item.get('measurementDay')!=day:item['todayTokens']=None
@@ -562,6 +562,8 @@ def main():
     sub.add_parser('catalog')
     sub.add_parser('limits')
     sub.add_parser('glm-key',help='Save/remove own Coding Plan key from bounded JSON on stdin; never use command-line key arguments')
+    k=sub.add_parser('provider-key',help='Own GLM/Kimi key as bounded JSON on stdin only');k.add_argument('--provider',choices=['glm','kimi'],required=True)
+    k.add_argument('--region',choices=['mainland-cn','global'],default='mainland-cn',help='Kimi account region; explicit endpoint, never automatic fallback')
     c=sub.add_parser('configure');c.add_argument('--providers',required=True);c.add_argument('--local-patterns',choices=['on','off'],default='off');c.add_argument('--local-tokens',choices=['on','off'])
     i=sub.add_parser('ingest');i.add_argument('--provider',choices=sorted(adapters.IDS),required=True);i.add_argument('--file',type=Path,required=True)
     h=sub.add_parser('hook');h.add_argument('--provider',choices=sorted(journal.PROVIDERS),required=True)
@@ -599,11 +601,11 @@ def main():
         elif a.command=='tls-check':
             from providers import tls_check
             result=tls_check()
-        elif a.command=='glm-key':
-            import glm_quota
+        elif a.command in ('glm-key','provider-key'):
+            import provider_secrets
             body=sys.stdin.buffer.read(8193)
             if len(body)>8192:raise ValueError('oversize')
-            result=glm_quota.save_key(a.state,json.loads(body).get('key'))
+            result=provider_secrets.save_key(a.state,json.loads(body).get('key'),a.provider if a.command=='provider-key' else 'glm',a.region if a.command=='provider-key' else 'mainland-cn')
         elif a.command=='journal':result=journal_cli.run(a)
         elif a.command=='hooks':result=instrumentation.configure_hooks(a.provider,a.state,a.action=='install',home=a.observer_home)
         elif a.command=='subscription':

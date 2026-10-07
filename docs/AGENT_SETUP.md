@@ -70,7 +70,7 @@ Set billing dates only when supplied by the user; quota reset dates are unrelate
 
 ## Observe and review
 
-Native observers are a separate explicit opt-in: `agent-pulse hooks --provider codex --action install` (also glm/claude). The inverse is `--action remove`; existing unrelated hooks are preserved. Review any native trust prompt normally. This is not available through MCP control and never starts a native agent session.
+Native observers are a separate explicit opt-in: `agent-pulse hooks --provider codex --action install` (also glm/claude; kimi for Kimi Code 2.x only). The inverse is `--action remove`; existing unrelated hooks are preserved. Review any native trust prompt normally. This is not available through MCP control and never starts a native agent session.
 
 Check real subsequent calls and pairing/gaps in the dashboard or review pack. Zero findings can mean thresholds were not met; unavailable counters are not zero. Do not inject test receipts into production. Use isolated `--state` directories for tests. For finding decisions, actual implemented changes and genuinely reviewed task outcomes are required. Follow [Improvement loop](IMPROVEMENT_LOOP.md). Settings/UI can also be used manually without skills or MCP.
 
@@ -83,3 +83,7 @@ All built-in UI, CLI and MCP preference writes use a locked, atomic patch and in
 Mac and Windows poll visual preferences about every five seconds; snapshots/provider selection refresh separately. This is not immediate synchronization of every open form. Reading `pulse_settings` does not create a missing state directory/database, initialize a schema or run migrations.
 
 `pulse_settings.config` reports configured fields, not every effective UI default. Legacy Mac visual preferences can remain in native UserDefaults when absent from config. Do not infer their current values from absence; explicitly configure a requested field or inspect the owner’s app UI.
+
+## Kimi client boundary
+
+Identify the actual client/version first. The observer targets TypeScript Kimi Code 2.x and its global `~/.kimi-code/config.toml` (`KIMI_CODE_HOME` override). It preserves other TOML bytes and removes only its marked block. Do not install it into legacy Python `~/.kimi/config.toml`. Keys are optional, entered masked in Agent Pulse Settings and saved only in local Secrets.json; Kimi Work/Chat login is not that key. Quota GET reports provider units, not daily token spend. Hook metadata can establish activity without supplying per-call token usage or shell exit codes. An installed observer, passing fixtures or an app subscription is not a real account-collection receipt. See [Kimi coverage](PROVIDERS.md#kimi-code).

@@ -1,6 +1,6 @@
 # In-client integration / Интеграция внутри клиентов
 
-Reviewed 2026-10-06 against official documentation. Feasibility, not an installed plugin or marketplace approval. Agent Pulse already provides optional local read-only MCP tools and opt-in event observers; the desktop widget remains the universal visible surface.
+Reviewed 2026-10-07 against official documentation. Feasibility, not an installed plugin or marketplace approval. Agent Pulse already provides optional local read-only MCP tools and opt-in event observers; the desktop widget remains the universal visible surface.
 
 | Surface | Verified extension point | Practical next step |
 | --- | --- | --- |
@@ -9,6 +9,7 @@ Reviewed 2026-10-06 against official documentation. Feasibility, not an installe
 | Claude Code terminal | Local status-line command receiving session JSON and reported rate-limit fields | Optional bounded formatter, preserving the existing status-line configuration |
 | Claude Desktop | MCP tool integration | No verified global-chat badge contract in the researched docs |
 | ZCode | Plugins with skills, commands, subagents, MCP and hooks | Analytics commands/MCP package; no verified permanent-chat badge API in the researched plugin contract |
+| Kimi Code 2.x CLI | TOML hooks, skills, local MCP | Opt-in observer implemented; native account acceptance remains separate. Kimi Work/Chat and legacy Python kimi-cli are not automatically covered |
 
 Reuse the local journal/collector, without a second agent loop or telemetry uploads. Installing tools differs from inserting persistent UI into a host. UI support depends on the host/version; public-directory distribution needs its normal publishing process. Do not promise automatic approval. No native client settings changed for this review.
 
@@ -21,5 +22,6 @@ Official sources / Официальные источники:
 - [Codex CLI configuration](https://developers.openai.com/codex/config-reference/)
 - [Claude Code status line](https://code.claude.com/docs/en/statusline)
 - [ZCode plugin contract](https://zcode.z.ai/en/docs/plugin)
+- [Kimi Code hooks](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/hooks.html)
 
 Next adapter proposal: [English](CLIENT_ADAPTERS.md) / [Русский](CLIENT_ADAPTERS.ru.md). Reviewed native model-switch and OAuth quota candidates; no new plugin installed.

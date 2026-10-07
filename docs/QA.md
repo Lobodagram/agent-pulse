@@ -1,3 +1,13 @@
+## 0.10.0 Kimi Code readiness · 2026-10-07
+
+Local source gates: 219 tests, privacy export, syntax and document links. Kimi Code 2.x TOML hooks are opt-in, preserve foreign bytes/handlers and have exact inverse removal. Native snake-case call IDs and numeric turns pair; raw tool_output is discarded and unreported shell exits/models remain unknown. Tests cover ambiguous quota windows, fail-closed caches, explicit regional endpoints and real concurrent GLM/Kimi key writes preserving the journal HMAC. Isolated Mac button tests saved/disconnected a synthetic own key and installed/removed eight hooks with exact restoration of a foreign handler. No synthetic events entered production state.
+
+Official Kimi Code 2.1.1 was installed with the owner's authorization using its official npm package. Version/help/doctor were checked without login, model calls or conversations. The owner states that the account belongs to a friend and its login is unavailable, and explicitly asks to retain configuration without live account acceptance. Kimi support is contract/fixture verified; authentic account limits, live native hook delivery and regional quota schema acceptance are unverified. Work/Chat authentication is separate and is not extracted. Own keys are optional masked inputs; .com and .ai are explicitly selected, never automatic failover destinations.
+
+User reported reopening an old widget. Multiple historical same-name development bundles were found; the exact closed instance cannot be identified retrospectively. Canonical installed-path acceptance is recorded after package verification. The existing Limits/Today switch, collapse-to-menu and Quit actions are separate controls. Platform CI/package/installed results are recorded after their actual completion below; previous CI does not certify this delta.
+
+219 тестов проверяют код и границы приватности. Kimi Code 2.1.1 установлен, но аккаунт друга по решению владельца не подключён: реальные квоты и живые события Kimi не выдаются за проверенные. Подключение доступно в настройках. Work/Chat и Code — разные клиенты. Личные ключи не входят в публичные пакеты.
+
 ## 0.9.7 first-start concurrency correction — delivered · 2026-10-07
 
 A fresh documentation-only source run [37619013943](https://github.com/Lobodagram/agent-pulse/actions/runs/37619013943) exposed a real Windows initialization race in the unchanged 0.9.6 runtime: `lock.write`/`flush` attempted access to a byte range held by a peer process and raised PermissionError. Local focused verification then reproduced a separate simultaneous WAL-negotiation OperationalError. Passing older runs did not rule out either timing-sensitive defect.

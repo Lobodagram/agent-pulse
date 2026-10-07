@@ -76,3 +76,26 @@ with tempfile.TemporaryDirectory() as tmp:
     assert concurrent_report['calls']==4 and all(c['paired'] and c['outcome']=='success' for c in concurrent_report['recentCalls'])
     assert (Path(tmp)/'parallel-first-start'/'.journal-key.lock').read_bytes()==b''
 print(json.dumps({'frozenHookJournalMcp':'passed','mcpConfigBusyRetry':'passed','conservativeResultMetadata':'passed','concurrentFirstHooks':'passed','modelsCalled':0,'syntheticDataOnly':True}))
+
+# Kimi Code native hook schema and inverse removal in throwaway native home only.
+with tempfile.TemporaryDirectory() as tmp:
+    state=Path(tmp)/'pulse';home=Path(tmp)/'native-home'
+    config=home/'.kimi-code/config.toml';config.parent.mkdir(parents=True)
+    original=b'# existing user setting\n[providers.custom]\napi_key="PRIVATE_NATIVE_CANARY"'
+    config.write_bytes(original)
+    base=[sys.argv[1],'--state',str(state)]
+    for action in ['install','install']:
+        r=subprocess.run(base+['hooks','--provider','kimi','--action',action,'--observer-home',str(home)],capture_output=True,timeout=5,check=True)
+        assert b'PRIVATE' not in r.stdout and not r.stderr
+    import tomllib
+    hooks=tomllib.loads(config.read_text())['hooks'];assert len(hooks)==8
+    for event in ['PreToolUse','PostToolUse']:
+        raw={'hook_event_name':event,'session_id':'kimi-fixture','turn_id':7,'tool_call_id':'native-call','tool_name':'Shell','tool_input':{'command':'git status'},'tool_output':'PRIVATE_RESULT_CANARY'}
+        r=subprocess.run(base+['hook','--provider','kimi'],input=json.dumps(raw).encode(),capture_output=True,timeout=2,check=True)
+        assert not r.stdout and not r.stderr
+    r=subprocess.run(base+['journal'],capture_output=True,timeout=20,check=True)
+    report=json.loads(r.stdout);assert report['calls']==1 and report['recentCalls'][0]['outcome']=='unknown'
+    assert b'PRIVATE' not in r.stdout
+    r=subprocess.run(base+['hooks','--provider','kimi','--action','remove','--observer-home',str(home)],capture_output=True,timeout=5,check=True)
+    assert config.read_bytes()==original and b'PRIVATE' not in r.stdout
+print(json.dumps({'kimiNativeSchemaAndInverse':'passed'}))

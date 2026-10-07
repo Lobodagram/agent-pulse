@@ -168,23 +168,45 @@ def get_json(url,headers=None):
         return x
 
 def kimi_quotas(raw):
-    from collector import number
-    p=empty('kimi');p.update(status='ready',sourceStatus=['quota_api'],tokenSource='Kimi Code quota API',tokenCoverage='quota units, not token spend')
+    from sanitizers import number
+    if not isinstance(raw,dict) or not isinstance(raw.get('limits',[]),list) or len(raw.get('limits',[]))>8:raise ValueError('quota_schema_unavailable')
+    p=empty('kimi');p.update(status='ready',sourceStatus=['quota_api'],tokenSource='Kimi Code quota API',tokenCoverage='quota units, not token spend',todayTokenCoverage='not-reported')
+    def minutes(row):
+        window=row.get('window')
+        window=window if isinstance(window,dict) else row
+        duration=number(window.get('duration'));unit=window.get('timeUnit')
+        factors={'MINUTE':1,'MINUTES':1,'HOUR':60,'HOURS':60,'DAY':1440,'DAYS':1440,'SECOND':1/60,'SECONDS':1/60}
+        if duration is None or unit not in factors:return None
+        result=duration*factors[unit]
+        return int(result) if result==int(result) and 0<result<=366*1440 else None
     rows=[(raw.get('usage'),10080)]
-    for r in (raw.get('limits') or [])[:8]:
-        if isinstance(r,dict):rows.append((r.get('detail') or r,None))
-    for idx,(r,mins) in enumerate(rows):
-        if not isinstance(r,dict):continue
-        limit=number(r.get('limit'));used=number(r.get('used'));remaining=number(r.get('remaining'))
-        if remaining is None and limit is not None and used is not None:remaining=max(0,limit-used)
-        percent=max(0,min(100,remaining/limit*100)) if remaining is not None and limit else None
-        reset=next((r[k] for k in ['reset_at','resetAt','reset_time','resetTime'] if r.get(k) is not None),None)
+    for row in raw.get('limits',[])[:8]:
+        if not isinstance(row,dict):continue
+        detail=row.get('detail')
+        detail=detail if isinstance(detail,dict) else row
+        outer=minutes(row);inner=minutes(detail)
+        if outer is not None and inner is not None and outer!=inner:raise ValueError('quota_schema_unavailable')
+        rows.append((detail,outer or inner))
+    for row,mins in rows:
+        if not isinstance(row,dict):continue
+        limit=number(row.get('limit'));used=number(row.get('used'));remaining=number(row.get('remaining'))
+        if remaining is None and limit is not None and used is not None and used<=limit:remaining=limit-used
+        percent=remaining/limit*100 if limit and remaining is not None and remaining<=limit else None
+        if used is not None and limit is not None and (used>limit or remaining is not None and abs(remaining+used-limit)>1e-8):percent=None
+        reset=next((row[k] for k in ['reset_at','resetAt','reset_time','resetTime'] if row.get(k) is not None),None)
         if isinstance(reset,str):
-            try:reset=datetime.fromisoformat(reset.replace('Z','+00:00')).timestamp()
+            try:
+                parsed=datetime.fromisoformat(reset.replace('Z','+00:00'))
+                reset=parsed.timestamp() if parsed.tzinfo else None
             except ValueError:reset=None
+        reset=number(reset)
+        reset=reset if reset is not None and 946684800<=reset<=4102444800 else None
         if limit is None and percent is None:continue
-        p['quotas'].append({'bucket':'kimi','kind':'secondary' if idx==0 else 'primary','durationMinutes':mins,'remainingPercent':percent,'resetsAt':number(reset)})
-    if not p['quotas']:p.update(status='unavailable',sourceStatus=['quota_fields_unavailable'])
+        p['quotas'].append({'bucket':'kimi','kind':'secondary' if mins==10080 else 'primary','durationMinutes':mins,'remainingPercent':percent,'resetsAt':reset})
+    # Duplicate declared windows are ambiguous; do not choose one account row.
+    for q in p['quotas']:
+        if q['durationMinutes'] is not None and sum(r['durationMinutes']==q['durationMinutes'] for r in p['quotas'])>1:q.update(remainingPercent=None,resetsAt=None)
+    if not any(q['remainingPercent'] is not None for q in p['quotas']):p.update(status='unavailable',sourceStatus=['quota_fields_unavailable'])
     return p
 
 def collect_extra(ident,directory,config):
@@ -197,21 +219,24 @@ def collect_extra(ident,directory,config):
             if p.get('observedAt') is not None and datetime.fromtimestamp(p['observedAt'],timezone.utc).strftime('%Y-%m-%d') != datetime.now(timezone.utc).strftime('%Y-%m-%d'):p['todayTokens']=None
             return p
         if ident=='kimi':
-            secret=Path(directory)/'Secrets.json'
-            if not secret.is_file():return empty(ident)
-            if secret.is_symlink() or secret.stat().st_size>65536:raise ValueError('invalid_secret_file')
-            if os.name!='nt' and secret.stat().st_mode & 0o077:raise ValueError('secret_permissions')
-            key=(json.loads(secret.read_text()).get('kimi') or {}).get('api_key')
+            from provider_secrets import secrets
+            connection=secrets(directory).get('kimi') or {}
+            key=connection.get('api_key')
             if not isinstance(key,str) or not key:return empty(ident)
-            return kimi_quotas(get_json('https://api.kimi.com/coding/v1/usages',{'Authorization':'Bearer '+key}))
+            if len(key)>4096 or any(c.isspace() for c in key):raise ValueError('invalid_key')
+            endpoints={'mainland-cn':'https://api.kimi.com/coding/v1/usages','global':'https://api.kimi.ai/coding/v1/usages'}
+            endpoint=endpoints.get(connection.get('region','mainland-cn'))
+            if endpoint is None:raise ValueError('quota_schema_unavailable')
+            return kimi_quotas(get_json(endpoint,{'Authorization':'Bearer '+key}))
         if ident=='qwen' and config.get('qwenBaseUrl'):
             u=urlparse(config['qwenBaseUrl'])
             if u.scheme!='http' or u.hostname not in ('127.0.0.1','::1') or u.username or u.password or u.path not in ('','/') or u.query or u.fragment:raise ValueError('loopback_required')
             raw=get_json(config['qwenBaseUrl'].rstrip('/')+'/usage/dashboard?range=today&heatmapDays=30')
             return qwen_dashboard(raw)
         return empty(ident)
-    except Exception:
-        p=empty(ident);p['sourceStatus']=['adapter_unavailable'];return p
+    except Exception as error:
+        from glm_quota import failure_category
+        p=empty(ident);p['sourceStatus']=['adapter_unavailable',failure_category(error)];return p
 
 def qwen_dashboard(raw):
     from collector import number

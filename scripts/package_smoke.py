@@ -26,7 +26,7 @@ def main():
         with zipfile.ZipFile(wheel) as z:
             names=z.namelist()
             assert not any(n.startswith(('scripts/','tests/')) for n in names)
-            for name in ['glm_quota.py','hook_bridge.py','sanitizers.py','pulse_version.py']:
+            for name in ['provider_secrets.py','glm_quota.py','hook_bridge.py','sanitizers.py','pulse_version.py']:
                 assert name in names
             metadata=Parser().parsestr(z.read(next(n for n in names if n.endswith('/METADATA'))).decode())
             assert metadata['Version']==__version__ and metadata['Requires-Python']=='>=3.11'
