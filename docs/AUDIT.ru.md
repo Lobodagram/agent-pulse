@@ -1,3 +1,9 @@
+## 0.9.2 · 2026-10-07
+
+- Replace the daily Swift Charts plot with ordinary SwiftUI bars, readable zero/large-number axes and the same hover/click/day-selector details. No Swift Charts link or Metal chart initialization is required. Intel chart fixtures now run in source CI as well as packaged CI.
+- 0.9.1 remains an immutable source-only preview: packaged Intel chart rendering aborted. Diagnostic run37592180734 reproduced `MTLLoader ... Target device architecture is nil`; ARM64/Windows passed. No binaries were published for0.9.1.
+- График построен обычными элементами SwiftUI: сохраняются наведение, выбор дня, точные значения и понятные единицы. Проверка Intel добавлена в CI исходников. Причина прежнего падения подтверждена сообщением Metal; готовые пакеты0.9.1 не публиковались.
+
 ## 0.9.1 · дневные счётчики
 
 Исправлена подтверждённая ошибка: накопительное число токенов перезаписывало бюджет байтов чтения и задерживало свежие данные Codex. Ограниченное восстановление отставания сбрасывает накопительную базу и явно отмечает пропуск; старый расход не приписывается сегодняшнему дню. Нормальный локальный сбор снова возвращает ненулевой частичный счётчик. 192 теста прошли. Во вкладке «Токены» — понятные единицы, просмотр/выбор дня и точные числа по клиентам. На Windows добавлен выбор дневных значений. Почасовые значения не выдумываются; длинные списки прокручиваются. EN/RU, большие/нулевые/отсутствующие значения проверены в вымышленных сценах. Платформенные сборки проверяются отдельно.

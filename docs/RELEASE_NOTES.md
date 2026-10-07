@@ -1,4 +1,6 @@
-Agent Pulse 0.9.1 — daily token details and ordinary utility windows / дневные токены и поведение окон
+Agent Pulse 0.9.2 — daily token details and ordinary utility windows / дневные токены и поведение окон
+
+The daily plot uses ordinary SwiftUI bars and no Swift Charts link. The previous0.9.1 package gate failed on Intel with a confirmed Metal loader assertion and remains source-only; its tag is unchanged. The same Intel chart checks must pass before packaging0.9.2.
 
 Analytics/Settings are ordinary reusable windows: restore from background/hidden/minimized state, hide on repeat while active. The widget retains its configurable floating level. Mac shortcuts: Cmd+1 / Cmd+comma. Windows preserves settings drafts and refreshes reused analytics.
 
