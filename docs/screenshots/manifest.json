@@ -1,12 +1,12 @@
 {
-  "docs/screenshots/analytics-en.png": "9d87e297fb314a1e65495fa0efe5ac731bd718368fad920df33f3dc01838de8e",
-  "docs/screenshots/capabilities-en.png": "658f5acd496dc539b951b759679318ef4350dd4ddd1a5de769724c17462c701c",
-  "docs/screenshots/capabilities-ru.png": "8cc4b2e507396498b4863c54ba6df7b4f14be381023f633a05e92e44eb3760ce",
+  "docs/screenshots/analytics-en.png": "a8f603e8803b26d8a3b1e7c315f46d52701665def60b2c3f74a5d89f9069c234",
+  "docs/screenshots/capabilities-en.png": "8bf81a043574ca28f925118ab6a3eddd6407d46618146c350bbe4a4707bd3750",
+  "docs/screenshots/capabilities-ru.png": "3ff28cce6f9d2c5075257a9b5d5bfbfdaa1c054c797c6be6578b6a7505c0ffb7",
   "docs/screenshots/glm-menu-ru.png": "e6793601c18cee74bdacfdeb4dbada97833e953dcc808c9eaec02422f4912bca",
   "docs/screenshots/limits-ru.png": "ee35a2bca9dffa660b7454c5975b80e509b9bcd120b7e2fdf51a0d8492503f41",
   "docs/screenshots/menu-bar-demo.png": "f1208b0cfd774e58a8083942cb55d58fa7094afbc081bf78d4e04e52d4e22c8e",
-  "docs/screenshots/models-en.png": "f11ba8ad6c3bb797b17bf2b80ff4f7782f41f539dc53d9ad944a2aa84553726d",
-  "docs/screenshots/models-ru.png": "711812fa9022063500e0490d6998db8d5ad1dbdcf8800f77ed5dc4abeedc7f94",
+  "docs/screenshots/models-en.png": "08c1305c536d1150992392d4f5045148d4ae611155392ac2920330528bb97de4",
+  "docs/screenshots/models-ru.png": "0f48519369addfadb150518a9ec2dd6edd789f4c9f8ea3cee385010e441ade5b",
   "docs/screenshots/settings-active-en.png": "6610262f3fe94a5ab1e53c1addf00abcd1969db0c8987bcdc25947642ad27d40",
   "docs/screenshots/settings-ru.png": "25731692f3dc0a7d230f955ea7cccec4a710cccdd6119ee5bc1d3b7a3360b7f0",
   "docs/screenshots/today-en.png": "90a3b2f4cfd90b4dff9b4215c55697a02197056bd32dd1f581d61332a86aa38f",
@@ -14,6 +14,8 @@
   "docs/screenshots/widget-ru.png": "ee35a2bca9dffa660b7454c5975b80e509b9bcd120b7e2fdf51a0d8492503f41",
   "docs/screenshots/widget-small-en.png": "71c2fdc75bd12a38525d061c4a61819c4ffa2ccc28395f54929634150369fb10",
   "docs/screenshots/widget-small-ru.png": "501d9f0ac4291e6afc724157a4370cd0184f3c99c25524a92b57bf6ce4818af3",
-  "docs/screenshots/workflows-en.png": "44cf4e85b2ec856a4528f2208e089d460c76817859f842d624627277b4a94884",
-  "docs/screenshots/workflows-ru.png": "72e4a4b9c8e9e8f8c0a161e9748ebc789bc3ae8549a1405b5d587c78e2e75c58"
+  "docs/screenshots/workflows-en.png": "e79a5b531dc913b7ef81b253aa90348583d0c4376a56cc703b85db588f708c2f",
+  "docs/screenshots/workflows-ru.png": "7b150a6b417be61018e169e6e20409b23d3b97bc43c69d2ba3fae1d41d9f297c",
+  "docs/screenshots/tokens-en.png": "9fcc431671983eb4bff1d0851bcac909b5126045a7812e4ef9e79ea5f7e451ea",
+  "docs/screenshots/tokens-ru.png": "5546e1cb17b6a5143acdb3e4faa787f40bc87a0ca74e642bcf51bd9009221956"
 }

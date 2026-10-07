@@ -353,9 +353,29 @@ class Pulse:
             t=tk.Text(f,bg=BG,fg=FG,wrap='word',font=('Consolas',11));scroll=ttk.Scrollbar(f,command=t.yview);t.configure(yscrollcommand=scroll.set);scroll.pack(side='right',fill='y');t.pack(expand=True,fill='both',padx=8,pady=8);t.insert('1.0','\n'.join(str(x) for x in lines));t.configure(state='disabled');return t
         overview=page(self.t('Overview','Обзор'));workflows=page(self.t('Workflows','Сценарии'));sessions=page(self.t('Sessions','Сессии'));comparison=page(self.t('Compare','Сравнение'))
         capabilities=page(self.t('Capabilities','Навыки'))
+        daily=page(self.t('Daily tokens','Токены по дням'))
+        tk.Label(daily,text=self.t('UTC daily counters · select a day for exact values. Missing is not zero.','Дневные счётчики UTC · выберите день для точных значений. Пропуск — не ноль.'),bg=BG,fg=QUIET,wraplength=560).pack(anchor='w',padx=8,pady=8)
+        history=self.data.get('history',[]);days=sorted({r['date'] for r in history})
+        daytree=ttk.Treeview(daily,columns=('tokens',),show='tree headings',height=6)
+        daytree.heading('#0',text=self.t('Day · UTC','День · UTC'));daytree.heading('tokens',text=self.t('Reported total','Передано всего'))
+        daytree.pack(fill='x',padx=8)
+        for day in days:daytree.insert('','end',iid=day,text=day,values=(f"{sum(r['tokens'] for r in history if r['date']==day):,.0f}",))
+        daydetail=textview(daily,[])
+        def day_selected(_=None):
+            if not daytree.selection():return
+            day=daytree.selection()[0];detail=[day+' · UTC','']
+            for p in self.data.get('providers',[]):
+                r=next((r for r in history if r['date']==day and r['provider']==p['id']),None)
+                detail.append(p['id'].upper()+' · '+(f"{r['tokens']:,.0f}" if r is not None else self.t('No daily counter; not zero','Дневной счётчик отсутствует; это не ноль')))
+                if r is not None:detail.append(self.t('Partial local events','Частичные локальные события') if r.get('coverage')=='partial-local' else self.t('Reported daily counter · source scope varies','Переданный дневной счётчик · охват источников различается'))
+            detail+=['',self.t('These daily sources do not report hourly tokens. Quota percentages are separate.','Эти дневные источники не передают почасовые токены. Проценты лимитов учитываются отдельно.')]
+            daydetail.configure(state='normal');daydetail.delete('1.0','end');daydetail.insert('1.0','\n'.join(detail));daydetail.configure(state='disabled')
+        daytree.bind('<<TreeviewSelect>>',day_selected)
+        if days:daytree.selection_set(days[-1]);day_selected()
         report=self.data.get('analytics',{});lines=[self.t('Tokens, quotas and billing dates are separate. Missing is unknown.','Токены, лимиты и даты оплаты различаются. Пропуск неизвестен.'),'']
         for p in self.data.get('providers',[]):
             lines += [p['name']+' · '+p['status'],self.t('Tokens today: ','Токены сегодня: ')+(str(p['todayTokens']) if p.get('todayTokens') is not None else '—'),p.get('tokenCoverage',''),'']
+            if 'local_tokens_backlog_skipped' in p.get('sourceStatus',[]):lines.append(self.t('Local backlog skipped; recent counters are partial, missing history is not reconstructed.','Локальное отставание пропущено; свежие счётчики частичны, пропущенная история не восстановлена.'))
         for d in self.data.get('history',[]):lines.append(f"{d['date']}  {d['provider']:10}  {d['tokens']:>12,.0f}")
         lines+=['',self.t('OBSERVED COVERAGE','НАБЛЮДАЕМЫЙ ОХВАТ')]
         for c in report.get('coverage',[]):
@@ -487,7 +507,11 @@ class Pulse:
             finally:j.close()
         ttk.Button(row,text=self.t('Compare','Сравнить'),command=compare).pack(side='left')
         if self.smoke:
-            for index in range(5):book.select(index);w.update_idletasks()
+            for index in range(len(book.tabs())):book.select(index);w.update_idletasks()
+            for day in days:
+                daytree.selection_set(day);day_selected()
+                assert day+' · UTC' in daydetail.get('1.0','end')
+                for p in self.data.get('providers',[]):assert p['id'].upper() in daydetail.get('1.0','end')
             if findings:finder.selection_set('0');finding_selected(None)
             if items:
                 index=next((i for i,r in enumerate(items) if r.get('modelHistory',{}).get('reportedChanges',0)>0),0)

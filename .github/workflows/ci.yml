@@ -32,3 +32,4 @@ jobs:
           'dist/Agent Pulse.app/Contents/MacOS/AgentPulse' --fixture examples/demo.json --snapshot .build/widget.png
           python scripts/widget_smoke.py 'dist/Agent Pulse.app/Contents/MacOS/AgentPulse'
           python scripts/model_ui_smoke.py 'dist/Agent Pulse.app/Contents/MacOS/AgentPulse'
+          python scripts/chart_ui_smoke.py 'dist/Agent Pulse.app/Contents/MacOS/AgentPulse'

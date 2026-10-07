@@ -40,7 +40,7 @@ struct Provider: Codable, Identifiable {
 }
 struct ProviderSpec: Codable, Identifiable { var id: String; var name: String; var mode: String; var support: String }
 struct DayUsage: Codable, Identifiable {
-    var provider: String; var date: String; var tokens: Double
+    var provider: String; var date: String; var tokens: Double; var coverage: String?
     var id: String { provider + date }
     var day: Date { isoDay.date(from: date) ?? .distantPast }
 }
@@ -464,6 +464,103 @@ struct WidgetView: View {
         }
     }
 }
+struct TokenHistoryView: View {
+    var snapshot: Snapshot
+    @State private var selectedDay: String?
+    @State private var hoveredDay: String?
+    private var history: [DayUsage] { snapshot.history.filter { $0.tokens.isFinite && $0.tokens >= 0 && isoDay.date(from: $0.date) != nil } }
+    private var days: [String] { Array(Set(history.map(\.date))).sorted() }
+    private var focusedDay: String? { hoveredDay ?? selectedDay }
+    private func day(at point: CGPoint, proxy: ChartProxy, geometry: GeometryProxy) -> String? {
+        guard let plot = proxy.plotFrame else { return nil }
+        let frame = geometry[plot]
+        guard frame.contains(point), let day: String = proxy.value(atX: point.x - frame.minX) else { return nil }
+        return days.contains(day) ? day : nil
+    }
+    private func coverageLabel(_ row: DayUsage) -> String {
+        switch row.coverage {
+        case "known-account-sum": return tr("Reported sum of known accounts", "Переданная сумма известных аккаунтов")
+        case "partial-local": return tr("Partial local events", "Частичные локальные события")
+        default: return tr("Reported daily counter · source scope varies", "Переданный дневной счётчик · охват источников различается")
+        }
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(tr("Tokens by day · UTC", "Токены по дням · UTC")).font(.system(size: 16, weight: .semibold))
+            if history.isEmpty {
+                Text(tr("No daily counters reported", "Дневные счётчики не получены")).foregroundStyle(quiet)
+            } else {
+                Chart(history) { item in
+                    BarMark(x: .value("Day", item.date), y: .value("Tokens", item.tokens))
+                        .foregroundStyle(by: .value("Client", item.provider.uppercased()))
+                        .position(by: .value("Client", item.provider.uppercased()))
+                        .accessibilityLabel(item.date + " · " + item.provider.uppercased())
+                        .accessibilityValue(fullNumber(item.tokens) + tr(" tokens", " токенов"))
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading) { value in
+                        AxisGridLine(); AxisTick()
+                        AxisValueLabel { if let number = value.as(Double.self) { Text(shortNumber(number)) } }
+                    }
+                }
+                .chartXAxis {
+                    AxisMarks(values: days.enumerated().filter { $0.offset % max(1, (days.count+4)/5) == 0 }.map(\.element)) { value in
+                        AxisGridLine(); AxisTick()
+                        AxisValueLabel { if let date = value.as(String.self) { Text(date.suffix(5)) } }
+                    }
+                }
+                .chartOverlay { proxy in
+                    GeometryReader { geometry in
+                        Rectangle().fill(.clear).contentShape(Rectangle())
+                            .onContinuousHover { phase in
+                                switch phase {
+                                case .active(let point): hoveredDay = day(at: point, proxy: proxy, geometry: geometry)
+                                case .ended: hoveredDay = nil
+                                }
+                            }
+                            .onTapGesture { point in
+                                if let day = day(at: point, proxy: proxy, geometry: geometry) { selectedDay = day }
+                            }
+                    }
+                }
+                .environment(\.calendar, Calendar(identifier: .gregorian))
+                .environment(\.timeZone, TimeZone(secondsFromGMT: 0)!)
+                .frame(height: 180)
+                Text(tr("Hover to preview; click to select a day. Values below are exact reported counters.", "Наведите для просмотра; нажмите, чтобы выбрать день. Ниже — точные переданные значения.")).font(.system(size: 11)).foregroundStyle(quiet)
+                Picker(tr("Day · UTC", "День · UTC"), selection: $selectedDay) {
+                    Text(tr("Choose a day", "Выберите день")).tag(nil as String?)
+                    ForEach(days, id: \.self) { day in Text(day).tag(Optional(day)) }
+                }.accessibilityLabel(tr("Select token day", "Выбрать день расхода токенов"))
+                if let focusedDay {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(focusedDay + " · UTC" + (hoveredDay == nil ? "" : tr(" · preview", " · просмотр"))).font(.system(size: 14, weight: .semibold))
+                        ForEach(snapshot.providers) { provider in
+                            let row = history.first { $0.date == focusedDay && $0.provider == provider.id }
+                            HStack(alignment: .top) {
+                                Text(provider.id.uppercased()).frame(width: 88, alignment: .leading)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(fullNumber(row?.tokens) + (row == nil ? "" : tr(" tokens", " токенов"))).monospacedDigit()
+                                    Text(row.map(coverageLabel) ?? tr("No daily counter; this is not zero", "Дневной счётчик отсутствует; это не ноль")).font(.system(size: 10)).foregroundStyle(quiet)
+                                }
+                            }.font(.system(size: 12))
+                        }
+                        Text(tr("Hourly token counts are not reported by these daily sources. Quota percentages are a separate measurement.", "Почасовые токены эти дневные источники не передают. Проценты лимитов — отдельное измерение.")).font(.system(size: 11)).foregroundStyle(quiet)
+                    }.padding(12).frame(maxWidth: .infinity, alignment: .leading).background(divider.opacity(0.35)).clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+            }
+        }
+        .onAppear {
+            if selectedDay == nil { selectedDay = days.last }
+            if storeFixtureDay != nil { selectedDay = storeFixtureDay }
+        }
+    }
+    private var storeFixtureDay: String? {
+        let args = CommandLine.arguments
+        guard args.contains("--fixture"), let index = args.firstIndex(of: "--history-day"), index+1 < args.count, days.contains(args[index+1]) else { return nil }
+        return args[index+1]
+    }
+}
+
 struct AnalysisView: View {
     @ObservedObject var store: PulseStore
     @State var tab = CommandLine.arguments.firstIndex(of: "--tab").flatMap { $0 + 1 < CommandLine.arguments.count ? CommandLine.arguments[$0 + 1] : nil } ?? "overview"
@@ -531,11 +628,13 @@ struct AnalysisView: View {
                 Text(tr("Overview", "Обзор")).tag("overview"); Text(tr("Workflows", "Сценарии")).tag("workflows")
                 Text(tr("Sessions", "Сессии")).tag("sessions"); Text(tr("Compare", "Сравнение")).tag("compare")
                 Text(tr("Capabilities", "Навыки")).tag("capabilities")
+                Text(tr("Tokens", "Токены")).tag("tokens")
             }.pickerStyle(.segmented).labelsHidden()
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if let snapshot = store.snapshot {
                         if tab == "overview" { overview(snapshot) }
+                        else if tab == "tokens" { TokenHistoryView(snapshot: snapshot) }
                         else if let report = snapshot.analytics {
                             if tab == "workflows" { workflows(report) }
                             else if tab == "sessions" { sessions(report) }
@@ -550,7 +649,7 @@ struct AnalysisView: View {
         .onChange(of: tab) { _, _ in message = ""; reviewMessage = "" }
         .onAppear {
             let args = CommandLine.arguments
-            if store.isFixture, let i = args.firstIndex(of: "--analysis-tab"), i+1 < args.count, ["overview", "workflows", "sessions", "compare", "capabilities"].contains(args[i+1]) { tab = args[i+1] }
+            if store.isFixture, let i = args.firstIndex(of: "--analysis-tab"), i+1 < args.count, ["overview", "workflows", "sessions", "compare", "capabilities", "tokens"].contains(args[i+1]) { tab = args[i+1] }
             if CommandLine.arguments.contains("--session-demo"), let first = store.snapshot?.analytics?.sessions.first { select(first) }
             if store.isFixture, CommandLine.arguments.contains("--model-demo"), let first = store.snapshot?.analytics?.sessions.first(where: { ($0.modelHistory?.reportedChanges ?? 0) > 0 }) { select(first) }
         }
@@ -566,14 +665,15 @@ struct AnalysisView: View {
                         if let context = p.contextTokens { Text(tr("Context gauge: ", "Размер контекста: ") + fullNumber(context)).font(.system(size: 11)).foregroundStyle(amber) }
                         Text(subscriptionText(p.subscription)).font(.system(size: 11)).foregroundStyle(quiet)
                         Text(p.tokenSource ?? tr("Source unavailable", "Источник недоступен")).font(.system(size: 10)).foregroundStyle(quiet)
-                        Text(p.tokenCoverage ?? "").font(.system(size: 10)).foregroundStyle(quiet)
+                        Text((p.todayTokenCoverage == "partial-local" ? tr("Today: partial local counters", "Сегодня: частичные локальные счётчики") : nil) ?? p.tokenCoverage ?? "").font(.system(size: 10)).foregroundStyle(quiet)
+                        if p.sourceStatus.contains("local_tokens_backlog_skipped") {
+                            Text(tr("Local backlog skipped: recent counters only; missing history is not reconstructed.", "Локальное отставание пропущено: учтены свежие счётчики; пропущенная история не восстановлена.")).font(.system(size: 10)).foregroundStyle(amber)
+                        }
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             Divider()
-            Text(tr("Reported tokens · UTC", "Переданные токены · UTC")).font(.system(size: 16, weight: .semibold))
-            if snapshot.history.isEmpty { Text(tr("No history reported", "История не получена")).foregroundStyle(quiet) }
-            else { Chart(snapshot.history) { item in BarMark(x: .value("Date", item.day, unit: .day), y: .value("Tokens", item.tokens)).foregroundStyle(by: .value("Client", item.provider)).position(by: .value("Client", item.provider)) }.frame(height: 140) }
+            TokenHistoryView(snapshot: snapshot)
             if let report = snapshot.analytics {
                 Text(tr("Observed work", "Наблюдаемая работа")).font(.system(size: 16, weight: .semibold))
                 Text("\(report.calls) " + tr("calls · ", "вызовов · ") + "\(report.findings.count) " + tr("workflow findings", "наблюдений по сценариям")).foregroundStyle(mint)

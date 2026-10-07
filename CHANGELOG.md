@@ -2,6 +2,10 @@
 
 ## 0.9.1 · 2026-10-07
 
+- Readable K/M/B and тыс./млн/млрд token axes, daily hover/click details, accessible day selection and separate Tokens/Daily tokens views on Mac/Windows. Missing counters remain unknown.
+- Repair Codex local projection: token totals no longer overwrite the file byte budget. Bounded backlog recovery resets the cumulative baseline, records a gap and labels partial history without attributing skipped older usage to today.
+- Понятный график и точные дневные значения по клиентам. Исправлен пропуск свежих токенов Codex; локальный неполный охват и пропущенная история явно обозначены.
+
 - Analytics and Settings use ordinary windows; the widget alone retains the configurable floating level. Repeated actions hide the active window, restore background/hidden/minimized windows, and reuse the same instance.
 - macOS adds Analytics (⌘1) and Settings (⌘,) menu shortcuts and fixture-only window diagnostics. Windows reuses utility windows instead of opening duplicates.
 - Аналитика и настройки уходят назад при переходе в другое приложение; кнопка возвращает окно, повторное нажатие скрывает активное. Виджет сохраняет режим поверх окон.

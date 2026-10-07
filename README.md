@@ -24,6 +24,10 @@ A local tool for improving coding-agent workspaces: collect sanitized tool event
 ![Limits — invented demo data](docs/screenshots/limits-ru.png)
 ![Today — invented demo data](docs/screenshots/today-en.png)
 
+Open Analytics → Tokens: readable token units, hover preview, click a day or use the date selector for exact per-client values. Windows: Daily tokens. Daily sources do not supply hourly counts. Codex local fallback is partial and opt-in; skipped backlog is labelled, never reconstructed from cumulative totals.
+
+![Daily tokens — invented demo data](docs/screenshots/tokens-en.png)
+
 ## What it does
 
 - Choose clients and page through two at a time; drag the compact panel by its title.

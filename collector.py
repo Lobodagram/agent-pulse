@@ -289,6 +289,7 @@ class Store:
         CREATE TABLE IF NOT EXISTS token_events(id TEXT PRIMARY KEY,date TEXT,tokens INTEGER);
         CREATE TABLE IF NOT EXISTS token_totals(id TEXT PRIMARY KEY,total INTEGER);
         CREATE TABLE IF NOT EXISTS cursors(id TEXT PRIMARY KEY,offset INTEGER);
+        CREATE TABLE IF NOT EXISTS rollout_gaps(id TEXT PRIMARY KEY,at INTEGER);
         CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT);
         ''')
         revision=self.db.execute('SELECT value FROM settings WHERE key=?',('_projection_version',)).fetchone()
@@ -337,6 +338,7 @@ class Store:
         self.db.execute('INSERT OR REPLACE INTO samples VALUES (?,?,?)',(pid,stamp,json.dumps(provider)))
         self.db.execute('DELETE FROM samples WHERE at<?',(stamp-90*86400,))
         self.db.execute('DELETE FROM events WHERE at<?',(stamp-30*86400,))
+        self.db.execute('DELETE FROM rollout_gaps WHERE at<?',(stamp-30*86400,))
         self.db.execute('DELETE FROM token_events WHERE date<?',((datetime.now()-timedelta(days=30)).strftime('%Y-%m-%d'),))
         self.db.execute('DELETE FROM account_daily WHERE date<?',((datetime.now()-timedelta(days=180)).strftime('%Y-%m-%d'),))
         self.db.execute('DELETE FROM daily WHERE date<?',((datetime.now()-timedelta(days=180)).strftime('%Y-%m-%d'),))
@@ -359,21 +361,32 @@ class Store:
         ident=hashlib.sha256(str(thread['id']).encode()).hexdigest()
         old=self.db.execute('SELECT offset FROM cursors WHERE id=?',(ident,)).fetchone()
         size=path.stat().st_size
-        start=old[0] if old and old[0]<=size else max(0,size-2*1024*1024)
+        continuous=bool(old and 0<=old[0]<=size and size-old[0]<=4*1024*1024)
+        start=old[0] if continuous else max(0,size-2*1024*1024)
+        if old and not continuous:
+            # Bounded recent coverage rather than an indefinitely delayed backlog.
+            # A cumulative delta across skipped bytes would misattribute older days.
+            self.db.execute('DELETE FROM token_totals WHERE id=?',(ident,))
+            self.db.execute('INSERT OR REPLACE INTO rollout_gaps VALUES (?,?)',(ident,int(time.time())))
         added=0
         with path.open('rb') as f:
             f.seek(start)
-            if start and not old:f.readline() # partial initial line
-            total=0
+            bytes_read=0
+            if start and not continuous:
+                # Skip a partial first line in bounded chunks, including huge bodies.
+                while True:
+                    part=f.readline(65536);bytes_read+=len(part)
+                    if not part or part.endswith(b'\n') or bytes_read>4*1024*1024:break
             while True:
+                if bytes_read>4*1024*1024:break
                 offset=f.tell();line=f.readline(512*1024+1)
                 if not line:break
-                total+=len(line)
-                if total>4*1024*1024 or len(line)>512*1024:
+                bytes_read+=len(line)
+                if bytes_read>4*1024*1024 or len(line)>512*1024:
                     # Skip an oversized line without loading its message body.
-                    while line and not line.endswith(b'\n') and total<=4*1024*1024:
-                        line=f.readline(65536);total+=len(line)
-                    if total>4*1024*1024:break
+                    while line and not line.endswith(b'\n') and bytes_read<=4*1024*1024:
+                        line=f.readline(65536);bytes_read+=len(line)
+                    if bytes_read>4*1024*1024:break
                     continue
                 if not line.endswith(b'\n'):
                     f.seek(offset);break # incomplete write: retry later
@@ -381,12 +394,12 @@ class Store:
                 except (ValueError,UnicodeError):continue
                 token = project_token_event(event)
                 if token:
-                    date,total,last = token
+                    date,cumulative_total,last = token
                     prev=self.db.execute('SELECT total FROM token_totals WHERE id=?',(ident,)).fetchone()
-                    amount=max(0,total-prev[0]) if prev else min(last,total)
+                    amount=max(0,cumulative_total-prev[0]) if prev else min(last,cumulative_total)
                     eid=hashlib.sha256(f'{ident}:{offset}:tokens'.encode()).hexdigest()
                     self.db.execute('INSERT OR IGNORE INTO token_events VALUES (?,?,?)',(eid,date,amount))
-                    self.db.execute('INSERT OR REPLACE INTO token_totals VALUES (?,?)',(ident,total))
+                    self.db.execute('INSERT OR REPLACE INTO token_totals VALUES (?,?)',(ident,cumulative_total))
                 for at,name,failed in (project_event(event) if include_tools else []):
                     eid=hashlib.sha256(f'{ident}:{offset}:{name}'.encode()).hexdigest()
                     before=self.db.total_changes
@@ -410,7 +423,7 @@ class Store:
     def history(self):
         # Native account totals are upserted per account/day, then summed across known accounts.
         # Legacy unscoped rows remain stored, but cannot be added to an overlapping day safely.
-        rows=[dict(provider=p,date=d,tokens=t,coverage='legacy-or-local') for p,d,t in self.db.execute("SELECT provider,date,tokens FROM daily WHERE date>=date('now','-30 days') ORDER BY date")]
+        rows=[dict(provider=p,date=d,tokens=t,coverage='partial-local' if s=='Codex bounded local events' else 'legacy-or-local') for p,d,t,s in self.db.execute("SELECT provider,date,tokens,source FROM daily WHERE date>=date('now','-30 days') ORDER BY date")]
         known=[dict(provider=p,date=d,tokens=t,coverage='known-account-sum') for p,d,t in self.db.execute("SELECT provider,date,sum(tokens) FROM account_daily WHERE date>=date('now','-30 days') GROUP BY provider,date")]
         covered={(r['provider'],r['date']) for r in known}
         return sorted([r for r in rows if (r['provider'],r['date']) not in covered]+known,key=lambda r:(r['date'],r['provider']))
@@ -517,6 +530,9 @@ def snapshot(directory, collect_patterns=None):
     codex=next((p for p in items if p['id']=='codex'),None)
     if collect_tokens and codex:
         for thread in threads:store.project_rollout(thread,include_tools=bool(collect_patterns))
+        gaps=store.db.execute('SELECT count(*) FROM rollout_gaps WHERE at>=?',(int(time.time())-30*86400,)).fetchone()[0]
+        codex['localTokenGaps']=gaps
+        if gaps:codex.setdefault('sourceStatus',[]).append('local_tokens_backlog_skipped')
         store.persist_local_tokens()
         if codex.get('todayTokens') is None:
             codex['todayTokens']=store.local_tokens(day);codex['todayTokenCoverage']='partial-local'

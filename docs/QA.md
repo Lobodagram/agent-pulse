@@ -1,3 +1,10 @@
+
+### 0.9.1 daily counters and chart verification
+
+Codex's local projection reused `total` for the file-byte budget and cumulative tokens. Large counters prematurely stopped reading and left a native-returned eligible file 278,576,866 bytes behind on this Mac. Separate `bytes_read` and `cumulative_total` fix the defect. A backlog over 4 MiB resumes from the bounded 2 MiB tail; its cumulative baseline resets, a hashed/dated gap is retained for 30 days, and the UI explicitly labels recent-only partial coverage. No skipped historical usage is assigned to today. Native account-day totals retain precedence. Regression tests cover 200-million counters, a 5 MiB oversized private line, backlog reset, deduplication and no path/body retention. The normal source snapshot now returns a nonzero partial Codex UTC-day counter; no invented events were inserted.
+
+Mac Tokens view uses categorical UTC dates (avoiding date-bin timezone drift), readable axes, exact hover/selected-day details and a keyboard-accessible date selector. Windows Daily tokens supports day selection and exact per-enabled-client counts. Daily sources do not supply hourly counts. EN/RU, large/zero/missing values and minimum-size renders passed; long details scroll. Synthetic screenshots were regenerated for the changed analytics navigation. Source unit tests: 192 passed. Final frozen/platform checks are recorded separately after publication.
+
 ## 0.9.1 window behavior · 2026-10-07
 
 Analytics/Settings use normal window level; the configurable floating level belongs only to the widget. Actions restore a background, hidden or minimized existing window and hide an already active window. macOS tests include a key nonactivating widget with a main utility window. Native menu shortcuts are Cmd+1 / Cmd+comma. Windows reuses its utility windows, rebuilds stale analytics on restore while retaining the selected tab, and leaves Settings edits intact.

@@ -34,3 +34,7 @@ New events after the first read are excluded. If old evidence changes (late comp
 Compact Mac menu cycles full uppercase client names without a page counter. Windows summaries use the same names; native tray tooltip length remains bounded.
 
 [Reviewed decisions, recheck states and bounded human exports](IMPROVEMENT_LOOP.md).
+
+## Daily token details
+
+Mac: Tokens; Windows: Daily tokens. The Mac chart uses readable units rather than scientific notation. Hover previews a UTC day, clicking pins it, and the date selector works without a pointer. Exact counters and coverage appear per enabled client; no entry means unknown, not zero. These daily sources do not expose hourly counters. Local Codex backlog recovery skips older unread bytes within the existing bounded read; the baseline is reset so skipped cumulative usage cannot be charged to today. A source warning records the gap. Native account-day totals take precedence over overlapping local counters.

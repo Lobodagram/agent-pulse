@@ -141,6 +141,35 @@ class StoreTests(unittest.TestCase):
         self.store.persist({'id':'codex','daily':[{'date':day,'tokens':100}],'tokenSource':'account','status':'ready'})
         self.store.persist_local_tokens();self.assertEqual(self.store.history()[0]['tokens'],100)
 
+    def test_large_token_counters_do_not_consume_file_byte_budget(self):
+        root=Path(self.temp.name);sessions=root/'.codex/sessions';sessions.mkdir(parents=True)
+        path=sessions/'large-counter.jsonl';now=datetime.now(timezone.utc).isoformat()
+        def event(total,last):return {'timestamp':now,'type':'event_msg','payload':{'type':'token_count','info':{'total_token_usage':{'total_tokens':total},'last_token_usage':{'total_tokens':last}}}}
+        path.write_text(''.join(json.dumps(e)+'\n' for e in [event(200_000_000,10),event(200_000_020,20),event(200_000_050,30)]))
+        with patch('collector.Path.home',return_value=root):
+            self.store.project_rollout({'id':'large-counter','path':str(path)},include_tools=False)
+        self.assertEqual(self.store.local_tokens(now[:10]),60)
+        self.assertEqual(self.store.db.execute('SELECT offset FROM cursors').fetchone()[0],path.stat().st_size)
+
+    def test_backlog_jump_resets_baseline_and_marks_partial_without_old_day_delta(self):
+        import hashlib
+        root=Path(self.temp.name);sessions=root/'.codex/sessions';sessions.mkdir(parents=True)
+        path=sessions/'backlog.jsonl';now=datetime.now(timezone.utc).isoformat();ident=hashlib.sha256(b'backlog').hexdigest()
+        def event(total,last):return {'timestamp':now,'type':'event_msg','payload':{'type':'token_count','info':{'total_token_usage':{'total_tokens':total},'last_token_usage':{'total_tokens':last}}}}
+        # An oversized private line cannot be retained or counted as token evidence.
+        path.write_bytes(b'{"private":"'+b'x'*(5*1024*1024)+b'"}\n'+(''.join(json.dumps(e)+'\n' for e in [event(200_000_000,10),event(200_000_020,20)])).encode())
+        self.store.db.execute('INSERT INTO cursors VALUES (?,?)',(ident,0))
+        self.store.db.execute('INSERT INTO token_totals VALUES (?,?)',(ident,100))
+        self.store.db.commit()
+        with patch('collector.Path.home',return_value=root):
+            for _ in range(2):self.store.project_rollout({'id':'backlog','path':str(path)},include_tools=False)
+        self.assertEqual(self.store.local_tokens(now[:10]),30)
+        self.assertEqual(self.store.db.execute('SELECT count(*) FROM rollout_gaps').fetchone()[0],1)
+        self.store.persist_local_tokens()
+        self.assertEqual(self.store.history()[0]['coverage'],'partial-local')
+        dump='\n'.join(self.store.db.iterdump())
+        self.assertNotIn(str(path),dump);self.assertNotIn('xxxx',dump)
+
 if __name__=='__main__':unittest.main()
 
 import collector
