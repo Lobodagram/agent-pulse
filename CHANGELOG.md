@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.1 · 2026-10-07
+
+- Analytics and Settings use ordinary windows; the widget alone retains the configurable floating level. Repeated actions hide the active window, restore background/hidden/minimized windows, and reuse the same instance.
+- macOS adds Analytics (⌘1) and Settings (⌘,) menu shortcuts and fixture-only window diagnostics. Windows reuses utility windows instead of opening duplicates.
+- Аналитика и настройки уходят назад при переходе в другое приложение; кнопка возвращает окно, повторное нажатие скрывает активное. Виджет сохраняет режим поверх окон.
+
 ## 0.9.0 · 2026-10-07
 
 - Portable setup/analysis skills and bilingual agent setup guide; explicit destination installer preserves existing skills.

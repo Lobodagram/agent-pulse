@@ -25,6 +25,7 @@ BG='#151a1d';FG='#f2f6f4';MINT='#a4e8cd';QUIET='#a6b4b0'
 class Pulse:
     def __init__(self,root,fixture=None,smoke=False,language='en'):
         self.root=root;self.state=state_directory();self.fixture=fixture;self.smoke=smoke;self.data={};self.loading=False;self.page=0;self.pending=queue.Queue();self.language=language;self.auth_revision=0;self.auth_marks={};self.reading_limits=False
+        self.utility_windows={};self.utility_press=None
         self.collapsed=False;self.compact_page=0;self.full_position=(100,100);self.refresh_failed=False
         root.title('Agent Pulse');root.geometry('400x310+100+100');root.configure(bg=BG);root.overrideredirect(True);root.attributes('-topmost',True)
         header=tk.Frame(root,bg=BG);header.pack(fill='x',padx=14,pady=(8,4))
@@ -35,6 +36,7 @@ class Pulse:
         for text,command in [('×',self.quit),('⌄',self.collapse),('⚙',self.settings),('▥',self.analysis),('↻',self.refresh)]:
             button=tk.Button(header,text=text,command=command,bg=BG,fg=FG,bd=0,width=2);button.pack(side='right');self.header_buttons.append(button)
             if text=='⌄':self.collapse_button=button
+            if text in ('⚙','▥'):button.bind('<ButtonPress-1>',self.capture_utility_focus)
         self.content=tk.Frame(root,bg=BG);self.content.pack(fill='both',expand=True,padx=16)
         self.footer=tk.Frame(root,bg=BG);self.footer.pack(fill='x',padx=16,pady=6)
         tk.Button(self.footer,text='‹',command=lambda:self.change_page(-1),bg=BG,fg=MINT,bd=0).pack(side='left')
@@ -220,7 +222,17 @@ class Pulse:
                     third=Instance(name)
                     try:assert third.owns
                     finally:third.close()
-                    self.analysis();self.root.update_idletasks();assert self.data.get('providers') and self.root.attributes('-topmost')
+                    self.analysis();self.root.update();assert self.data.get('providers') and self.root.attributes('-topmost')
+                    for kind,action in [('analysis',self.analysis),('settings',self.settings)]:
+                        action() if kind=='settings' else None
+                        self.root.update();window=self.utility_windows[kind]
+                        assert not window.attributes('-topmost')
+                        window.focus_force();self.root.update();self.capture_utility_focus(None)
+                        action();self.root.update();assert window.state()=='withdrawn'
+                        action();self.root.update();assert self.utility_windows[kind] is window and window.state()=='normal'
+                        window.iconify();self.root.update();action();self.root.update();assert window.state()=='normal'
+                        window.destroy();self.root.update();action();self.root.update();assert self.utility_windows[kind] is not window
+                    print('PASS: single-instance normal utility windows, active hide, hidden/minimized/closed restore')
                     self.toggle_metric();assert self.metric_mode=='today';self.toggle_metric();assert self.metric_mode=='limits'
                     for metric in ('limits','today'):
                         self.metric_mode=metric;self.render()
@@ -308,9 +320,33 @@ class Pulse:
         self.set_scale(self.scale,save=False)
         self.update_tray()
     def window(self,title):
-        w=tk.Toplevel(self.root);w.title(title);w.geometry('760x600');w.configure(bg=BG);w.attributes('-topmost',True);return w
+        w=tk.Toplevel(self.root);w.title(title);w.geometry('760x600');w.configure(bg=BG);w.attributes('-topmost',False);w.after_idle(w.focus_force);return w
+    def capture_utility_focus(self,event):
+        focused=self.root.focus_displayof()
+        self.utility_press=(focused.winfo_toplevel() if focused else None,)
+    def existing_utility(self,kind):
+        press=self.utility_press;self.utility_press=None
+        window=self.utility_windows.get(kind)
+        if not window or not window.winfo_exists():return False
+        focused=self.root.focus_displayof()
+        active=press[0] if press is not None else (focused.winfo_toplevel() if focused else None)
+        if window.state()=='normal' and active is window:window.withdraw()
+        else:window.deiconify();window.lift();window.focus_force()
+        return True
     def analysis(self):
-        w=self.window(self.t('Agent Pulse · analytics','Agent Pulse · аналитика'));book=ttk.Notebook(w);book.pack(fill='both',expand=True,padx=12,pady=12)
+        if self.existing_utility('analysis'):
+            w=self.utility_windows['analysis']
+            if w.state()=='normal' and self.analysis_data is not self.data:
+                book=next((c for c in w.winfo_children() if isinstance(c,ttk.Notebook)),None)
+                selected=book.index(book.select()) if book else 0
+                for child in w.winfo_children():child.destroy()
+                self.populate_analysis(w,selected)
+            return
+        w=self.window(self.t('Agent Pulse · analytics','Agent Pulse · аналитика'));self.utility_windows['analysis']=w
+        self.populate_analysis(w)
+    def populate_analysis(self,w,selected_tab=0):
+        self.analysis_data=self.data
+        book=ttk.Notebook(w);book.pack(fill='both',expand=True,padx=12,pady=12)
         def page(title):
             f=tk.Frame(book,bg=BG);book.add(f,text=title);return f
         def textview(f,lines):
@@ -458,8 +494,10 @@ class Pulse:
                 tree.selection_set(str(index));selected(None)
                 if any(r.get('modelHistory',{}).get('reportedChanges',0)>0 for r in items):
                     assert 'demo-' in detail.get('1.0','end'),'Model history must be rendered from fixture'
+        book.select(selected_tab)
     def settings(self):
-        w=self.window(self.t('Agent Pulse · settings','Agent Pulse · настройки'))
+        if self.existing_utility('settings'):return
+        w=self.window(self.t('Agent Pulse · settings','Agent Pulse · настройки'));self.utility_windows['settings']=w
         canvas=tk.Canvas(w,bg=BG,highlightthickness=0);scroll=ttk.Scrollbar(w,command=canvas.yview);canvas.configure(yscrollcommand=scroll.set);scroll.pack(side='right',fill='y');canvas.pack(fill='both',expand=True)
         f=tk.Frame(canvas,bg=BG);canvas.create_window(10,10,window=f,anchor='nw');f.bind('<Configure>',lambda e:canvas.configure(scrollregion=canvas.bbox('all')))
         def label(s):tk.Label(f,text=s,bg=BG,fg=FG,anchor='w').pack(fill='x',pady=6)

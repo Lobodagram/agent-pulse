@@ -1,3 +1,15 @@
+## 0.9.1 window behavior · 2026-10-07
+
+Analytics/Settings use normal window level; the configurable floating level belongs only to the widget. Actions restore a background, hidden or minimized existing window and hide an already active window. macOS tests include a key nonactivating widget with a main utility window. Native menu shortcuts are Cmd+1 / Cmd+comma. Windows reuses its utility windows, rebuilds stale analytics on restore while retaining the selected tab, and leaves Settings edits intact.
+
+Local source checks: 190 unit tests, privacy export, syntax and document links passed; 20 own-window Mac cases passed, including minimize/hidden restoration, toggle, key focus and normal utility versus floating widget. Interactive own synthetic Mac windows confirmed open/hide and application deactivation; the automation observation activates the selected app, so a separate physical background-click claim is not made. Platform CI and downloaded-package acceptance follow publication and are recorded separately.
+
+Development installation is explicitly `dist/Agent Pulse.app` in the local product checkout; `/Applications` is the recommended end-user location, not the current development installation. Stable observer paths are preserved across replacement. No credentials or private state are included in packages or synthetic screenshots.
+
+The supplied GLM audit was of 0.8.1, not 0.9.0. Key trimming, bounded safe failure categories and frozen Windows HTTPS verification already shipped in 0.9.0. Code remains 8.5/10; analytical effectiveness 7/10. Notarization, signing, physical Windows/Intel/Spaces/multi-display/sleep-wake and true cold first-start remain open. Gatekeeper is a hypothesis for the first-start delay, not a verified cause; signing does not guarantee that warning/reputation issues disappear.
+
+Prospective benefit gates: at least three genuinely comparable before/after task pairs with an unchanged human acceptance criterion and accepted/failed/rework labels; 1/3/7-day observational rechecks with explicit models/gaps/unknowns. Separately review at least 20 real finding candidates with true/false/indeterminate verdicts and publish precision with its denominator and coverage limits. Pairing among received events is not absolute expected-event coverage. Sustained multiweek observations and physical checks must be actual evidence, not promises or synthetic data. No automatic model calls, peer launch, invented labels or causal subscription-saving estimate.
+
 ## 0.9.0 delivered verification · 2026-10-07
 
 [Source Checks37575139840](https://github.com/Lobodagram/agent-pulse/actions/runs/37575139840) and [tagged packages37575357265](https://github.com/Lobodagram/agent-pulse/actions/runs/37575357265) passed all targets. Immutable v0.9.0 is719a5ae1185a6327d0b20781e715a9a3bf4f370a;126public files matched hashes/modes.190tests, installed wheel/CLI/hook/MCP, both portable skill validators and actual isolated Mac button/section checks passed. Windows frozen HTTPS verified certificates/hostname against the fixed Z.ai endpoint without a credential. Physical Windows user-machine acceptance is separate.

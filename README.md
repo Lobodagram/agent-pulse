@@ -10,7 +10,7 @@ A local tool for improving coding-agent workspaces: collect sanitized tool event
 
 [Linux/headless runtime](docs/HEADLESS.md) · Runtime wheel: Python 3.11+
 
-**0.9.0 preview.** Downloadable packages and their verification are linked below and recorded in [QA](docs/QA.md). macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
+**0.9.1 preview.** Downloadable packages and their verification are linked below and recorded in [QA](docs/QA.md). macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
 
 **Confirm collection first:** configured observers are not proof of observation. After setup, start a new native session, review hook trust when required, perform an ordinary task, and check Workflows for actual paired calls. See the [readiness audit](docs/AUDIT.md). Capabilities separates exact registered skill-file loads, explicit invocations and manual declarations. No observed use is not proof of non-use; command families are bounded static classifications, not semantic understanding of arbitrary code.
 
@@ -69,6 +69,8 @@ For a source checkout, see [building](docs/BUILDING.md). Python 3.11+ is require
 Own state lives at `~/Library/Application Support/AgentPulse` on macOS, `%LOCALAPPDATA%\AgentPulse` on Windows and `$XDG_STATE_HOME/agent-pulse` (or `~/.local/state/agent-pulse`) for the Linux collector. It includes counters, manual dates, local configuration and a private journal of sanitized metadata and keyed hashes. Nothing is synchronized by this project.
 
 Optional Codex event analysis is **off by default**. When enabled, it transiently parses bounded recent event files returned by native metadata and retains only counters/categories. It does not copy conversation text into telemetry. Native clients handle their own authentication and may have their own network/telemetry behavior. Kimi sends its opted-in key only to its official quota endpoint; Qwen uses an explicitly configured loopback address. Details: [PRIVACY.md](PRIVACY.md).
+
+Analytics and Settings are ordinary windows: switching apps sends them behind the active app. Their widget/menu actions bring them forward or hide the already active window. macOS shortcuts: **⌘1** Analytics, **⌘,** Settings. Only the widget uses the Always on top preference.
 
 ## License
 
