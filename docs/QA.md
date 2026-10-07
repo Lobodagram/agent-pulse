@@ -1,3 +1,9 @@
+## 0.10.1 installed-version clarity · 2026-10-07
+
+0.10.0 source CI [37640780934](https://github.com/Lobodagram/agent-pulse/actions/runs/37640780934) passed all four platforms and220 tests; [package CI37641294405](https://github.com/Lobodagram/agent-pulse/actions/runs/37641294405) passed all three binaries/publication. The tagged README retained stale development-candidate wording. 0.10.1 corrects this wording and shows the actual installed version in Mac/Windows Settings titles; earlier tags/packages are preserved. No analytics algorithm change. Subsequent0.10.1 platform/download/installed receipts are recorded after completion, not inferred from0.10.0.
+
+The development Mac's standard name-based launch now resolves the canonical /Applications bundle. Historical own same-bundle development registrations were removed while retaining their files; the existing observer helper path is preserved by an updated compatibility copy. Actual Codex/GLM quota percentages, Limits/Today/back, Settings, all six analytics sections and Quit/relaunch were observed; absent comparison labels remain insufficient evidence. Personal keys/settings survived installation. Kimi account login was not attempted. These actual observations were not published as screenshots.
+
 ## 0.10.0 Kimi Code readiness · 2026-10-07
 
 First source CI exposed CRLF-converted observer markers on Windows: the block could be overlooked. Marker parsing now accepts LF/CRLF/EOF with original offsets, preserves foreign bytes and rejects malformed blocks. A cross-platform editor-conversion regression verifies idempotence and exact removal. The failing initial run was not released.

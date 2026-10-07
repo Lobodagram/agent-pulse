@@ -3,6 +3,7 @@ import SwiftUI
 import Combine
 
 var pulseLanguageOverride: String?
+var pulseApplicationVersion: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "development" }
 var russian: Bool { (pulseLanguageOverride ?? UserDefaults.standard.string(forKey: "language")) == "ru" }
 func tr(_ en: String, _ ru: String) -> String { russian ? ru : en }
 struct Quota: Codable, Identifiable {
@@ -1150,7 +1151,7 @@ final class FloatingPanel: NSPanel {
     func showSettings() {
         if settingsWindow == nil {
             let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 620), styleMask: [.titled, .closable], backing: .buffered, defer: false)
-            w.title = tr("Agent Pulse · settings", "Agent Pulse · настройки"); w.isReleasedWhenClosed = false
+            w.title = "Agent Pulse " + pulseApplicationVersion + tr(" · settings", " · настройки"); w.isReleasedWhenClosed = false
             w.contentView = NSHostingView(rootView: SettingsView(store: store, actions: self)); w.center(); settingsWindow = w
         }
         presentUtilityWindow(settingsWindow)

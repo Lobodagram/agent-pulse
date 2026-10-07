@@ -14,6 +14,7 @@ from pulse_tray import Tray, Instance
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from compact_summary import provider_line,quota_pages,tray_tooltip,window_label
 import collector
+from pulse_version import __version__
 import analytics
 import instrumentation
 from journal import Journal
@@ -522,7 +523,7 @@ class Pulse:
         book.select(selected_tab)
     def settings(self):
         if self.existing_utility('settings'):return
-        w=self.window(self.t('Agent Pulse · settings','Agent Pulse · настройки'));self.utility_windows['settings']=w
+        w=self.window('Agent Pulse '+__version__+self.t(' · settings',' · настройки'));self.utility_windows['settings']=w
         canvas=tk.Canvas(w,bg=BG,highlightthickness=0);scroll=ttk.Scrollbar(w,command=canvas.yview);canvas.configure(yscrollcommand=scroll.set);scroll.pack(side='right',fill='y');canvas.pack(fill='both',expand=True)
         f=tk.Frame(canvas,bg=BG);canvas.create_window(10,10,window=f,anchor='nw');f.bind('<Configure>',lambda e:canvas.configure(scrollregion=canvas.bbox('all')))
         def label(s):tk.Label(f,text=s,bg=BG,fg=FG,anchor='w').pack(fill='x',pady=6)
