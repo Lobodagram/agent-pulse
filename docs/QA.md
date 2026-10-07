@@ -341,3 +341,6 @@ GUI found and repaired fixture language persistence, stale resize accessibility 
 Проверки кнопок выполнялись в отдельном состоянии; тестовые решения не попадали в рабочий журнал. 190 тестов и wheel прошли. Физическая проверка Windows и итоговые опубликованные сборки — отдельные этапы.
 
 Source CI candidate 3649e9c exposed a Windows-only export check defect: native backslash paths did not match the reviewed POSIX screenshot manifest. All 190 tests passed (one platform skip), but wheel acceptance correctly stopped; no release tag was created. Export now compares `Path.as_posix()` against the unchanged SHA256 manifest. Source/package CI must pass on the corrected commit before release.
+# 0.9.6 outcome evidence correction — candidate
+
+Seven focused regression tests pass after demonstrating the previous false-success cases. A new frozen helper check sends invented malformed/bounded responses through actual hooks into a throwaway journal and asserts unknown provenance and no result-canary leakage. Ordinary successful native metadata and explicit failure semantics remain covered. Final source/platform/downloaded/installed checks are pending; screenshots and production UI source are unchanged. No production event rewriting, fake acceptance/reviews, native session launch or client configuration change.

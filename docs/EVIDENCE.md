@@ -4,6 +4,12 @@
 
 [Русский](EVIDENCE.ru.md)
 
+## Outcome clarification in 0.9.6
+
+Malformed non-null exit metadata in a recognized code-mode result makes the result unknown, even if another location reports zero. A shell result with more than ten content blocks or an inspected text block over 128 KiB reports `result-limit-exceeded`; skipped data cannot support success. These are limits on evidence, not command failures. Explicit native failure/error flags still take priority. No stdout regex, output retention, command rewrite or new execution wrapper is introduced. Previously stored events cannot be reclassified because raw results are deliberately not retained.
+
+Checked 2026-10-07: [Codex hooks](https://developers.openai.com/codex/hooks/#posttooluse) run for shell calls with nonzero exits too; event completion alone is not success. The [0.160.0 native result implementation](https://github.com/openai/codex/blob/rust-v0.160.0/codex-rs/core/src/tools/context.rs) sends truncated text on the inspected shell hook path and has a separate structured code-mode result. They are different delivery paths: Agent Pulse cannot recover missing native shell exits from ordinary hook stdout. GLM structured exits remain supported; no client session is started to acquire new evidence.
+
 Capabilities distinguishes `loaded` (successful Read of an exactly registered HMAC skill-file locator), `invoked` (successful explicit Skill/tool or registered MCP-prefix call), and `declared` (manual session assertion). Reading instructions does not prove following them; no observed use never proves non-use. Only reviewed inventory IDs are retained. Optional inventory `locator` is an absolute skill-file path, immediately hashed and never stored literally. Scanning names does not read instructions. Failed/unknown calls do not establish successful capability use.
 
 Manual declaration: `python3 collector.py journal --action declare --provider codex --session HASH --capability REVIEWED_ID --kind skill`. Session and inventory entry must already exist. This is labeled separately from native invocation.

@@ -47,4 +47,16 @@ with tempfile.TemporaryDirectory() as tmp:
     assert not r.stderr
     assert not json.loads(r.stdout)['result']['isError']
     assert json.loads((Path(tmp)/'config.json').read_text())['metricMode']=='today'
-print(json.dumps({'frozenHookJournalMcp':'passed','mcpConfigBusyRetry':'passed','modelsCalled':0,'syntheticDataOnly':True}))
+    for call,response in [('invalid-result',{'exit_code':0,'content':[{'type':'text','text':json.dumps({'output':'PRIVATE_RESULT_CANARY','wall_time_seconds':1,'exit_code':True})}]}),
+                          ('bounded-result',{'exit_code':0,'content':[{'type':'text','text':'demo'}]*11})]:
+        for event in ['PreToolUse','PostToolUse']:
+            raw={'hook_event_name':event,'session_id':'frozen-demo','turn_id':'demo-turn','tool_use_id':call,'tool_name':'Bash','tool_input':{'command':'git status'},'tool_response':response}
+            r=subprocess.run(base+['hook','--provider','codex'],input=json.dumps(raw).encode(),capture_output=True,timeout=2,check=True)
+            assert not r.stdout and not r.stderr
+    r=subprocess.run(base+['journal'],capture_output=True,timeout=20,check=True)
+    report=json.loads(r.stdout)
+    assert report['calls']==3
+    assert sorted(c['outcome'] for c in report['recentCalls'])==['success','unknown','unknown']
+    assert {c['outcomeSource'] for c in report['recentCalls']}=={'structured-exit','conflicting-or-invalid-exit','result-limit-exceeded'}
+    assert 'PRIVATE_RESULT_CANARY' not in r.stdout.decode()
+print(json.dumps({'frozenHookJournalMcp':'passed','mcpConfigBusyRetry':'passed','conservativeResultMetadata':'passed','modelsCalled':0,'syntheticDataOnly':True}))

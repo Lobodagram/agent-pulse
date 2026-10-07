@@ -190,3 +190,9 @@ Remove redundant native Tk label padding, preserving readable fonts and fitting 
 - PolyForm Noncommercial 1.0.0 plus separately negotiated paid commercial licensing.
 
 Выбор клиентов, русско-английский интерфейс, отдельный показ контекста и расхода, предварительный Windows-виджет, сборки, документация и демонстрационные скриншоты. Анализ событий Codex по умолчанию выключен. Коммерческая лицензия приобретается отдельно.
+# 0.9.6
+
+- Reject malformed exit metadata inside recognized code-mode result objects instead of silently accepting a neighbouring valid exit. Explicit failure keeps priority.
+- Shell results exceeding the existing 10-block/128-KiB inspection bounds stay unknown; a skipped suffix cannot establish success. No larger payload retention or parsing budget.
+- Seven outcome regression cases and a real frozen hook/journal check cover false success, privacy and conservative limits. Plain Codex shell hook stdout still cannot supply an exit code; this release does not claim broader native outcome coverage or reclassify historical events.
+- Некорректный exit code в обёртке больше не маскируется соседним нулём; результат за пределами проверки остаётся неизвестным. Текст stdout Codex не превращается в доказательство успеха.

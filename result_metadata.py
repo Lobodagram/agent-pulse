@@ -16,7 +16,7 @@ def classify(event,raw,tool):
         return 'failed',None,'error-flag'
     if not isinstance(response,dict):
         return ('unknown',None,'exit-not-reported') if shell else ('success',None,'completed-non-shell')
-    codes=[];invalid=False
+    codes=[];invalid=False;limit_exceeded=False
     failed=any(response.get(k) is True for k in ('isError','is_error','failed'))
     for key in ('exit_code','exitCode'):
         if key in response and response[key] is not None:
@@ -27,17 +27,22 @@ def classify(event,raw,tool):
     if shell:
         # Accept complete code-mode result objects, never regexes inside command output.
         blocks=response.get('content')
+        # A bounded prefix cannot establish success: a later block may contradict it.
+        limit_exceeded=isinstance(blocks,list) and len(blocks)>10
         for block in blocks[:10] if isinstance(blocks,list) else []:
             text=block.get('text') if isinstance(block,dict) else None
-            if not isinstance(text,str) or len(text)>128*1024:continue
+            if not isinstance(text,str):continue
+            if len(text)>128*1024:limit_exceeded=True;continue
             try:d=json.loads(text)
             except (ValueError,RecursionError):continue
             if not isinstance(d,dict) or not isinstance(d.get('output'),str):continue
             wall=d.get('wall_time_seconds')
             if isinstance(wall,bool) or not isinstance(wall,(float,int)) or not math.isfinite(wall) or wall<0:continue
             code=exit_code(d.get('exit_code'))
+            if d.get('exit_code') is not None and code is None:invalid=True
             if code is not None:codes.append(code);source='code-mode-result'
     if failed:return 'failed',codes[0] if len(set(codes))==1 else None,'error-flag'
+    if limit_exceeded:return 'unknown',None,'result-limit-exceeded'
     if invalid or len(set(codes))>1:return 'unknown',None,'conflicting-or-invalid-exit'
     if codes:return ('success' if codes[0]==0 else 'failed'),codes[0],source
     if shell:
