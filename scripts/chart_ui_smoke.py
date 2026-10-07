@@ -20,7 +20,12 @@ with tempfile.TemporaryDirectory() as tmp:
             for row in data['history']:row['tokens']=0
         if name=='tokens-empty':data['history']=[]
         fixture=root/'fixture.json';fixture.write_text(json.dumps(data),encoding='utf-8');output=root/(name+'.png')
-        subprocess.run([str(bundle/'Contents/MacOS/AgentPulse'),'--fixture',str(fixture),'--view',mode,'--tab','tokens','--language',language,'--snapshot',str(output)],check=True,capture_output=True,timeout=20)
+        try:
+            subprocess.run([str(bundle/'Contents/MacOS/AgentPulse'),'--fixture',str(fixture),'--view',mode,'--tab','tokens','--language',language,'--snapshot',str(output)],check=True,capture_output=True,timeout=20)
+        except subprocess.CalledProcessError as error:
+            # This process only receives invented fixtures, never a real account/key.
+            print(error.stderr.decode('utf-8',errors='replace')[-6000:],file=sys.stderr)
+            raise
         r=json.loads(output.with_suffix('.png.json').read_text())
         assert r['fixtureMode'] and r['capturedSize']==([620,520] if mode=='analysis-small' else [760,620])
         assert output.stat().st_size>100
