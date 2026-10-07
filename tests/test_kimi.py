@@ -84,6 +84,24 @@ class KimiTests(unittest.TestCase):
                 path.symlink_to(target)
                 with self.assertRaises(ValueError):instrumentation.configure_hooks('kimi',Path(tmp)/'pulse',home=tmp)
                 self.assertEqual(target.read_text(),'')
+    def test_crlf_marker_edits_are_idempotent_and_remove_only_own_block(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=instrumentation.native_path('kimi',tmp);path.parent.mkdir()
+            original=b'# foreign handler\r\n[[hooks]]\r\nevent="Stop"\r\ncommand="foreign"\r\n'
+            path.write_bytes(original);state=Path(tmp)/'pulse'
+            instrumentation.configure_hooks('kimi',state,home=tmp)
+            # Emulate an editor converting only the installed block/separator.
+            installed=path.read_bytes();tail=installed[len(original):].replace(b'\n',b'\r\n')
+            path.write_bytes(original+tail)
+            instrumentation.configure_hooks('kimi',state,home=tmp)
+            self.assertEqual(len(tomllib.loads(path.read_text())['hooks']),9)
+            instrumentation.configure_hooks('kimi',state,False,home=tmp)
+            self.assertEqual(path.read_bytes(),original)
+            for malformed in [b'# BEGIN Agent Pulse observer\r\n',b'# END Agent Pulse observer\r\n',
+                              b'# BEGIN Agent Pulse observer']:
+                path.write_bytes(malformed)
+                with self.assertRaises(ValueError):instrumentation.configure_hooks('kimi',state,home=tmp)
+                self.assertEqual(path.read_bytes(),malformed)
     def test_native_snake_call_id_pairing_turn_id_and_payload_privacy(self):
         with tempfile.TemporaryDirectory() as tmp:
             j=Journal(tmp)

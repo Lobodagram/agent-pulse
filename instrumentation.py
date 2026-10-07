@@ -91,12 +91,19 @@ def configure_kimi_hooks(state,enable=True,home=None):
     text=original.decode('utf-8')
     parsed=tomllib.loads(text)
     if not isinstance(parsed.get('hooks',[]),list):raise ValueError('invalid_hooks')
-    if text.count(KIMI_BEGIN)!=text.count(KIMI_END) or text.count(KIMI_BEGIN)>1:raise ValueError('invalid_observer_block')
+    # Native editors can convert our LF markers to CRLF. Match line boundaries
+    # with original byte offsets; never normalize foreign TOML/credential bytes.
+    import re
+    begins=list(re.finditer(r'(?m)^# BEGIN Agent Pulse observer(?:\r?\n|$)',text))
+    ends=list(re.finditer(r'(?m)^# END Agent Pulse observer(?:\r?\n|$)',text))
+    if len(begins)!=len(ends) or len(begins)>1:raise ValueError('invalid_observer_block')
     base=text
-    if KIMI_BEGIN in text:
-        start=text.index(KIMI_BEGIN);end=text.index(KIMI_END)+len(KIMI_END)
-        if end<start:raise ValueError('invalid_observer_block')
-        if start>0 and text[start-1]=='\n':start-=1
+    if begins:
+        start=begins[0].start();end=ends[0].end()
+        if ends[0].start()<start:raise ValueError('invalid_observer_block')
+        if start>0 and text[start-1]=='\n':
+            start-=1
+            if start>0 and text[start-1]=='\r':start-=1
         base=text[:start]+text[end:]
     if enable:
         j=Journal(state);j.close()
