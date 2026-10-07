@@ -24,7 +24,7 @@ cat > "$PULSE_OUTPUT/Agent Pulse.app/Contents/Info.plist" <<PLIST
 <key>CFBundleIdentifier</key><string>app.agentpulse.desktop</string>
 <key>CFBundleName</key><string>Agent Pulse</string>
 <key>CFBundleDisplayName</key><string>Agent Pulse</string>
-<key>CFBundleVersion</key><string>23</string>
+<key>CFBundleVersion</key><string>24</string>
 <key>CFBundleShortVersionString</key><string>${PULSE_VERSION}</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>

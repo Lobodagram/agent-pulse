@@ -46,6 +46,51 @@ def atomic_json(path,value):
     finally:
         if tmp.exists():tmp.unlink()
 
+def patch_config(directory,changes):
+    """Serialize all cooperating UI/CLI/MCP patches across atomic replacements.
+
+    Different fields merge; for the same field the last completed patch wins.
+    The lock file must remain in place: unlinking it would split waiting writers.
+    """
+    directory=Path(directory)
+    if directory.is_symlink():raise ValueError('symlink_state')
+    directory.mkdir(parents=True,exist_ok=True,mode=0o700)
+    path=directory/'.config.lock'
+    if path.is_symlink():raise ValueError('symlink_lock')
+    fd=os.open(path,os.O_RDWR|os.O_CREAT|getattr(os,'O_NOFOLLOW',0),0o600)
+    with os.fdopen(fd,'r+b') as lock:
+        if os.name=='nt':
+            import msvcrt
+            if os.fstat(lock.fileno()).st_size==0:lock.write(b'0');lock.flush()
+        else:
+            import fcntl
+            os.fchmod(lock.fileno(),0o600)
+        deadline=time.monotonic()+1
+        while True:
+            try:
+                if os.name=='nt':
+                    lock.seek(0);msvcrt.locking(lock.fileno(),msvcrt.LK_NBLCK,1)
+                else:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic()>=deadline:raise TimeoutError('config_busy')
+                time.sleep(.01)
+            except OSError:
+                if os.name!='nt':raise
+                if time.monotonic()>=deadline:raise TimeoutError('config_busy')
+                time.sleep(.01)
+        try:
+            config=load_config(directory)
+            revision=config.get('configRevision',0)
+            if type(revision)!=int or not 0<=revision<2**53:raise ValueError('invalid_config_revision')
+            config.update(changes);config['configRevision']=revision+1
+            atomic_json(directory/'config.json',config)
+            return config['configRevision']
+        finally:
+            if os.name=='nt':
+                lock.seek(0);msvcrt.locking(lock.fileno(),msvcrt.LK_UNLCK,1)
+            else:fcntl.flock(lock,fcntl.LOCK_UN)
+
 def empty(ident):
     spec=next(x for x in CATALOG if x['id']==ident)
     return {'id':ident,'name':spec['name'],'status':'unavailable','quotas':[],'daily':[],

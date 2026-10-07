@@ -51,3 +51,9 @@ Native observers are a separate explicit opt-in: `agent-pulse hooks --provider c
 Check real subsequent calls and pairing/gaps in the dashboard or review pack. Zero findings can mean thresholds were not met; unavailable counters are not zero. Do not inject test receipts into production. Use isolated `--state` directories for tests. For finding decisions, actual implemented changes and genuinely reviewed task outcomes are required. Follow [Improvement loop](IMPROVEMENT_LOOP.md). Settings/UI can also be used manually without skills or MCP.
 
 Contracts checked 2026-10-07: [Codex skills](https://developers.openai.com/codex/skills), [Codex MCP](https://developers.openai.com/codex/mcp), [ZCode skills](https://zcode.z.ai/en/docs/skill), [ZCode MCP](https://zcode.z.ai/en/docs/mcp-services). Third-party discovery can change; this release does not certify every client/version combination.
+
+## Concurrent preferences
+
+All built-in UI, CLI and MCP preference writes use a locked, atomic patch and increment `configRevision`, returned by `pulse_settings` and successful configure calls. Unrelated fields are preserved. Changes to the same field use the last completed patch; there is no conflict prompt or compare-and-swap guarantee. An open client-selection form is a draft: Apply intentionally replaces that entire selection group. A busy write fails after one second without changing the config; retry after the other operation finishes. Do not write config.json directly while the app runs.
+
+Mac and Windows poll visual preferences about every five seconds; snapshots/provider selection refresh separately. This is not immediate synchronization of every open form. Reading `pulse_settings` does not create a missing state directory/database, initialize a schema or run migrations.

@@ -613,9 +613,10 @@ def main():
         elif a.command=='configure':
             enabled=list(dict.fromkeys(a.providers.split(','))) if a.providers else []
             if any(x not in adapters.IDS for x in enabled):raise ValueError('invalid_provider')
-            config=adapters.load_config(a.state);config.update(enabledProviders=enabled,localPatterns=a.local_patterns=='on')
-            if a.local_tokens is not None:config['localTokens']=a.local_tokens=='on'
-            adapters.atomic_json(a.state/'config.json',config);result={'saved':True}
+            from agent_control import update_settings
+            changes={'enabledProviders':enabled,'localPatterns':a.local_patterns=='on'}
+            if a.local_tokens is not None:changes['localTokens']=a.local_tokens=='on'
+            result=update_settings(a.state,changes)
         elif a.command=='ingest':
             if a.file.is_symlink() or a.file.stat().st_size>2*1024*1024:raise ValueError('invalid_import')
             raw=json.loads(a.file.read_text(encoding='utf-8'));result=adapters.normalized(raw,a.provider)

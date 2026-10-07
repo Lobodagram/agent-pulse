@@ -18,6 +18,7 @@ import analytics
 import instrumentation
 from journal import Journal
 import providers
+from agent_control import update_settings
 from platform_support import state_directory
 
 BG='#151a1d';FG='#f2f6f4';MINT='#a4e8cd';QUIET='#a6b4b0'
@@ -61,7 +62,7 @@ class Pulse:
     def toggle_metric(self):
         self.metric_mode='today' if self.metric_mode=='limits' else 'limits'
         if not self.fixture:
-            config=providers.load_config(self.state);config['metricMode']=self.metric_mode;providers.atomic_json(self.state/'config.json',config)
+            update_settings(self.state,{'metricMode':self.metric_mode})
         self.render()
     def quit(self):
         if getattr(self,'tray',None):self.tray.close()
@@ -78,7 +79,7 @@ class Pulse:
         else:self.root.deiconify()
         if self.collapsed:self.position_compact()
         if save and not self.fixture:
-            config=providers.load_config(self.state);config['displayMode']=self.display_mode;providers.atomic_json(self.state/'config.json',config)
+            update_settings(self.state,{'displayMode':self.display_mode})
         return mode!='tray' or ready
     def position_compact(self):
         area=self.tray.work_area() if self.tray else None
@@ -109,7 +110,7 @@ class Pulse:
     def resize_drag(self,e):self.set_scale((self.resize_start[1]+e.x_root-self.resize_start[0])/400,save=False)
     def save_scale(self):
         if not self.fixture:
-            config=providers.load_config(self.state);config['widgetScale']=self.scale;providers.atomic_json(self.state/'config.json',config)
+            update_settings(self.state,{'widgetScale':self.scale})
     def set_scale(self,value,save=True):
         self.scale=min(1,max(.8,float(value)))
         if self.collapsed:return
@@ -141,7 +142,7 @@ class Pulse:
     def save_topmost(self,value):
         self.root.attributes('-topmost',value)
         if not self.fixture:
-            config=providers.load_config(self.state);config['topmost']=bool(value);providers.atomic_json(self.state/'config.json',config)
+            update_settings(self.state,{'topmost':bool(value)})
     def sync_preferences(self):
         if self.fixture:return
         config=providers.load_config(self.state)
@@ -563,7 +564,7 @@ class Pulse:
             self.language=lang.get()
             if not self.set_display_mode(placement.get()):messagebox.showinfo('Agent Pulse',self.t('Tray unavailable; floating widget retained.','Трей недоступен; виджет сохранён на экране.'))
             if not self.fixture:
-                config=providers.load_config(self.state);config.update(enabledProviders=[i for i,v in flags.items() if v.get()],localPatterns=patterns.get(),localTokens=tokens.get());providers.atomic_json(self.state/'config.json',config)
+                update_settings(self.state,{'enabledProviders':[i for i,v in flags.items() if v.get()],'localPatterns':patterns.get(),'localTokens':tokens.get(),'language':self.language})
             self.refresh();w.destroy()
         ttk.Button(f,text=self.t('Apply','Применить'),command=apply).pack(anchor='w',pady=10)
         label(self.t('Local observers · start a new client session after setup','Локальные наблюдатели · после настройки начните новую сессию'))

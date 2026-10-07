@@ -1,6 +1,9 @@
 """Bounded local control. No secrets, native client configuration or model calls."""
 from pathlib import Path
-from providers import IDS, load_config, atomic_json
+from contextlib import closing
+import json
+import sqlite3
+from providers import IDS, load_config, patch_config
 
 CONFIG_KEYS={'enabledProviders','localPatterns','localTokens','language','widgetScale','displayMode','metricMode','menuNumbers','menuFollowActive','topmost'}
 
@@ -9,10 +12,20 @@ def settings(directory):
     # Unknown fields may hold provider locators; do not expose them to the agent.
     result={'config':{k:v for k,v in config.items() if k in CONFIG_KEYS},'localOnly':True,
             'credentials':'Enter provider keys in the app settings; never paste them into an agent chat.'}
-    from collector import Store
-    store=Store(Path(directory))
-    try:result['subscriptions']={k:v for k,v in store.settings().items() if k in IDS}
-    finally:store.db.close()
+    revision=config.get('configRevision',0)
+    result['configRevision']=revision if type(revision)==int and 0<=revision<=2**53 else None
+    result['subscriptions']={}
+    path=Path(directory)/'metrics.sqlite'
+    if Path(directory).is_symlink() or path.is_symlink():raise ValueError('symlink_state')
+    if path.exists():
+        # No Store/schema initialization or migrations on this read-only path.
+        with closing(sqlite3.connect(path.resolve().as_uri()+'?mode=ro',uri=True,timeout=1)) as db:
+            try:
+                rows=db.execute('SELECT key,value FROM settings WHERE key IN ('+','.join('?' for _ in IDS)+')',tuple(IDS)).fetchall()
+            except sqlite3.OperationalError as error:
+                if str(error)!='no such table: settings':raise
+                rows=[]
+            result['subscriptions']={k:json.loads(v) for k,v in rows}
     return result
 
 def update_settings(directory,changes):
@@ -27,10 +40,10 @@ def update_settings(directory,changes):
         elif key=='language' and value not in ('en','ru'):raise ValueError('invalid_language')
         elif key=='metricMode' and value not in ('limits','today'):raise ValueError('invalid_metric')
         elif key=='displayMode' and value not in ('floating','compact','tray','menu'):raise ValueError('invalid_placement')
-    config=load_config(directory);config.update(changes)
-    if 'enabledProviders' in changes:config['enabledProviders']=list(dict.fromkeys(changes['enabledProviders']))
-    atomic_json(Path(directory)/'config.json',config)
-    return {'saved':True,'localOnly':True}
+    changes=dict(changes)
+    if 'enabledProviders' in changes:changes['enabledProviders']=list(dict.fromkeys(changes['enabledProviders']))
+    revision=patch_config(directory,changes)
+    return {'saved':True,'localOnly':True,'configRevision':revision}
 
 def control(name,args,directory):
     if name=='pulse_configure' and set(args)=={'changes'}:return update_settings(directory,args['changes'])

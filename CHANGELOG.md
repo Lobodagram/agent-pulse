@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.3 · 2026-10-07
+
+- Serialize UI/CLI/MCP preference patches with a separate cross-process lock and monotonic configRevision. Unrelated fields merge; the last completed patch wins for the same field. Busy writes fail after one second without replacing the config. Windows also persists the selected language.
+- Read-only settings inspect existing subscription rows without creating a state directory/database or running schema migrations. Unknown configuration fields and account locators remain private.
+- Six regression cases cover three concurrent processes/36 writes, lock timeout/recovery, unchanged legacy database bytes and symlink rejection. UI and analytics behavior remain as in 0.9.2. First cold-start cause, signing, physical platform acceptance and measured analytical benefit remain open.
+- Записи настроек из интерфейса, CLI и MCP больше не теряют изменения разных полей. Для одного поля сохраняется последнее применённое значение; при занятом файле действует ограниченный таймаут. Простое чтение настроек не создаёт базу и не меняет её схему.
+
 ## 0.9.2 · 2026-10-07
 
 - Replace the daily Swift Charts plot with ordinary SwiftUI bars, readable zero/large-number axes and the same hover/click/day-selector details. No Swift Charts link or Metal chart initialization is required. Intel chart fixtures now run in source CI as well as packaged CI.
