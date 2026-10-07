@@ -65,7 +65,9 @@ with tempfile.TemporaryDirectory() as tmp:
         if mode.startswith('today'):assert r['metricMode']=='today',r
         if mode=='glm-menu-quotas':assert r['menuTitle'].startswith('GLM 5ч') and '7д' in r['menuTitle'],r
         assert r['hidePassed'] and r['restorePassed'],r
-        if mode=='window-focus':assert r['utilityTogglePassed'] and r['utilityRestorePassed'] and r['utilityFocusPassed'] and r['utilityPlacementPassed'],r
+        if mode=='window-focus':
+            assert r['utilityTogglePassed'] and r['utilityRestorePassed'] and r['utilityFocusPassed'] and r['utilityPlacementPassed'],r
+            assert all(r['utilityFocusChecks'].get(k) is True for k in ('readyBefore','readyAfter','widgetKey','utilityMain','hidden')),r
         if destination:
             shutil.copy2(out,destination/out.name);shutil.copy2(out.with_suffix('.png.json'),destination/(out.name+'.json'))
 print('PASS: minimum compact/detail, resize handler, menu-only launch, movable menu-click widget, rotating status buttons and foreground/fallback selection')

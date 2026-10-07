@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.4 · 2026-10-07
+
+- Keep 0.9.3 immutable and source-only: ARM64 packaging failed the existing window-toggle fixture, so no release binaries were attached; Intel and Windows jobs passed.
+- Fixture-only window focus checks now wait for observed active/key-window readiness with bounded deadlines, rather than assuming activation after 300ms. They additionally report and assert widget-key/utility-main/hide/restore states. Production window actions remain unchanged. The original CI failure was not reproduced in 10 local runs; an activation timing assumption is corrected, while its exact cause remains unproven.
+-0.9.3 остаётся версией только с исходниками: пакеты не опубликованы из-за сбоя проверки ARM64. Тест фокуса теперь ждёт подтверждённого состояния окна и сохраняет промежуточные признаки; поведение окон продукта не менялось.
+
 ## 0.9.3 · 2026-10-07
 
 - Serialize UI/CLI/MCP preference patches with a separate cross-process lock and monotonic configRevision. Unrelated fields merge; the last completed patch wins for the same field. Busy writes fail after one second without replacing the config. Windows also persists the selected language.

@@ -990,6 +990,7 @@ final class FloatingPanel: NSPanel {
     var analysisWindow: NSWindow?
     var settingsWindow: NSWindow?
     var fixtureTogglePassed = false
+    var fixtureFocusChecks: [String: Bool] = [:]
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         store = PulseStore()
@@ -1142,6 +1143,27 @@ final class FloatingPanel: NSPanel {
         }
         presentUtilityWindow(settingsWindow)
     }
+    func checkFixtureFocus(stage: Int, deadline: Date) {
+        guard store.isFixture else { return }
+        let ready = NSApp.isActive && settingsWindow?.isVisible == true && settingsWindow?.isKeyWindow == true
+        if !ready {
+            guard Date() < deadline else { fixtureFocusChecks[stage == 0 ? "readyBefore" : "readyAfter"] = false; return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) { self.checkFixtureFocus(stage: stage, deadline: deadline) }
+            return
+        }
+        fixtureFocusChecks[stage == 0 ? "readyBefore" : "readyAfter"] = true
+        if stage == 0 {
+            panel?.makeKey()
+            fixtureFocusChecks["widgetKey"] = panel?.isKeyWindow == true
+            fixtureFocusChecks["utilityMain"] = settingsWindow?.isMainWindow == true
+            openSettings()
+            fixtureFocusChecks["hidden"] = settingsWindow?.isVisible == false
+            openSettings()
+            checkFixtureFocus(stage: 1, deadline: Date().addingTimeInterval(0.8))
+        } else {
+            fixtureTogglePassed = fixtureFocusChecks["hidden"] == true && fixtureFocusChecks["widgetKey"] == true && fixtureFocusChecks["utilityMain"] == true
+        }
+    }
     func handleSnapshotArguments() {
         let args = CommandLine.arguments
         guard let index = args.firstIndex(of: "--snapshot"), index + 1 < args.count else { return }
@@ -1159,15 +1181,7 @@ final class FloatingPanel: NSPanel {
         if mode == "window-focus", store.isFixture {
             showAnalysis(); analysisWindow?.miniaturize(nil); showAnalysis()
             showSettings(); settingsWindow?.orderOut(nil); showSettings()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                self.panel?.makeKey()
-                self.openSettings()
-                let hidden = self.settingsWindow?.isVisible == false
-                self.openSettings()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    self.fixtureTogglePassed = hidden && self.settingsWindow?.isVisible == true && self.settingsWindow?.isKeyWindow == true
-                }
-            }
+            checkFixtureFocus(stage: 0, deadline: Date().addingTimeInterval(0.8))
         }
         if mode == "menu-widget" { setDisplayMode("menu"); DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { self.statusClicked() } }
         if mode == "resize-check", store.isFixture {
@@ -1188,7 +1202,7 @@ final class FloatingPanel: NSPanel {
                 let before = panel.isVisible
                 self.hidePanel(); let hidden = !panel.isVisible
                 self.togglePanel(); let restored = panel.isVisible
-                let report: [String: Any] = ["view": mode, "utilityTogglePassed": mode != "window-focus" || self.fixtureTogglePassed, "utilityRestorePassed": mode != "window-focus" || (self.analysisWindow?.isVisible == true && self.analysisWindow?.isMiniaturized == false && self.settingsWindow?.isVisible == true), "utilityFocusPassed": mode != "window-focus" || (self.settingsWindow?.isKeyWindow == true && NSApp.isActive), "utilityPlacementPassed": mode != "window-focus" || (self.settingsWindow?.level == .normal && self.settingsWindow?.collectionBehavior.contains(.moveToActiveSpace) == true), "panelWidth": panel.frame.width, "panelHeight": panel.frame.height, "floatingLevel": panel.level == .floating, "joinsAllSpaces": panel.collectionBehavior.contains(.canJoinAllSpaces), "fullScreenAuxiliary": panel.collectionBehavior.contains(.fullScreenAuxiliary), "movable": panel.isMovableByWindowBackground, "visibleBefore": before, "hidePassed": hidden, "restorePassed": restored, "statusItem": self.statusItem.button != nil, "fixtureMode": self.store.isFixture, "metricMode": self.store.metricMode, "scale": self.store.widgetScale, "menuClickShowsPanel": mode == "menu-widget" && before, "menuTooltip": self.statusItem.button?.toolTip ?? "", "displayMode": self.store.displayMode, "menuTitle": self.statusItem.button?.title ?? "", "capturedSize": [w?.contentView?.bounds.width ?? 0, w?.contentView?.bounds.height ?? 0]]
+                let report: [String: Any] = ["view": mode, "utilityFocusChecks": self.fixtureFocusChecks, "utilityTogglePassed": mode != "window-focus" || self.fixtureTogglePassed, "utilityRestorePassed": mode != "window-focus" || (self.analysisWindow?.isVisible == true && self.analysisWindow?.isMiniaturized == false && self.settingsWindow?.isVisible == true), "utilityFocusPassed": mode != "window-focus" || (self.settingsWindow?.isKeyWindow == true && NSApp.isActive), "utilityPlacementPassed": mode != "window-focus" || (self.settingsWindow?.level == .normal && self.settingsWindow?.collectionBehavior.contains(.moveToActiveSpace) == true), "panelWidth": panel.frame.width, "panelHeight": panel.frame.height, "floatingLevel": panel.level == .floating, "joinsAllSpaces": panel.collectionBehavior.contains(.canJoinAllSpaces), "fullScreenAuxiliary": panel.collectionBehavior.contains(.fullScreenAuxiliary), "movable": panel.isMovableByWindowBackground, "visibleBefore": before, "hidePassed": hidden, "restorePassed": restored, "statusItem": self.statusItem.button != nil, "fixtureMode": self.store.isFixture, "metricMode": self.store.metricMode, "scale": self.store.widgetScale, "menuClickShowsPanel": mode == "menu-widget" && before, "menuTooltip": self.statusItem.button?.toolTip ?? "", "displayMode": self.store.displayMode, "menuTitle": self.statusItem.button?.title ?? "", "capturedSize": [w?.contentView?.bounds.width ?? 0, w?.contentView?.bounds.height ?? 0]]
                 if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) {
                     try? data.write(to: URL(fileURLWithPath: path + ".json"))
                 }

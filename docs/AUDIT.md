@@ -1,3 +1,9 @@
+## 0.9.4 focus-fixture correction · 2026-10-07
+
+The 0.9.3 [package run37600531862](https://github.com/Lobodagram/agent-pulse/actions/runs/37600531862) failed on ARM64: window-focus reported utilityTogglePassed=false while restore/focus/placement passed. Intel and Windows passed; publication was skipped, tag9b72e61e8511d7c0981558f382af9fb651315693 remains immutable and source-only. Ten local repeated original focus cases passed; the exact CI cause is unproven.
+
+The fixture assumed activation after 300ms. 0.9.4 waits for actual app-active/settings-key readiness with bounded deadlines before exercising the nonactivating widget, then records widget-key, utility-main, hidden and restored state. Assertions are extended, not waived. This changes fixture diagnostics only; production window behavior remains unchanged. Updated full gates are pending below.
+
 ## 0.9.3 settings consistency · 2026-10-07
 
 Confirmed both GLM findings against 0.9.2: settings reads created metrics.sqlite and configuration used unsynchronized read/merge/replace. All built-in preference writers now share a bounded cross-process patch lock; revisions count completed writes, different fields merge, same-field conflicts remain explicitly last-completed-patch-wins. Read-only settings query existing subscription rows with SQLite mode=ro and no Store/schema initialization. Local verification passed: 198 unit tests, privacy export, Python syntax, 122 document links and isolated wheel/CLI/hook/MCP entry points. Six new regression cases include 36 writes from three independent spawned processes and timeout/recovery. The new frozen helper passed the native two-second synthetic hook/journal/MCP check; 20 own-window Mac fixture cases passed. Interactive isolated UI/MCP acceptance preserved language, metric mode, size, topmost and client selection across both writers. Public platform builds and downloaded/installed acceptance remain pending until separately recorded.
