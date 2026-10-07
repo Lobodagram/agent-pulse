@@ -65,7 +65,7 @@ Contract: [official Claude status-line JSON](https://code.claude.com/docs/en/sta
 
 ## Kimi Code 2.x: separate quota and event connections
 
-Select the account region explicitly in Settings: .com (mainland-cn) or .ai (global). The same key is never retried against a different regional host. Official Kimi Code 2.1.1 was installed/help-checked here, but the owner cannot log into the friend-owned account; actual account quotas/native events remain unverified.
+Select the account region explicitly in Settings: .com (mainland-cn) or .ai (global). The same key is never retried against a different regional host. Official Kimi Code 2.1.1 was installed/help-checked here, but live account acceptance was not performed; actual account quotas/native events remain unverified.
 
 Enable Kimi in the client selection. Enter your **own Kimi Code key** in the masked Settings field and Save. It stays in local `Secrets.json` (0600 on POSIX; restrict NTFS access on Windows). A Kimi Work/Chat login is not a Kimi Code key. Agent Pulse does not extract native keys, cookies or passwords.
 
