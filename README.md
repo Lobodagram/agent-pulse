@@ -8,6 +8,8 @@ Widget: **Limits ⇄ / Today ⇄**, persisted per device; opt-in personal GLM Co
 
 A local tool for improving coding-agent workspaces: collect sanitized tool events, inspect repeated workflows and failures, and review evidence before automating a task or adding a skill/MCP. The desktop widget also shows reported tokens and subscription quotas.
 
+[Agent setup: OS, dependencies, skills and MCP](docs/AGENT_SETUP.md)
+
 [Linux/headless runtime](docs/HEADLESS.md) · Runtime wheel: Python 3.11+
 
 **0.9.6 preview.** Downloadable packages and their verification are linked below and recorded in [QA](docs/QA.md). macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.

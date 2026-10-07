@@ -4,6 +4,28 @@ From 0.9.5, temporary preference contention returns a tool execution result with
 
 Give your agent this repository URL and ask: “Read docs/AGENT_SETUP.md, inspect my existing Agent Pulse installation, configure the requested providers without exposing keys, and explain collection coverage.” This guide is for the local runtime, not a permanently embedded chat UI. The agent's own subscription may be used when you ask it to analyze; Agent Pulse itself makes no model calls.
 
+## Identify the OS and installation route first
+
+Check the OS, OS version and processor architecture using native system information. Choose a **release package** or **source installation**. Do not install build dependencies to run a packaged app, or upgrade system Python/OS/native clients without need and owner authorization. Stop and explain unsupported environments.
+
+| Environment | Release package | User dependencies and limits |
+| --- | --- | --- |
+| macOS 14+, Apple Silicon ARM64 | `agent-pulse-macos-arm64.zip` | Python/runtime are inside the `.app`; no external Python, Xcode or PyInstaller needed. Choose a stable location, such as `/Applications`, before installing observers. |
+| macOS 14+, Intel x64 | `agent-pulse-macos-x64.zip` | Same rules; match the architecture. Signing is ad-hoc, without Apple notarization; do not bypass Gatekeeper automatically. |
+| Windows 10/11 x64 | `agent-pulse-windows-x64.zip` | Python/Tk/runtime are bundled. Extract the **whole** folder to a stable location: keep `AgentPulse.exe`, `pulse-collector.exe` and `pulse-runtime` together. No system Python needed for the app. |
+| Linux | No packaged desktop GUI | Source collector/local MCP only: Python 3.11+ in a dedicated venv; [headless instructions](HEADLESS.md). Provider adapters vary by client. |
+| Windows ARM64 or other platforms/architectures | No separately verified package | Do not promise native support or tested emulation. Establish compatibility first rather than choosing a mismatched download. |
+
+Download the matching architecture from [releases](https://github.com/Lobodagram/agent-pulse/releases/latest), verify SHA256 against `SHA256SUMS.txt`, and read that version's limits. Checksums verify agreement with the manifest, not code signing. Do not reuse Mac shell commands in PowerShell.
+
+Packaged MCP needs no external Python: on Mac, command is the absolute path to `Agent Pulse.app/Contents/Resources/pulse-collector`; on Windows, the extracted `pulse-collector.exe`; arguments are `["mcp"]`. Set the path as a distinct command field in the native client configuration, preserving spaces. Do not use GUI `AgentPulse.exe` for stdio. Additional controls require the owner's separate request.
+
+For **source** installs on Mac/Linux: `python3 -m venv .venv`, then `.venv/bin/python -m pip install .`. On Windows: `py -3.12 -m venv .venv` (or a verified Python 3.11+), then `.venv\Scripts\python.exe -m pip install .`. For the Windows source widget, check Tk (`python -c "import tkinter"`) in the selected environment. The runtime collector uses the standard library. **Building the app** separately requires Xcode Command Line Tools on Mac and pinned PyInstaller in a build-venv; see [platform-specific build commands](BUILDING.md).
+
+The portable skill installer below requires Python 3.11+ and reviewed source; it is an optional separate step. An app/MCP-only user does not need Python just for skills: an agent can read `agent-skills/*/SKILL.md` directly from reviewed source.
+
+Core analytics checks are shared across platforms; the macOS menu and Windows tray differ. Green CI does not replace physical Windows DPI/tray/sleep-wake acceptance; installation does not prove event collection. Report installed version/path/OS/architecture, selected clients, actual MCP tools and subsequent real events, plus unverified functions. Users enter their own credentials locally; never copy another person's configuration or keys.
+
 ## Install reviewed skills
 
 Clone or download a reviewed release source. In that checkout, install the two skills to an explicit directory using Python 3.11+:
