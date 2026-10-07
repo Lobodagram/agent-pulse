@@ -1,4 +1,6 @@
-Agent Pulse 0.10.0 — Kimi Code setup and safe observation / подключение Kimi Code
+Agent Pulse 0.10.1 — Kimi Code setup and safe observation / подключение Kimi Code
+
+Settings now show the installed version on Mac/Windows; EN/RU release-state documentation is corrected. Earlier 0.10.0 tag and packages remain unchanged.
 
 Kimi Code 2.x gains opt-in TOML hooks, native call/turn pairing, masked own-key controls and explicit .com/.ai quota regions. Foreign hook handlers/configuration are preserved, removal restores the original bytes, and keys remain in local Secrets.json. Shared locking protects GLM/Kimi keys and the journal HMAC. Ambiguous windows, missing models and unreported command exits stay unknown; quotas are not daily token spend.
 
@@ -8,4 +10,4 @@ Local source:220 tests; isolated Mac controls cover key save/disconnect and eigh
 
 Public preview / предварительная версия. Codex/GLM have actual local collection evidence; this is not all-client completeness or measured subscription savings. Physical Windows DPI/tray/sleep-wake, Mac Spaces/multi-display, cold first-start and signing/notarization remain open. AGPL-3.0-only; prior MIT grants remain valid. Check SHA256SUMS; checksums are not code signing.
 
-[English OS-aware agent setup](https://github.com/Lobodagram/agent-pulse/blob/v0.10.0/docs/AGENT_SETUP.md) · [Установка агентом по ОС](https://github.com/Lobodagram/agent-pulse/blob/v0.10.0/docs/AGENT_SETUP.ru.md)
+[English OS-aware agent setup](https://github.com/Lobodagram/agent-pulse/blob/v0.10.1/docs/AGENT_SETUP.md) · [Установка агентом по ОС](https://github.com/Lobodagram/agent-pulse/blob/v0.10.1/docs/AGENT_SETUP.ru.md)
