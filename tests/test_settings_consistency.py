@@ -5,12 +5,15 @@ import multiprocessing
 import os
 from pathlib import Path
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import time
 import unittest
 from unittest.mock import patch
 import agent_control
 import providers
+from mcp_server import dispatch
 
 def held_writer(directory,entered,release):
     original=providers.atomic_json
@@ -83,6 +86,38 @@ class SettingsConsistencyTests(unittest.TestCase):
         config=providers.load_config(self.state)
         self.assertEqual(config['language'],'ru');self.assertEqual(config['metricMode'],'today')
         self.assertEqual(config['configRevision'],3)
+    def test_mcp_busy_is_execution_error_then_ping_and_retry_work(self):
+        agent_control.update_settings(self.state,{'metricMode':'limits'})
+        before=(self.state/'config.json').read_bytes()
+        ctx=multiprocessing.get_context('spawn');entered=ctx.Event();release=ctx.Event()
+        worker=ctx.Process(target=held_writer,args=(str(self.state),entered,release));worker.start()
+        try:
+            self.assertTrue(entered.wait(5))
+            requests=[{'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'pulse_configure','arguments':{'changes':{'metricMode':'today'}}}},
+                      {'jsonrpc':'2.0','id':2,'method':'ping'}]
+            proc=subprocess.run([sys.executable,str(Path(__file__).resolve().parents[1]/'mcp_server.py'),'--state',str(self.state),'--allow-control'],
+                                input=''.join(json.dumps(x)+'\n' for x in requests),text=True,capture_output=True,timeout=4)
+            self.assertEqual(proc.returncode,0);self.assertEqual(proc.stderr,'')
+            responses=[json.loads(x) for x in proc.stdout.splitlines()]
+            self.assertEqual(responses,[{'jsonrpc':'2.0','id':1,'result':{'content':[{'type':'text','text':'{"error":"config_busy","retryable":true}'}],'isError':True}},
+                                        {'jsonrpc':'2.0','id':2,'result':{}}])
+            self.assertEqual((self.state/'config.json').read_bytes(),before)
+        finally:
+            release.set();worker.join(10)
+            if worker.is_alive():worker.terminate();worker.join()
+        self.assertEqual(worker.exitcode,0)
+        result=dispatch(requests[0],self.state,True)
+        self.assertFalse(result['isError']);self.assertEqual(json.loads(result['content'][0]['text'])['configRevision'],3)
+        self.assertEqual(providers.load_config(self.state)['metricMode'],'today')
+    def test_only_typed_config_contention_gets_retryable_result(self):
+        request={'method':'tools/call','params':{'name':'pulse_configure','arguments':{'changes':{'language':'ru'}}}}
+        with patch('agent_control.control',side_effect=providers.ConfigBusy('private-canary')):
+            result=dispatch(request,self.state,True)
+        self.assertEqual(result,{'content':[{'type':'text','text':'{"error":"config_busy","retryable":true}'}],'isError':True})
+        with patch('agent_control.control',side_effect=TimeoutError('private-canary')):
+            with self.assertRaises(TimeoutError):dispatch(request,self.state,True)
+        with self.assertRaises(ValueError):dispatch(request,self.state,False)
+        self.assertFalse(self.state.exists())
     @unittest.skipIf(os.name=='nt','symlink privilege differs on Windows')
     def test_symlink_state_database_and_lock_are_refused(self):
         self.state.mkdir();other=Path(self.tmp.name)/'other';other.mkdir()

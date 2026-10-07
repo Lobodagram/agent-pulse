@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.5 · 2026-10-07
+
+MCP preference contention returns a retryable tool execution error (`isError: true`, `config_busy`) instead of an invalid-request error. Fixed literals only: no exception messages, paths or arguments. Real held-lock stdio tests verify unchanged bytes, continued ping and retry after release; packaged smoke exercises the same control path.
+
+Mac already polls visual preferences every five seconds; verified live by changing the metric through local MCP and restoring it without restart/manual refresh. Snapshot/client-selection refresh remains separate.
+
+Занятый файл настроек возвращает агенту понятную ошибку с возможностью повторить действие. Автоматическое подхватывание настроек на Mac подтверждено; интерфейс и доступ к данным не расширены.
+
 ## 0.9.4 · 2026-10-07
 
 - Keep 0.9.3 immutable and source-only: ARM64 packaging failed the existing window-toggle fixture, so no release binaries were attached; Intel and Windows jobs passed.

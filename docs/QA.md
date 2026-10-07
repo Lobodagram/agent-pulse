@@ -1,3 +1,7 @@
+## 0.9.5 candidate · 2026-10-07
+
+Two additional regressions test real held-lock stdio MCP, continued ping, unchanged config bytes, successful retry after release, typed-only classification and exception-canary omission. Packaged smoke adds the same busy/recovery gate. Existing production Mac polling was accepted live without restart/manual refresh and the original metric mode was restored. UI rendering is unchanged; existing invented-data screenshots remain representative. Publication/download gates follow completion.
+
 ## 0.9.4 delivered acceptance · 2026-10-07
 
 [Source checks37601456705](https://github.com/Lobodagram/agent-pulse/actions/runs/37601456705) passed Linux, Windows, Mac ARM64 and Intel. [Packages37601980097](https://github.com/Lobodagram/agent-pulse/actions/runs/37601980097) passed all three binaries and publication. Immutable v0.9.4 is49e825e93f95b47a60adfd27f18444df8e7a6ca2;130 allowlisted source files matched hashes/modes.198 tests; isolated runtime wheel, entry points and six new settings regression cases passed. Frozen MCP settings read on absent state creates no directory/database. Native two-second synthetic hook/journal/MCP deadline remains unchanged and passed.

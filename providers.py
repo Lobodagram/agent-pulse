@@ -46,6 +46,9 @@ def atomic_json(path,value):
     finally:
         if tmp.exists():tmp.unlink()
 
+class ConfigBusy(TimeoutError):
+    """A cooperating writer holds the local preference lock; retry later."""
+
 def patch_config(directory,changes):
     """Serialize all cooperating UI/CLI/MCP patches across atomic replacements.
 
@@ -73,11 +76,11 @@ def patch_config(directory,changes):
                 else:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
                 break
             except BlockingIOError:
-                if time.monotonic()>=deadline:raise TimeoutError('config_busy')
+                if time.monotonic()>=deadline:raise ConfigBusy('config_busy')
                 time.sleep(.01)
             except OSError:
                 if os.name!='nt':raise
-                if time.monotonic()>=deadline:raise TimeoutError('config_busy')
+                if time.monotonic()>=deadline:raise ConfigBusy('config_busy')
                 time.sleep(.01)
         try:
             config=load_config(directory)

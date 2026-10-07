@@ -1,3 +1,11 @@
+## 0.9.5 candidate · 2026-10-07
+
+The Mac polling suspicion was disproved: the existing five-second timer calls `loadPreferences()`. Installed0.9.4 accepted Limits→Today→Limits via local MCP without restart/manual refresh; the requested field was restored and revision advanced normally. MCP lock contention was confirmed and corrected to a retryable fixed-literal tool execution result; only typed ConfigBusy is classified. Generic timeouts remain generic. Tests use actual independent processes, verify unchanged bytes and continued ping/retry. [MCP tool errors](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#error-handling) distinguish execution failures from protocol errors.
+
+Prospective benefit gates below remain unchanged and precede any human-reviewed corpus. No causal/subscription-saving claim. Code remains9/10; analytical effectiveness7/10. Cold-first-launch cause, signing and physical acceptance remain open. Publication/download gates follow completion.
+
+Подозрение о настройках Mac не подтвердилось; автоматическое переключение проверено в работающем виджете. Ошибка занятой блокировки исправлена без выдачи приватных данных. Критерии пользы не изменены и заданы до эксперимента.
+
 ## 0.9.4 delivered acceptance · 2026-10-07
 
 [Source checks37601456705](https://github.com/Lobodagram/agent-pulse/actions/runs/37601456705) passed Linux, Windows, Mac ARM64 and Intel. [Packages37601980097](https://github.com/Lobodagram/agent-pulse/actions/runs/37601980097) passed all three binaries and publication. Immutable v0.9.4 is49e825e93f95b47a60adfd27f18444df8e7a6ca2;130 allowlisted source files matched hashes/modes.198 tests; isolated runtime wheel, entry points and six new settings regression cases passed. Frozen MCP settings read on absent state creates no directory/database. Native two-second synthetic hook/journal/MCP deadline remains unchanged and passed.

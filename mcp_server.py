@@ -9,7 +9,7 @@ from analytics import report, compare
 from platform_support import state_directory
 from evidence_pack import evidence_pack
 from pathlib import Path
-from providers import IDS as PROVIDER_IDS
+from providers import IDS as PROVIDER_IDS, ConfigBusy
 from session_view import session_page
 TOOLS=[
  {'name':'pulse_report','description':'Local observed workflow findings and coverage; not exact tool token costs.','inputSchema':{'type':'object','properties':{},'additionalProperties':False}},
@@ -47,7 +47,11 @@ def dispatch(request,state,allow_control=False):
     if name in {t['name'] for t in CONTROL_TOOLS}:
         if not allow_control:raise ValueError('control_disabled')
         from agent_control import control
-        data=control(name,args,state)
+        try:data=control(name,args,state)
+        except ConfigBusy:
+            # Execution failure, not invalid parameters. Fixed literals only;
+            # never serialize the exception, config, arguments or local paths.
+            return {'content':[{'type':'text','text':'{"error":"config_busy","retryable":true}'}],'isError':True}
         return {'content':[{'type':'text','text':json.dumps(data,ensure_ascii=False,allow_nan=False)}],'isError':False}
     j=Journal(state)
     try:

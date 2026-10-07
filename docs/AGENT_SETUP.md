@@ -1,5 +1,7 @@
 # Agent setup and control
 
+From 0.9.5, temporary preference contention returns a tool execution result with `isError: true` and fixed text JSON `{"error":"config_busy","retryable":true}`. Retry after the other operation completes; there is no automatic agent retry loop. Disabled controls and invalid arguments remain protocol errors. No path, input or exception message is included. Mac already calls `loadPreferences()` every five seconds; visual preferences need no restart or manual refresh.
+
 Give your agent this repository URL and ask: “Read docs/AGENT_SETUP.md, inspect my existing Agent Pulse installation, configure the requested providers without exposing keys, and explain collection coverage.” This guide is for the local runtime, not a permanently embedded chat UI. The agent's own subscription may be used when you ask it to analyze; Agent Pulse itself makes no model calls.
 
 ## Install reviewed skills

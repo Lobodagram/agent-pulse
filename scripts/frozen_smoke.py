@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check delivered helper bytes with invented events, without accounts/models."""
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -25,4 +26,25 @@ with tempfile.TemporaryDirectory() as tmp:
     assert json.loads(responses[1]['result']['content'][0]['text'])['calls']==1
     assert 'пакет проверки' in json.loads(responses[2]['result']['content'][0]['text'])['markdown']
     assert len(responses[3]['result']['tools'])==6
-print(json.dumps({'frozenHookJournalMcp':'passed','modelsCalled':0,'syntheticDataOnly':True}))
+    # Exercise the actual packaged control path with a different process holding
+    # its lock. No test events/settings enter a real user's state.
+    busy={'jsonrpc':'2.0','id':5,'method':'tools/call','params':{'name':'pulse_configure','arguments':{'changes':{'metricMode':'today'}}}}
+    with (Path(tmp)/'.config.lock').open('w+b') as lock:
+        lock.write(b'0');lock.flush();lock.seek(0)
+        if os.name=='nt':
+            import msvcrt
+            msvcrt.locking(lock.fileno(),msvcrt.LK_NBLCK,1)
+        else:
+            import fcntl
+            fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        r=subprocess.run(base+['mcp','--allow-control'],input=(json.dumps(busy)+'\n'+json.dumps({'jsonrpc':'2.0','id':6,'method':'ping'})+'\n').encode(),capture_output=True,timeout=10,check=True)
+        assert not r.stderr
+        responses=[json.loads(x) for x in r.stdout.splitlines()]
+        assert responses[0]=={'jsonrpc':'2.0','id':5,'result':{'content':[{'type':'text','text':'{"error":"config_busy","retryable":true}'}],'isError':True}}
+        assert responses[1]=={'jsonrpc':'2.0','id':6,'result':{}}
+        assert not (Path(tmp)/'config.json').exists()
+    r=subprocess.run(base+['mcp','--allow-control'],input=(json.dumps(busy)+'\n').encode(),capture_output=True,timeout=10,check=True)
+    assert not r.stderr
+    assert not json.loads(r.stdout)['result']['isError']
+    assert json.loads((Path(tmp)/'config.json').read_text())['metricMode']=='today'
+print(json.dumps({'frozenHookJournalMcp':'passed','mcpConfigBusyRetry':'passed','modelsCalled':0,'syntheticDataOnly':True}))
