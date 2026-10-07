@@ -471,7 +471,7 @@ struct AnalysisView: View {
     @State var modelHistory: ModelHistory?
     @State var label = ""; @State var variant = "before"; @State var outcome = "unknown"
     @State var before = "before"; @State var after = "after"; @State var message = ""
-    @State var comparisonMessage = ""
+    @State var comparisonMessage = ""; @State var comparisonLabel = ""
     @State var sessionCursors: [String?] = [nil]; @State var sessionPage = 0; @State var nextCursor: String?
     @State var sessionTotal = 0; @State var pageOffset = 0; @State var pageLoading = false; @State var pageRequest = UUID()
     @State var showUnobservedCapabilities = false
@@ -763,17 +763,21 @@ struct AnalysisView: View {
             Text(tr("Review the same task family before and after a change", "Сравните одну группу задач до и после изменения")).font(.system(size: 16, weight: .semibold))
             Text(tr("Label sessions, variant and acceptance in Sessions. At least 3 observations per variant are needed. Model settings and task difficulty still require your review.", "Укажите метки, вариант и результат в Сессиях. Нужно хотя бы 3 наблюдения на вариант. Настройки моделей и сложность задач проверяете вы.")).font(.system(size: 12)).foregroundStyle(quiet)
             Text("\(report.sessions.filter { !($0.label ?? "").isEmpty }.count) " + tr("labelled sessions in this view. Empty groups mean insufficient reviewed evidence, not zero improvement.", "размеченных сессий в этом разделе. Пустые группы означают недостаток проверенных данных, а не нулевое улучшение.")).font(.system(size: 11)).foregroundStyle(quiet)
-            HStack { TextField(tr("Task label", "Метка задачи"), text: $label); TextField(tr("Before", "До"), text: $before); TextField(tr("After", "После"), text: $after) }
+            HStack { TextField(tr("Task label", "Метка задачи"), text: $comparisonLabel); TextField(tr("Before", "До"), text: $before); TextField(tr("After", "После"), text: $after) }
             Button(tr("Compare observations", "Сравнить наблюдения")) {
                 if store.isFixture { comparisonMessage = tr("Demo comparison: use real reviewed sessions to measure effects.", "Демо: для оценки эффекта используйте реальные проверенные сессии."); return }
-                store.run(["journal", "--action", "compare", "--label", label, "--before", before, "--after", after]) { r in
+                let queryLabel = comparisonLabel; let queryBefore = before; let queryAfter = after
+                store.run(["journal", "--action", "compare", "--label", queryLabel, "--before", queryBefore, "--after", queryAfter]) { r in
+                    guard comparisonLabel == queryLabel, before == queryBefore, after == queryAfter else { return }
                     if case .success(let data) = r, let obj = try? JSONSerialization.jsonObject(with: data), let formatted = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]), let text = String(data: formatted, encoding: .utf8) { comparisonMessage = text }
                     else { comparisonMessage = tr("Use valid task and variant labels", "Проверьте метки задачи и вариантов") }
                 }
             }
             if !comparisonMessage.isEmpty { Text(comparisonMessage).font(.system(size: 11, design: .monospaced)).textSelection(.enabled) }
             Text(tr("No causal claim, exact per-tool cost or promised subscription saving. Failed and rework results remain visible.", "Без заявления о причинности, точной стоимости инструмента или обещаний экономии подписки. Ошибки и доработки учитываются.")).font(.system(size: 11)).foregroundStyle(amber)
-        }
+        }.onChange(of: comparisonLabel) { _, _ in comparisonMessage = "" }
+        .onChange(of: before) { _, _ in comparisonMessage = "" }
+        .onChange(of: after) { _, _ in comparisonMessage = "" }
     }
 }
 struct SubscriptionRow: View {
