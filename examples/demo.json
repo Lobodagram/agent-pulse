@@ -112,7 +112,22 @@
       "id": "glm",
       "name": "GLM / ZCode",
       "status": "ready",
-      "quotas": [],
+      "quotas": [
+        {
+          "bucket": "glm",
+          "kind": "primary",
+          "durationMinutes": 300,
+          "remainingPercent": 78,
+          "resetsAt": 1893495600
+        },
+        {
+          "bucket": "glm",
+          "kind": "secondary",
+          "durationMinutes": 10080,
+          "remainingPercent": 65,
+          "resetsAt": 1893578400
+        }
+      ],
       "daily": [],
       "todayTokens": 43800,
       "resetCredits": null,
@@ -128,7 +143,9 @@
       },
       "observedAt": 1893492000,
       "periodTokens": 286200,
-      "sessions": 18
+      "sessions": 18,
+      "quotaObservedAt": 1893492000,
+      "quotaStatus": "ready"
     },
     {
       "id": "claude",

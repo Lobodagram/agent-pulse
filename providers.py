@@ -190,3 +190,17 @@ def qwen_dashboard(raw):
         if name!='other' and count is not None:p['tools'].append({'provider':'qwen','name':'skill.'+name,'count':count,'errors':None,'source':'Qwen local aggregate'})
     if p['todayTokens'] is None:p.update(status='unavailable',sourceStatus=['dashboard_schema_unavailable'])
     return p
+
+
+def tls_check():
+    """Explicit diagnostic: fixed HTTPS GET, no key and no inference endpoint."""
+    from urllib.error import HTTPError
+    context=verified_http_context()
+    if context.verify_mode!=ssl.CERT_REQUIRED or not context.check_hostname:raise ValueError('unsafe_tls_context')
+    roots=context.cert_store_stats()['x509_ca']
+    opener=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect(),urllib.request.HTTPSHandler(context=context))
+    request=urllib.request.Request('https://api.z.ai/api/monitor/usage/quota/limit',headers={'Accept':'application/json'},method='GET')
+    try:
+        with opener.open(request,timeout=12) as response:status=response.status
+    except HTTPError as error:status=error.code
+    return {'verifiedTLS':True,'hostnameVerified':True,'caCertificates':roots,'httpStatus':status,'credentialSent':False}

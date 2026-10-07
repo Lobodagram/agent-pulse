@@ -15,6 +15,7 @@ with tempfile.TemporaryDirectory() as tmp:
         data=json.loads(fixture.read_text())
         if mode in ('two-quotas','expanded-two-quotas','today-two-quotas','glm-menu-quotas'):data['providers'][1]['quotas']=data['providers'][0]['quotas']
         if mode in ('pending','today-pending'):data['providers'][0].update(todayTokens=None,todayTokenStatus='account-day-pending')
+        if mode in ('menu-next','menu-timer','menu-active','menu-fallback'):data['providers'][1]['quotas']=[]
         demo.write_text(json.dumps(data))
         view='menu-bar' if mode in ('menu-next','menu-timer','menu-active','menu-fallback') else 'expanded' if mode=='expanded-two-quotas' else mode if mode not in ('two-quotas','pending','compact-en','single-instance') else 'compact'
         if mode.startswith('today') or mode=='glm-menu-quotas':view='compact' if mode.startswith('today') else 'menu-bar'

@@ -24,5 +24,5 @@ with tempfile.TemporaryDirectory() as tmp:
     assert responses[0]['result']['serverInfo']['version']==__version__
     assert json.loads(responses[1]['result']['content'][0]['text'])['calls']==1
     assert 'пакет проверки' in json.loads(responses[2]['result']['content'][0]['text'])['markdown']
-    assert len(responses[3]['result']['tools'])==5
+    assert len(responses[3]['result']['tools'])==6
 print(json.dumps({'frozenHookJournalMcp':'passed','modelsCalled':0,'syntheticDataOnly':True}))

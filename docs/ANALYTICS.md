@@ -56,7 +56,7 @@ Reports/exports contain private activity metadata even without payloads. They ar
 
 ## Optional local MCP
 
-Start `python3 /absolute/checkout/collector.py mcp`, or register the installed `pulse-collector` helper with argument `mcp` in your native MCP client. Source-mode arguments must include the absolute collector path before `mcp`. No API key or port is required. Add global `--state /your/state` **before** `mcp` when using a custom journal. Available read-only tools: `pulse_report`, `pulse_session`, `pulse_compare`, `pulse_evidence`, `pulse_review_pack`. No command execution, client control, skill installation or automatic agent loop is exposed. Reads may perform housekeeping of the tool's own cache. Registration is optional and does not happen silently.
+Start `python3 /absolute/checkout/collector.py mcp`, or register the installed `pulse-collector` helper with argument `mcp` in your native MCP client. Source-mode arguments must include the absolute collector path before `mcp`. No API key or port is required. Add global `--state /your/state` **before** `mcp` when using a custom journal. Available read-only tools: `pulse_report`, `pulse_session`, `pulse_compare`, `pulse_evidence`, `pulse_review_pack`, `pulse_settings`. Default mode is read-only. Explicit `--allow-control` adds bounded local settings, billing dates and manual finding/session decisions; no arbitrary execution, keys, native hook edits or automatic agent loop. See [agent setup](AGENT_SETUP.md). Reads may perform housekeeping of the tool's own cache. Registration is optional and does not happen silently.
 
 ## Coverage, retention and privacy
 

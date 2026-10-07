@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.0 — development candidate / кандидат
+
+- Portable setup/analysis skills and bilingual agent setup guide; explicit destination installer preserves existing skills.
+- Read-only local settings MCP plus opt-in bounded control: preferences, manual billing dates and genuine finding/session reviews. No keys, arbitrary commands, native hook edits or model calls.
+- Local visual preference synchronization, isolated Mac acceptance state/observer home, fixture language writes removed.
+- Pasted GLM keys trim outer whitespace; failures carry fixed safe categories. Explicit no-key TLS diagnostic and packaged Windows CI gate.
+- Prospective AGPL-3.0-only; published MIT rights/notices preserved. Public screenshot hash review and runtime-file rejection added to export.
+
+Переносимые навыки, управление по явному выбору, безопасная диагностика GLM и переход новых версий на AGPL. Кандидат ещё требует окончательной проверки сборок и публикации.
+
+
 ## 0.8.1 · 2026-10-06
 
 - Fix frozen macOS HTTPS trust when the build Python framework CA path is absent: add OS-owned roots while retaining certificate/hostname verification and fail-closed behavior.

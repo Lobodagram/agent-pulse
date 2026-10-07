@@ -136,7 +136,27 @@ class Pulse:
                 st=path.stat();result[provider]=(st.st_mtime_ns,st.st_size,st.st_ino)
             except OSError:result[provider]=None
         return result
+    def save_topmost(self,value):
+        self.root.attributes('-topmost',value)
+        if not self.fixture:
+            config=providers.load_config(self.state);config['topmost']=bool(value);providers.atomic_json(self.state/'config.json',config)
+    def sync_preferences(self):
+        if self.fixture:return
+        config=providers.load_config(self.state)
+        signature=json.dumps({k:config.get(k) for k in ('language','widgetScale','metricMode','displayMode','topmost')},sort_keys=True)
+        if signature==getattr(self,'preference_signature',None):return
+        self.preference_signature=signature
+        self.language=config.get('language',self.language)
+        self.metric_mode=config.get('metricMode',self.metric_mode)
+        self.root.attributes('-topmost',config.get('topmost',True))
+        scale=config.get('widgetScale',self.scale)
+        if type(scale) in (float,int) and .8<=scale<=1:self.set_scale(scale,save=False)
+        mode=config.get('displayMode',self.display_mode)
+        if mode=='menu':mode='tray'
+        if mode in ('floating','compact','tray') and mode!=self.display_mode:self.set_display_mode(mode,save=False)
+        self.render()
     def check_authentication(self):
+        self.sync_preferences()
         if not self.fixture:
             marks=self.authentication_metadata()
             if marks!=self.auth_marks:
@@ -444,7 +464,7 @@ class Pulse:
         f=tk.Frame(canvas,bg=BG);canvas.create_window(10,10,window=f,anchor='nw');f.bind('<Configure>',lambda e:canvas.configure(scrollregion=canvas.bbox('all')))
         def label(s):tk.Label(f,text=s,bg=BG,fg=FG,anchor='w').pack(fill='x',pady=6)
         lang=tk.StringVar(value=self.language);ttk.Combobox(f,textvariable=lang,values=['en','ru'],state='readonly').pack(anchor='w')
-        top=tk.BooleanVar(value=True);tk.Checkbutton(f,text=self.t('Always on top','Поверх окон'),variable=top,command=lambda:self.root.attributes('-topmost',top.get()),bg=BG,fg=FG,selectcolor=BG).pack(anchor='w')
+        top=tk.BooleanVar(value=True);tk.Checkbutton(f,text=self.t('Always on top','Поверх окон'),variable=top,command=lambda:self.save_topmost(top.get()),bg=BG,fg=FG,selectcolor=BG).pack(anchor='w')
         label(self.t('Widget size · or drag the lower-right corner','Размер виджета · можно тянуть за нижний правый угол'))
         size=tk.DoubleVar(value=self.scale)
         presets=tk.Frame(f,bg=BG);presets.pack(anchor='w')
@@ -455,6 +475,8 @@ class Pulse:
         ttk.Combobox(f,textvariable=placement,values=['floating','compact','tray'],state='readonly').pack(anchor='w')
         label(self.t('Compact keeps quota rows above the taskbar. Tray shows a bounded tooltip; Windows may hide its icon.','Compact — проценты над панелью задач. Tray — подсказка при наведении; значок может быть скрыт Windows.'))
         label(self.t('GLM Coding Plan · personal Z.ai key','GLM Coding Plan · личный ключ Z.ai'))
+        quota_error=next((p.get('quotaError') for p in self.data.get('providers',[]) if p['id']=='glm'),None)
+        if quota_error:label(self.t('Quota unavailable: ','Квоты недоступны: ')+quota_error)
         glm_key=tk.StringVar();ttk.Entry(f,textvariable=glm_key,show='•',width=40).pack(anchor='w')
         def save_glm(remove=False):
             if self.fixture:return

@@ -38,7 +38,7 @@ jobs:
           python scripts/model_ui_smoke.py 'dist/Agent Pulse.app/Contents/MacOS/AgentPulse'
           'dist/Agent Pulse.app/Contents/Resources/pulse-collector' catalog > .build/catalog.json
           python scripts/frozen_smoke.py 'dist/Agent Pulse.app/Contents/Resources/pulse-collector'
-          cp LICENSE NOTICE 'dist/Agent Pulse.app/Contents/Resources/'
+          cp LICENSE LICENSE-MIT.txt NOTICE 'dist/Agent Pulse.app/Contents/Resources/'
           python scripts/runtime_notices.py 'dist/Agent Pulse.app/Contents/Resources/Licenses'
           codesign --force --sign - 'dist/Agent Pulse.app'
           codesign --verify --deep --strict 'dist/Agent Pulse.app'
@@ -50,6 +50,8 @@ jobs:
           Copy-Item .build/pulse-collector/* dist/ -Recurse -Force
           & ./dist/pulse-collector.exe catalog
           python scripts/frozen_smoke.py dist/pulse-collector.exe
+          & ./dist/pulse-collector.exe tls-check
+          if ($LASTEXITCODE -ne 0) { throw "Frozen Windows TLS verification failed" }
           if ($LASTEXITCODE -ne 0) { throw "Frozen collector failed" }
           python -m PyInstaller --clean --noconfirm --onefile --windowed --name AgentPulse --paths . windows/agent_pulse.py
           python windows/agent_pulse.py --fixture examples/demo.json --smoke
@@ -69,7 +71,7 @@ jobs:
           $ruSmoke = Start-Process -FilePath dist/AgentPulse.exe -ArgumentList '--fixture',"`"$quotaDemo`"",'--smoke','--language','ru' -Wait -PassThru
           if ($ruSmoke.ExitCode -ne 0) { throw 'Packaged Russian Windows layout smoke failed' }
           python scripts/runtime_notices.py dist/Licenses
-          Compress-Archive -Path dist/AgentPulse.exe,dist/pulse-collector.exe,dist/pulse-runtime,dist/Licenses,LICENSE,NOTICE,README.md,README.ru.md -DestinationPath 'dist/agent-pulse-${{ matrix.artifact }}.zip'
+          Compress-Archive -Path dist/AgentPulse.exe,dist/pulse-collector.exe,dist/pulse-runtime,dist/Licenses,LICENSE,LICENSE-MIT.txt,NOTICE,README.md,README.ru.md -DestinationPath 'dist/agent-pulse-${{ matrix.artifact }}.zip'
       - uses: actions/upload-artifact@v4
         with:
           name: agent-pulse-${{ matrix.artifact }}

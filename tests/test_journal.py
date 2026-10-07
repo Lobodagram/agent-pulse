@@ -161,7 +161,7 @@ class JournalTests(unittest.TestCase):
     def test_cli_hook_silent(self):
         r=subprocess.run([sys.executable,'collector.py','--state',str(self.state),'hook','--provider','codex'],input=b'not JSON',capture_output=True);self.assertEqual(r.returncode,0);self.assertEqual(r.stdout,b'');self.assertEqual(r.stderr,b'')
     def test_mcp_only_read_tools(self):
-        self.assertEqual({t['name'] for t in dispatch({'method':'tools/list'},self.state)['tools']},{'pulse_report','pulse_session','pulse_evidence','pulse_compare','pulse_review_pack'})
+        self.assertEqual({t['name'] for t in dispatch({'method':'tools/list'},self.state)['tools']},{'pulse_report','pulse_session','pulse_evidence','pulse_compare','pulse_review_pack','pulse_settings'})
         with self.assertRaises(ValueError):dispatch({'method':'tools/call','params':{'name':'execute','arguments':{'command':'x'}}},self.state)
         with self.assertRaises(ValueError):dispatch({'method':'tools/call','params':{'name':'pulse_session','arguments':{'sessionId':'../private'}}},self.state)
     def test_mcp_malformed_no_old_id_reuse(self):

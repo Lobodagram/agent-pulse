@@ -106,3 +106,11 @@ Priority: (1) prove the real event path, (2) collect and manually review repeate
 ## Official contracts checked
 
 [OpenAI hooks](https://learn.chatgpt.com/docs/hooks) require review of non-managed hook definitions and describe tool-coverage exceptions. [ZCode hooks](https://zcode.z.ai/en/docs/hooks) describe user configuration and session-start snapshots. The observer preserves these boundaries; it does not bypass trust or start agents.
+
+## 0.9.0 candidate · 2026-10-07
+
+Portable setup/analysis skills and explicit bounded local control now connect evidence to owner-requested settings and manual review actions. Read-only remains default; keys/native hooks/arbitrary execution are outside MCP control. Native hooks retain separate opt-in/trust. External agent inference follows that client's own policy; this utility itself makes no model calls.
+
+GLM diagnostics distinguish fixed safe categories, pasted keys trim surrounding whitespace, Windows frozen TLS gets an actual packaged HTTPS gate. UI acceptance revealed comparison-message carryover and stale resize accessibility state; both were corrected. Fixture language no longer writes production preferences. Export rejects runtime-like files and requires reviewed screenshot hashes. Prospective AGPL transition preserves historical MIT grants and contributor copyright.
+
+Code assessment remains 8.5/10, main analytical effectiveness 7/10. More controls and passing synthetic mechanics do not prove measured benefit. Need representative accepted before/after tasks, honest outcome/model/coverage review, and outstanding signing/physical/cold-start acceptance. No new causal subscription-saving claim. Candidate checks are recorded in QA; publication gates are pending.

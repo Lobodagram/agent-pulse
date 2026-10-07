@@ -10,7 +10,7 @@ A local tool for improving coding-agent workspaces: collect sanitized tool event
 
 [Linux/headless runtime](docs/HEADLESS.md) · Runtime wheel: Python 3.11+
 
-**0.8.1 public preview.** macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
+**0.9.0 development candidate; current downloadable release: [0.8.1](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.8.1).** macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
 
 **Confirm collection first:** configured observers are not proof of observation. After setup, start a new native session, review hook trust when required, perform an ordinary task, and check Workflows for actual paired calls. See the [readiness audit](docs/AUDIT.md). Capabilities separates exact registered skill-file loads, explicit invocations and manual declarations. No observed use is not proof of non-use; command families are bounded static classifications, not semantic understanding of arbitrary code.
 
@@ -72,7 +72,7 @@ Optional Codex event analysis is **off by default**. When enabled, it transientl
 
 ## License
 
-**Open source under [MIT](LICENSE), by [Lobodagram](https://github.com/Lobodagram).** Personal and commercial use, modification, integration and sale are permitted. Keep the copyright and permission notice; MIT does not require prominent UI credit or opening modifications. [Licensing details](COMMERCIAL_LICENSE.md) · [Contributing](CONTRIBUTING.md).
+**Open source under [AGPL-3.0-only](LICENSE), by [Lobodagram](https://github.com/Lobodagram).** Personal and commercial use are allowed; distribution and modified network versions carry source-sharing obligations. Earlier MIT releases keep their rights. [Licensing details](COMMERCIAL_LICENSE.md) · [Contributing](CONTRIBUTING.md).
 
 The project is independent of OpenAI, Z.ai, Anthropic, Moonshot, Alibaba and other named vendors. Names identify compatible clients; no affiliation or endorsement is implied.
 
@@ -101,3 +101,7 @@ The **− / ⌄** button collapses into the menu bar/compact strip; **×** quits
 ![Capabilities demo](docs/screenshots/capabilities-en.png)
 
 [Improvement loop and delivery helper](docs/IMPROVEMENT_LOOP.md)
+
+## Agent setup and control
+
+Give your agent this repository URL and ask it to follow [Agent setup](docs/AGENT_SETUP.md). Two portable skills cover setup and evidence-based workflow analysis. The stdio MCP is read-only by default; optional `--allow-control` enables bounded local preferences, billing dates and manual review decisions. It never accepts credentials or runs shell/model calls. [Russian guide](docs/AGENT_SETUP.ru.md).

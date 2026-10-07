@@ -3,7 +3,8 @@ import SwiftUI
 import Charts
 import Combine
 
-var russian: Bool { UserDefaults.standard.string(forKey: "language") == "ru" }
+var pulseLanguageOverride: String?
+var russian: Bool { (pulseLanguageOverride ?? UserDefaults.standard.string(forKey: "language")) == "ru" }
 func tr(_ en: String, _ ru: String) -> String { russian ? ru : en }
 struct Quota: Codable, Identifiable {
     var bucket: String; var kind: String; var durationMinutes: Double?; var remainingPercent: Double?; var resetsAt: Double?
@@ -34,7 +35,7 @@ struct Subscription: Codable { var date: String?; var kind: String; var source: 
 struct Provider: Codable, Identifiable {
     var id: String; var name: String; var status: String; var quotas: [Quota]
     var todayTokens: Double?; var lifetimeTokens: Double?; var periodTokens: Double?; var contextTokens: Double?
-    var sessions: Double?; var resetCredits: Double?; var sourceStatus: [String]
+    var sessions: Double?; var resetCredits: Double?; var sourceStatus: [String]; var quotaError: String?
     var accountScope: String?; var quotaObservedAt: Double?; var observedAt: Double?; var lastSuccessfulAt: Double?; var tokenSource: String?; var tokenCoverage: String?; var todayTokenCoverage: String?; var todayTokenStatus: String?; var subscription: Subscription
 }
 struct ProviderSpec: Codable, Identifiable { var id: String; var name: String; var mode: String; var support: String }
@@ -168,19 +169,22 @@ func subscriptionText(_ s: Subscription) -> String {
 }
 @MainActor final class PulseStore: ObservableObject {
     @Published var snapshot: Snapshot?; @Published var loading = false; @Published var error: String?; @Published var settingsMessage: String?
-    @Published var expanded = false; @Published var topmost = true; @Published var page = 0
-    @Published var language: String = UserDefaults.standard.string(forKey: "language") ?? "en" { didSet { UserDefaults.standard.set(language, forKey: "language") } }
-    @Published var widgetScale: Double = min(1, max(0.8, UserDefaults.standard.double(forKey: "widgetScale") == 0 ? 1 : UserDefaults.standard.double(forKey: "widgetScale"))) { didSet { if !isFixture { UserDefaults.standard.set(widgetScale, forKey: "widgetScale") } } }
-    @Published var displayMode: String = UserDefaults.standard.string(forKey: "displayMode") ?? "floating" { didSet { if !isFixture { UserDefaults.standard.set(displayMode, forKey: "displayMode") } } }
+    @Published var expanded = false; @Published var topmost = true { didSet { savePreference("topmost", topmost) } }; @Published var page = 0
+    @Published var language: String = UserDefaults.standard.string(forKey: "language") ?? "en" { didSet { pulseLanguageOverride = language; savePreference("language", language) } }
+    @Published var widgetScale: Double = min(1, max(0.8, UserDefaults.standard.double(forKey: "widgetScale") == 0 ? 1 : UserDefaults.standard.double(forKey: "widgetScale"))) { didSet { savePreference("widgetScale", widgetScale) } }
+    @Published var displayMode: String = UserDefaults.standard.string(forKey: "displayMode") ?? "floating" { didSet { savePreference("displayMode", displayMode) } }
     @Published var glmKeySaving = false
-    @Published var metricMode: String = UserDefaults.standard.string(forKey: "metricMode") == "today" ? "today" : "limits" { didSet { if !isFixture { UserDefaults.standard.set(metricMode, forKey: "metricMode") } } }
-    @Published var menuNumbers: Bool = UserDefaults.standard.object(forKey: "menuNumbers") as? Bool ?? true { didSet { if !isFixture { UserDefaults.standard.set(menuNumbers, forKey: "menuNumbers") } } }
-    @Published var menuFollowActive: Bool = UserDefaults.standard.bool(forKey: "menuFollowActive") { didSet { if !isFixture { UserDefaults.standard.set(menuFollowActive, forKey: "menuFollowActive") } } }
+    @Published var metricMode: String = UserDefaults.standard.string(forKey: "metricMode") == "today" ? "today" : "limits" { didSet { savePreference("metricMode", metricMode) } }
+    @Published var menuNumbers: Bool = UserDefaults.standard.object(forKey: "menuNumbers") as? Bool ?? true { didSet { savePreference("menuNumbers", menuNumbers) } }
+    @Published var menuFollowActive: Bool = UserDefaults.standard.bool(forKey: "menuFollowActive") { didSet { savePreference("menuFollowActive", menuFollowActive) } }
+    let observerHome: String?; let stateOverride: String?; private var applyingSettings = false; private var settingsBytes: Data?; private var pendingPreferences: [String:Any] = [:]; private var writingPreferences = false
     let fixture: String?; private var timer: Timer?; private var limitTimer: Timer?; private var readingLimits = false; private var authTimer: Timer?; private var authMarks: [String: String] = [:]; private var authRevision = 0
     init() {
         let args = CommandLine.arguments
+        observerHome = args.firstIndex(of: "--observer-home").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
+        stateOverride = args.firstIndex(of: "--state").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
         fixture = args.firstIndex(of: "--fixture").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
-        if let i = args.firstIndex(of: "--language"), i + 1 < args.count { language = args[i + 1]; UserDefaults.standard.set(language, forKey: "language") }
+        if let i = args.firstIndex(of: "--language"), i + 1 < args.count { language = args[i + 1] }
         if let i = args.firstIndex(of: "--scale"), i + 1 < args.count, let value = Double(args[i + 1]) { widgetScale = min(1, max(0.8, value)) }
         if let i = args.firstIndex(of: "--metric-mode"), i + 1 < args.count { metricMode = args[i + 1] == "today" ? "today" : "limits" }
         if args.contains("--menu-only") { displayMode = "menu" }
@@ -188,11 +192,44 @@ func subscriptionText(_ s: Subscription) -> String {
             do { snapshot = try JSONDecoder().decode(Snapshot.self, from: Data(contentsOf: URL(fileURLWithPath: fixture))) }
             catch { self.error = tr("Could not load demo", "Не удалось прочитать демо") }
         } else {
+            loadPreferences()
             authMarks = authenticationMetadata()
-            authTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in Task { @MainActor in self?.checkAuthenticationChange() } }
+            authTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in Task { @MainActor in self?.loadPreferences(); self?.checkAuthenticationChange() } }
             limitTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in Task { @MainActor in self?.refreshLimits() } }
             refresh(); timer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in Task { @MainActor in self?.refresh() } }
         }
+    }
+    var stateURL: URL { stateOverride.map { URL(fileURLWithPath: $0) } ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AgentPulse") }
+    func savePreference(_ key: String, _ value: Any) {
+        guard !isFixture, !applyingSettings else { return }
+        if stateOverride == nil { UserDefaults.standard.set(value, forKey: key) }
+        pendingPreferences[key] = value
+        flushPreferences()
+    }
+    func flushPreferences() {
+        guard !writingPreferences, !pendingPreferences.isEmpty, let data = try? JSONSerialization.data(withJSONObject: pendingPreferences) else { return }
+        pendingPreferences = [:]; writingPreferences = true
+        run(["settings", "--update"], input: data) { [weak self] result in
+            guard let self else { return }; self.writingPreferences = false
+            if case .failure = result { self.settingsMessage = tr("Could not save local settings", "Не удалось сохранить настройки") }
+            self.flushPreferences()
+        }
+    }
+    func loadPreferences() {
+        guard !isFixture, !writingPreferences, pendingPreferences.isEmpty else { return }
+        let url = stateURL.appendingPathComponent("config.json")
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path), attributes[.type] as? FileAttributeType != .typeSymbolicLink,
+              let size = attributes[.size] as? Int, size <= 65536, let data = try? Data(contentsOf: url), data != settingsBytes,
+              let values = try? JSONSerialization.jsonObject(with: data) as? [String:Any] else { return }
+        settingsBytes = data; applyingSettings = true
+        defer { applyingSettings = false }
+        if let v = values["language"] as? String, ["en","ru"].contains(v) { language = v }
+        if let v = values["widgetScale"] as? Double, v >= 0.8, v <= 1 { widgetScale = v }
+        if let v = values["displayMode"] as? String, ["floating","menu","compact","tray"].contains(v) { displayMode = v == "floating" ? "floating" : "menu" }
+        if let v = values["metricMode"] as? String, ["limits","today"].contains(v) { metricMode = v }
+        if let v = values["topmost"] as? Bool { topmost = v }
+        if let v = values["menuNumbers"] as? Bool { menuNumbers = v }
+        if let v = values["menuFollowActive"] as? Bool { menuFollowActive = v }
     }
     var baseHeight: Double { expanded ? 430 : 270 }
     var isFixture: Bool { fixture != nil }
@@ -200,6 +237,7 @@ func subscriptionText(_ s: Subscription) -> String {
     var visibleProviders: [Provider] { Array((snapshot?.providers ?? []).dropFirst(min(page, pages - 1) * 2).prefix(2)) }
     func run(_ arguments: [String], input: Data? = nil, completion: @escaping @MainActor (Result<Data, Error>) -> Void) {
         let resources = Bundle.main.resourceURL!
+        let arguments = (stateOverride.map { ["--state", $0] } ?? []) + arguments + (arguments.first == "hooks" ? (observerHome.map { ["--observer-home", $0] } ?? []) : [])
         DispatchQueue.global(qos: .utility).async {
             do {
                 let process = Process(); let bundled = resources.appendingPathComponent("pulse-collector")
@@ -335,7 +373,7 @@ func todayText(_ p: Provider) -> String {
     return p.todayTokenStatus == "account-day-pending" ? tr("awaiting report", "жду отчёт") : p.todayTokenStatus == "local-day-pending" ? tr("no local data yet", "ещё нет данных") : tr("not reported", "не передано")
 }
 struct ResizeGrip: NSViewRepresentable {
-    var actions: AppDelegate
+    var actions: AppDelegate; var scale: Double
     final class Grip: NSView {
         var actions: AppDelegate?; var start: NSPoint = .zero; var width: Double = 360
         override var mouseDownCanMoveWindow: Bool { false }
@@ -348,7 +386,7 @@ struct ResizeGrip: NSViewRepresentable {
         override func accessibilityPerformDecrement() -> Bool { guard let actions else { return false }; actions.setScale(actions.store.widgetScale - 0.05); syncValue(); return true }
     }
     func makeNSView(context: Context) -> Grip { let view = Grip(); view.actions = actions; view.setAccessibilityElement(true); view.setAccessibilityRole(.slider); view.setAccessibilityLabel(tr("Widget size", "Размер виджета")); return view }
-    func updateNSView(_ view: Grip, context: Context) { view.actions = actions; view.setAccessibilityValue(actions.store.widgetScale * 100) }
+    func updateNSView(_ view: Grip, context: Context) { view.actions = actions; view.setAccessibilityValue(scale * 100) }
 }
 struct ProviderLine: View {
     let provider: Provider
@@ -422,7 +460,7 @@ struct WidgetView: View {
         }.padding(.horizontal, 18).padding(.vertical, 10).frame(width: 360, height: store.expanded ? 430 : 270, alignment: .topLeading).background(bg).foregroundStyle(ink).colorScheme(.dark)
         .overlay(alignment: .bottomTrailing) {
             Image(systemName: "arrow.up.left.and.arrow.down.right").font(.system(size: 9)).foregroundStyle(quiet).padding(5)
-                .frame(width: 30, height: 30).overlay(ResizeGrip(actions: actions)).help(tr("Drag to resize · 80–100%", "Потяните для изменения размера · 80–100%"))
+                .frame(width: 30, height: 30).overlay(ResizeGrip(actions: actions, scale: store.widgetScale)).help(tr("Drag to resize · 80–100%", "Потяните для изменения размера · 80–100%"))
         }
     }
 }
@@ -449,7 +487,7 @@ struct AnalysisView: View {
     }
     func loadSessionPage(_ sid: String, cursor: String?, index: Int = 0) {
         let request = UUID(); pageRequest = request; pageLoading = true; message = ""
-        var arguments = ["journal", "--action", "session", "--session", sid]
+        var arguments = ["journal", "--action", "session", "--session", sid, "--limit", "100"]
         if let cursor { arguments += ["--cursor", cursor] }
         store.run(arguments) { result in
             guard selectedSession == sid, pageRequest == request else { return }
@@ -508,6 +546,7 @@ struct AnalysisView: View {
             }
             Text(tr("Local evidence · partial coverage · no model calls or per-tool token estimates", "Локальные данные · частичный охват · без вызовов моделей и оценки токенов каждого инструмента")).font(.system(size: 10)).foregroundStyle(quiet)
         }.padding(24).background(bg).foregroundStyle(ink).colorScheme(.dark)
+        .onChange(of: tab) { _, _ in message = ""; reviewMessage = "" }
         .onAppear {
             let args = CommandLine.arguments
             if store.isFixture, let i = args.firstIndex(of: "--analysis-tab"), i+1 < args.count, ["overview", "workflows", "sessions", "compare", "capabilities"].contains(args[i+1]) { tab = args[i+1] }
@@ -772,6 +811,7 @@ struct SettingsView: View {
                 Text(tr("Remaining percentages for selected clients; one client at a time, rotating every 8 seconds. Click to show/hide the movable widget; — means unavailable.", "Проценты остатка выбранных клиентов; один клиент за раз, смена каждые 8 секунд. Нажатие показывает/скрывает подвижное табло; — значит нет данных.")).font(.system(size: 11)).foregroundStyle(quiet)
                 Picker(tr("Widget metric", "Показатель виджета"), selection: $store.metricMode) { Text(tr("Remaining limits", "Остаток лимитов")).tag("limits"); Text(tr("Tokens today · UTC", "Токены сегодня · UTC")).tag("today") }.frame(width: 350)
                 Text(tr("GLM Coding Plan connection", "Подключение GLM Coding Plan")).font(.system(size: 16, weight: .semibold))
+                if let code = store.snapshot?.providers.first(where: { $0.id == "glm" })?.quotaError { Text(tr("Quota unavailable: ", "Квоты недоступны: ") + code).font(.system(size: 11)).foregroundStyle(quiet) }
                 SecureField(tr("Own Z.ai Coding Plan key", "Личный ключ Z.ai Coding Plan"), text: $glmKey).textFieldStyle(.roundedBorder).frame(width: 350)
                 HStack { Button(tr("Save key", "Сохранить ключ")) { store.saveGLMKey(glmKey); glmKey = "" }.disabled(glmKey.isEmpty || store.isFixture || store.glmKeySaving); Button(tr("Disconnect quotas", "Отключить квоты")) { store.saveGLMKey(""); glmKey = "" }.disabled(store.isFixture || store.glmKeySaving) }
                 Text(tr("Personal Z.ai plan only. Quotas belong to this key; local token records belong to ZCode on this device. The key stays in private Secrets.json, outside Git. No native credentials are read.", "Личный план Z.ai. Квоты относятся к этому ключу; локальные токены — к ZCode на устройстве. Ключ хранится в закрытом Secrets.json вне Git. Ключи ZCode не читаются.")).font(.system(size: 11)).foregroundStyle(quiet)
@@ -853,6 +893,9 @@ final class FloatingPanel: NSPanel {
             panel.setFrameOrigin(NSPoint(x: screen.maxX - 380, y: screen.maxY - 290))
         }
         self.panel = panel; resizePanel()
+        store.$widgetScale.sink { [weak self] _ in DispatchQueue.main.async { self?.resizePanel() } }.store(in: &observations)
+        store.$topmost.sink { [weak self] value in DispatchQueue.main.async { self?.panel?.level = value ? .floating : .normal } }.store(in: &observations)
+        store.$displayMode.dropFirst().sink { [weak self] value in DispatchQueue.main.async { if value == "floating" { self?.panel?.orderFrontRegardless() } else { self?.panel?.orderOut(nil) }; self?.updateStatus() } }.store(in: &observations)
         if store.displayMode != "menu" { panel.orderFrontRegardless() }
         updateStatus()
         handleSnapshotArguments()

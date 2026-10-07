@@ -47,3 +47,9 @@ Model evidence retains only sanitized native top-level identifiers and conflict 
 Optional personal Z.ai Coding Plan quotas (0.8.0): a separately supplied key is kept only in Agent Pulse’s own private Secrets.json. It authenticates the fixed Z.ai statistics GET endpoint; no inference, prompts, journal or tool arguments are sent. Redirects/proxies are disabled. Only numeric five-hour/week percentages, reset timestamps and read status are projected. Keys are not exported or logged, and native ZCode credentials are not read. Quotas refer to the configured key; local token history may cover different native accounts. Removing/changing the key clears old quota values.
 
 Личные квоты Z.ai подключаются отдельно: ключ хранится только в локальном Secrets.json, используется для GET статистики Z.ai. Журнал, команды и промпты не отправляются; вызовов моделей нет. Сохраняются только проценты, сбросы и статус чтения. Ключ не публикуется и не выводится в журнал. Смена ключа очищает прежние квоты.
+
+## Optional local agent control / Управление через агента
+
+The default local stdio MCP exposes only bounded evidence/settings reads. Explicit `--allow-control` enables allowlisted Agent Pulse preferences and genuine manual review/billing decisions. It cannot read/accept provider keys, execute arbitrary shell commands, change native hooks, launch agents or send model requests. An external agent may forward tool responses to its own inference service under that client's policy; connecting local MCP is therefore an owner's choice, not a claim of offline inference. Secrets stay excluded from tool responses.
+
+По умолчанию MCP только читает. Явный режим управления разрешает ограниченные настройки и ручные решения, но не ключи, произвольные команды или запуск агентов. Подключённый внешний агент может передавать ответы своей модели по правилам клиента; локальный MCP не означает локальный инференс. Ключи исключены из ответов.

@@ -1,6 +1,7 @@
 Copyright 2026 Lobodagram (https://github.com/Lobodagram)
 
-Agent Pulse original sources: MIT; see LICENSE.
+Agent Pulse new versions from v0.9.0: AGPL-3.0-only; see LICENSE.
+Previously published MIT grants remain valid; see LICENSE-MIT.txt and COMMERCIAL_LICENSE.md.
 This license does not relicense third-party components or vendor clients.
 Python runtime: Python Software Foundation License; bundled runtime licensing notices are supplied by PyInstaller/Python.
 Tk/Tcl Windows UI runtime: Tcl/Tk license; included runtime notices apply.

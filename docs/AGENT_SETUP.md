@@ -1,0 +1,53 @@
+# Agent setup and control
+
+Give your agent this repository URL and ask: “Read docs/AGENT_SETUP.md, inspect my existing Agent Pulse installation, configure the requested providers without exposing keys, and explain collection coverage.” This guide is for the local runtime, not a permanently embedded chat UI. The agent's own subscription may be used when you ask it to analyze; Agent Pulse itself makes no model calls.
+
+## Install reviewed skills
+
+Clone or download a reviewed release source. In that checkout, install the two skills to an explicit directory using Python 3.11+:
+
+```sh
+python scripts/install_agent_skills.py --destination ~/.agents/skills
+```
+
+Codex discovers user skills there. For ZCode use `~/.zcode/skills`; for another client choose its documented skill directory or read the SKILL.md files manually. The installer refuses existing names and symlink destinations; it does not modify MCP/client configs or launch an agent. Skills are selected for relevant tasks rather than all loaded on every task. Restart/reload skill discovery using the client's normal workflow.
+
+## Local runtime and MCP
+
+In a dedicated venv, `python -m pip install .` provides `agent-pulse` and `agent-pulse-mcp`. Alternatively use `python collector.py` from the reviewed checkout, or the packaged `pulse-collector` helper (inside the Mac app's Contents/Resources; next to Windows AgentPulse.exe). Use absolute executable paths in client configs. No hosted Agent Pulse service or corporate server is required.
+
+```sh
+agent-pulse catalog
+agent-pulse settings
+agent-pulse journal --format markdown --language en
+agent-pulse-mcp
+```
+
+Read-only MCP tools: `pulse_report`, `pulse_session`, `pulse_evidence`, `pulse_compare`, `pulse_review_pack`, `pulse_settings`. To add it to Codex CLI with an installed executable on PATH:
+
+```sh
+codex mcp add agent-pulse -- agent-pulse-mcp
+```
+
+For ZCode add a STDIO server in its MCP settings panel. Set command to your absolute `agent-pulse-mcp` executable and args to `[]`. Its native config uses `mcp.servers`; `.agents/mcp.json` with `mcpServers` is a fallback and is skipped when native servers exist in that scope. Preserve existing registrations. Claude, Kimi or another MCP client can connect to the same local STDIO command through their current native configuration; verify their tool list rather than assume installation means connection.
+
+## Optional bounded control
+
+Only if requested, start `agent-pulse-mcp --allow-control` (packaged helper: `pulse-collector mcp --allow-control`). Four extra tools allow local settings, manual subscription dates, finding review and session annotation. They do not accept secrets, file destinations, shell commands, native hook edits or model calls.
+
+`pulse_configure` takes `changes`: allowed fields are enabledProviders, localPatterns, localTokens, language (en/ru), widgetScale (0.8–1), displayMode (floating/menu/compact/tray), metricMode (limits/today), topmost, menuNumbers and menuFollowActive. Mac maps compact/tray to menu mode; Windows maps menu to tray. Floating is common. macOS menu flags are platform-specific. Visual changes are polled within about five seconds; provider snapshots refresh on their normal schedule or manually. The equivalent CLI reads bounded JSON from stdin:
+
+```sh
+printf '%s' '{"enabledProviders":["codex","glm"],"metricMode":"limits","widgetScale":0.8}' | agent-pulse settings --update
+agent-pulse settings
+```
+
+Set billing dates only when supplied by the user; quota reset dates are unrelated. Enter personal GLM/Kimi keys through the documented local settings/Secrets.json workflow, never chat or command arguments. `pulse_settings` excludes unknown config fields and credentials. Errors are fixed categories, not remote payloads.
+
+## Observe and review
+
+Native observers are a separate explicit opt-in: `agent-pulse hooks --provider codex --action install` (also glm/claude). The inverse is `--action remove`; existing unrelated hooks are preserved. Review any native trust prompt normally. This is not available through MCP control and never starts a native agent session.
+
+Check real subsequent calls and pairing/gaps in the dashboard or review pack. Zero findings can mean thresholds were not met; unavailable counters are not zero. Do not inject test receipts into production. Use isolated `--state` directories for tests. For finding decisions, actual implemented changes and genuinely reviewed task outcomes are required. Follow [Improvement loop](IMPROVEMENT_LOOP.md). Settings/UI can also be used manually without skills or MCP.
+
+Contracts checked 2026-10-07: [Codex skills](https://developers.openai.com/codex/skills), [Codex MCP](https://developers.openai.com/codex/mcp), [ZCode skills](https://zcode.z.ai/en/docs/skill), [ZCode MCP](https://zcode.z.ai/en/docs/mcp-services). Third-party discovery can change; this release does not certify every client/version combination.

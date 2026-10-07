@@ -129,3 +129,7 @@ The widget's **Limits ⇄ / Today ⇄** button selects remaining subscription pe
 
 
 Frozen Mac 0.8.1 adds OS-owned /etc/ssl/cert.pem roots to the verified HTTPS context because the build Python framework CA path may be absent. Certificate/hostname verification remains required; invalid roots fail closed. / Сборка Mac 0.8.1 использует также системные CA; проверка сертификата и имени сервера сохраняется.
+
+GLM read failures report a fixed `quotaError` category: configuration, authentication, TLS, network, remote, schema or unavailable. No exception message, response body or key is retained. Outer paste whitespace is removed; internal whitespace stays invalid. `agent-pulse tls-check` explicitly verifies a fixed public HTTPS quota endpoint without a key. The packaged Windows release gate runs this diagnostic; it uses CPython's Windows CA/ROOT trust, certificate and hostname checks remain required. Physical user-machine trust coverage is separate.
+
+Ошибки GLM различаются безопасными категориями без текста ответа и ключа. Пробелы по краям вставки убираются; внутренние запрещены. Проверка tls-check не передаёт ключ и не вызывает модели. Сборка Windows проверяется отдельно; это не физическая приёмка каждого компьютера.

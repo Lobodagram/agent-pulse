@@ -265,6 +265,7 @@ def collect_glm(day, config=None, directory=None):
     quota=glm_quota.collect(directory or DEFAULT_STATE)
     base.update(quota)
     base['sourceStatus'].append('glm_quota_'+quota['quotaStatus'])
+    if quota.get('quotaError'):base['sourceStatus'].append('glm_quota_error_'+quota['quotaError'])
     if quota['quotaStatus']=='ready':base['status']='ready'
     return base
 
@@ -548,12 +549,14 @@ def main():
     c=sub.add_parser('configure');c.add_argument('--providers',required=True);c.add_argument('--local-patterns',choices=['on','off'],default='off');c.add_argument('--local-tokens',choices=['on','off'])
     i=sub.add_parser('ingest');i.add_argument('--provider',choices=sorted(adapters.IDS),required=True);i.add_argument('--file',type=Path,required=True)
     h=sub.add_parser('hook');h.add_argument('--provider',choices=sorted(journal.PROVIDERS),required=True)
-    h=sub.add_parser('hooks');h.add_argument('--provider',choices=sorted(instrumentation.NATIVE_EVENTS),required=True);h.add_argument('--action',choices=['install','remove'],required=True)
+    h=sub.add_parser('hooks');h.add_argument('--provider',choices=sorted(instrumentation.NATIVE_EVENTS),required=True);h.add_argument('--action',choices=['install','remove'],required=True);h.add_argument('--observer-home',type=Path,help='Explicit isolated native config root for acceptance tests')
     h=sub.add_parser('journal');h.add_argument('--action',choices=['report','evidence','session','inventory','scan','annotate','declare','compare','export','review'],default='report');h.add_argument('--session');h.add_argument('--provider',choices=sorted(journal.PROVIDERS),default='codex');h.add_argument('--skills-dir',type=Path,action='append',default=[]);h.add_argument('--config',type=Path);h.add_argument('--file',type=Path);h.add_argument('--label');h.add_argument('--variant');h.add_argument('--outcome',choices=['accepted','failed','rework','unknown'],default='unknown');h.add_argument('--before');h.add_argument('--after');h.add_argument('--finding');h.add_argument('--capability');h.add_argument('--kind',choices=['skill','tool','mcp'])
     h.add_argument('--status',choices=['open','actioned','dismissed'],default='open');h.add_argument('--reason',choices=['unspecified','script','skill','mcp','routing','retrieval','fix','not-applicable','duplicate'],default='unspecified');h.add_argument('--days',type=int,choices=[1,3,7],default=1)
     h.add_argument('--format',choices=['json','markdown'],default='json');h.add_argument('--language',choices=['en','ru'],default='en')
     h.add_argument('--cursor');h.add_argument('--limit',type=int,default=500)
-    sub.add_parser('mcp')
+    h=sub.add_parser('mcp');h.add_argument('--allow-control',action='store_true')
+    h=sub.add_parser('settings');h.add_argument('--update',action='store_true',help='Bounded JSON changes on stdin, no credentials')
+    sub.add_parser('tls-check',help='Inspect actual TLS trust and verify a fixed public quota endpoint without any key')
     a=p.parse_args();os.umask(0o077)
     if a.command=='hook':
         j=None
@@ -568,15 +571,25 @@ def main():
         finally:
             if j:j.close()
         return
-    if a.command=='mcp':mcp_server.serve(a.state);return
+    if a.command=='mcp':mcp_server.serve(a.state,a.allow_control);return
     try:
-        if a.command=='glm-key':
+        if a.command=='settings':
+            from agent_control import settings,update_settings
+            if a.update:
+                body=sys.stdin.buffer.read(8193)
+                if len(body)>8192:raise ValueError('oversize')
+                result=update_settings(a.state,json.loads(body))
+            else:result=settings(a.state)
+        elif a.command=='tls-check':
+            from providers import tls_check
+            result=tls_check()
+        elif a.command=='glm-key':
             import glm_quota
             body=sys.stdin.buffer.read(8193)
             if len(body)>8192:raise ValueError('oversize')
             result=glm_quota.save_key(a.state,json.loads(body).get('key'))
         elif a.command=='journal':result=journal_cli.run(a)
-        elif a.command=='hooks':result=instrumentation.configure_hooks(a.provider,a.state,a.action=='install')
+        elif a.command=='hooks':result=instrumentation.configure_hooks(a.provider,a.state,a.action=='install',home=a.observer_home)
         elif a.command=='subscription':
             s=Store(a.state);s.set_subscription(a.provider,a.date,a.kind);s.db.close();result={'saved':True}
         elif a.command=='catalog':result=adapters.CATALOG

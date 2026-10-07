@@ -18,7 +18,7 @@ agent-pulse-mcp = "mcp_server:main"
 
 [tool.setuptools]
 packages = []
-py-modules = ["glm_quota", "sanitizers", "pulse_version", "hook_bridge", "capability_detection", "finding_review", "review_pack", "collector", "providers", "platform_support", "journal", "journal_cli", "analytics", "instrumentation", "mcp_server", "session_view", "model_evidence", "capability_report", "evidence_pack", "command_profile", "result_metadata", "compact_summary"]
+py-modules = ["agent_control", "glm_quota", "sanitizers", "pulse_version", "hook_bridge", "capability_detection", "finding_review", "review_pack", "collector", "providers", "platform_support", "journal", "journal_cli", "analytics", "instrumentation", "mcp_server", "session_view", "model_evidence", "capability_report", "evidence_pack", "command_profile", "result_metadata", "compact_summary"]
 
 [tool.setuptools.dynamic]
 version = {attr = "pulse_version.__version__"}
