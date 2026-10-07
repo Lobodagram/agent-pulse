@@ -471,6 +471,7 @@ struct AnalysisView: View {
     @State var modelHistory: ModelHistory?
     @State var label = ""; @State var variant = "before"; @State var outcome = "unknown"
     @State var before = "before"; @State var after = "after"; @State var message = ""
+    @State var comparisonMessage = ""
     @State var sessionCursors: [String?] = [nil]; @State var sessionPage = 0; @State var nextCursor: String?
     @State var sessionTotal = 0; @State var pageOffset = 0; @State var pageLoading = false; @State var pageRequest = UUID()
     @State var showUnobservedCapabilities = false
@@ -764,13 +765,13 @@ struct AnalysisView: View {
             Text("\(report.sessions.filter { !($0.label ?? "").isEmpty }.count) " + tr("labelled sessions in this view. Empty groups mean insufficient reviewed evidence, not zero improvement.", "размеченных сессий в этом разделе. Пустые группы означают недостаток проверенных данных, а не нулевое улучшение.")).font(.system(size: 11)).foregroundStyle(quiet)
             HStack { TextField(tr("Task label", "Метка задачи"), text: $label); TextField(tr("Before", "До"), text: $before); TextField(tr("After", "После"), text: $after) }
             Button(tr("Compare observations", "Сравнить наблюдения")) {
-                if store.isFixture { message = tr("Demo comparison: use real reviewed sessions to measure effects.", "Демо: для оценки эффекта используйте реальные проверенные сессии."); return }
+                if store.isFixture { comparisonMessage = tr("Demo comparison: use real reviewed sessions to measure effects.", "Демо: для оценки эффекта используйте реальные проверенные сессии."); return }
                 store.run(["journal", "--action", "compare", "--label", label, "--before", before, "--after", after]) { r in
-                    if case .success(let data) = r, let obj = try? JSONSerialization.jsonObject(with: data), let formatted = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]), let text = String(data: formatted, encoding: .utf8) { message = text }
-                    else { message = tr("Use valid task and variant labels", "Проверьте метки задачи и вариантов") }
+                    if case .success(let data) = r, let obj = try? JSONSerialization.jsonObject(with: data), let formatted = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]), let text = String(data: formatted, encoding: .utf8) { comparisonMessage = text }
+                    else { comparisonMessage = tr("Use valid task and variant labels", "Проверьте метки задачи и вариантов") }
                 }
             }
-            if !message.isEmpty { Text(message).font(.system(size: 11, design: .monospaced)).textSelection(.enabled) }
+            if !comparisonMessage.isEmpty { Text(comparisonMessage).font(.system(size: 11, design: .monospaced)).textSelection(.enabled) }
             Text(tr("No causal claim, exact per-tool cost or promised subscription saving. Failed and rework results remain visible.", "Без заявления о причинности, точной стоимости инструмента или обещаний экономии подписки. Ошибки и доработки учитываются.")).font(.system(size: 11)).foregroundStyle(amber)
         }
     }

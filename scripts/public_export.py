@@ -23,7 +23,7 @@ def export(destination):
         data=source.read_bytes();rel=source.relative_to(ROOT)
         if source.name.lower() in {'secrets.json','config.json','auth.json','credentials.json'} or source.suffix.lower() in {'.db','.sqlite','.sqlite3','.log','.zip','.exe','.dmg'}:raise ValueError('runtime_file_in_'+str(rel))
         if source.suffix=='.png':
-            if str(rel) not in reviewed or reviewed[str(rel)]!=hashlib.sha256(data).hexdigest():raise ValueError('unreviewed_image_'+str(rel))
+            if rel.as_posix() not in reviewed or reviewed[rel.as_posix()]!=hashlib.sha256(data).hexdigest():raise ValueError('unreviewed_image_'+rel.as_posix())
         else:
             text=data.decode('utf-8')
             patterns=[r'/Users/[A-Za-z0-9_.@-]+',r'bioclaude\.biocard',r'bcm_[A-Za-z0-9_-]{25,}',r'github_pat_[A-Za-z0-9_]{25,}',r'ghp_[A-Za-z0-9]{25,}',r'sk-[A-Za-z0-9]{25,}']
