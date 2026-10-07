@@ -1,3 +1,5 @@
+0.9.2 выпущена: проверки исходников пройдены на четырёх платформах, сборки всех трёх пакетов успешны, скачанная ARM64-версия установлена и проверена на живых данных. 192 теста; личные ключи в проверенных исходниках и пакетах не найдены. Подробности в QA.md. Код 8.5/10, аналитика 7/10; физические проверки и удобство длинной истории моделей ещё требуют работы.
+
 ## 0.9.2 · 2026-10-07
 
 - Replace the daily Swift Charts plot with ordinary SwiftUI bars, readable zero/large-number axes and the same hover/click/day-selector details. No Swift Charts link or Metal chart initialization is required. Intel chart fixtures now run in source CI as well as packaged CI.

@@ -1,6 +1,6 @@
 Agent Pulse 0.9.2 — daily token details and ordinary utility windows / дневные токены и поведение окон
 
-The daily plot uses ordinary SwiftUI bars and no Swift Charts link. The previous0.9.1 package gate failed on Intel with a confirmed Metal loader assertion and remains source-only; its tag is unchanged. The same Intel chart checks must pass before packaging0.9.2.
+The daily plot uses ordinary SwiftUI bars and no Swift Charts link. The previous0.9.1 package gate failed on Intel with a confirmed Metal loader assertion and remains source-only; its tag is unchanged. The same Intel checks passed for0.9.2. Source Checks 37593705308 and Packages 37594165145 passed; all three downloadable packages are available.
 
 Analytics/Settings are ordinary reusable windows: restore from background/hidden/minimized state, hide on repeat while active. The widget retains its configurable floating level. Mac shortcuts: Cmd+1 / Cmd+comma. Windows preserves settings drafts and refreshes reused analytics.
 
@@ -11,3 +11,5 @@ Codex local-token repair separates cumulative tokens from the file byte budget. 
 Окна аналитики/настроек возвращаются на передний план, повторное действие скрывает активное окно; виджет сохраняет свой режим поверх окон. График показывает понятные единицы и точные дневные значения по клиентам. Исправлен сбор свежих локальных токенов Codex, пропуски и неполный охват обозначены; старый расход не приписывается текущему дню.
 
 AGPL-3.0-only; prior published MIT grants remain valid. Code assessment 8.5/10; analytical effectiveness 7/10 pending genuine accepted comparable tasks. Signing/notarization, true cold first-start and physical Windows DPI/Intel graphics/Spaces/multi-display/sleep-wake remain open. See docs/QA.md for actual source, GUI and package evidence; these are distinct gates.
+
+Downloaded ARM64 installed acceptance passed, including real day counters and window controls. Scoped personal-key comparisons found no matches in source or three archives, including decoded runtime modules. Доступны три проверенных пакета; версия установлена и проверена на MacBook. Личные ключи в проверенных исходниках и пакетах не найдены.
