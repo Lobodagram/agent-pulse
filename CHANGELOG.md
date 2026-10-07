@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.7 · 2026-10-07
+
+- Fix Windows first-start contention: lock the byte range without writing a marker into an already locked region. Empty and legacy lock files both work; configuration locking follows the same rule. Journal key and SQLite WAL/schema preparation share one initialization lock. Windows acquisition polls with a bounded 750ms budget rather than one-second CRT retry intervals. Native hook deadlines remain two seconds.
+- Three regression cases cover untouched lock bytes and real cross-process initialization exclusion; the packaged smoke also requires four concurrent first hook pairs to be retained.
+- Bilingual agent setup now distinguishes OS/version/architecture, bundled app versus source/build dependencies, packaged MCP commands, unsupported targets and actual event-collection checks. UI and analytics algorithms are unchanged.
+- Исправлены гонки одновременного первого запуска: на Windows больше нет записи в уже заблокированный байт; ключ и подготовка базы защищены одной блокировкой. Инструкция установки учитывает ОС, архитектуру и способ запуска. Физическая Windows-приёмка и доказательство экономии подписки остаются отдельными проверками.
+
+## 0.9.6 · 2026-10-07
+
+Conservative shell-result parsing rejects invalid wrapped exits and uninspected oversized suffixes instead of reporting false success. Seven regression tests and the frozen result/privacy-canary gate were added; Windows packaging immediately fails on a failed frozen smoke. See QA for delivered evidence.
+
+Невалидные или неполные результаты команд сохраняются как unknown; границы анализа и приватность не ослаблены.
+
 ## 0.9.5 · 2026-10-07
 
 MCP preference contention returns a retryable tool execution error (`isError: true`, `config_busy`) instead of an invalid-request error. Fixed literals only: no exception messages, paths or arguments. Real held-lock stdio tests verify unchanged bytes, continued ping and retry after release; packaged smoke exercises the same control path.

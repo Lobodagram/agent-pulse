@@ -1,3 +1,13 @@
+## 0.9.7 first-start concurrency correction — in verification · 2026-10-07
+
+A fresh documentation-only source run [37619013943](https://github.com/Lobodagram/agent-pulse/actions/runs/37619013943) exposed a real Windows initialization race in the unchanged 0.9.6 runtime: `lock.write`/`flush` attempted access to a byte range held by a peer process and raised PermissionError. Local focused verification then reproduced a separate simultaneous WAL-negotiation OperationalError. Passing older runs did not rule out either timing-sensitive defect.
+
+0.9.7 removes pre-lock marker writes from journal/config locks, supports locking beyond EOF (including existing marker files), bounds Windows journal acquisition with short polling, and keeps WAL/schema initialization inside the key-lock critical section. [Microsoft's locking contract](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/locking?view=msvc-170) permits ranges beyond EOF. Three additional regression cases protect unchanged lock bytes and actual process exclusion through schema preparation. Four simultaneous first hook pairs are checked by the actual packaged helper, still against the native two-second per-hook deadline and isolated invented state. No raw payload retention or production observation rewrite.
+
+210 local tests plus syntax/privacy/document-link checks passed. Source/platform/package/downloaded/installed gates are reported separately after completion. This is a correctness fix, not a new measured-efficiency claim. UI sources and 19 reviewed synthetic screenshots are unchanged; no physical Windows, notarization, true cold-machine or multi-display acceptance is implied. OS-specific agent setup and dependency routes are now explicit in EN/RU. Code9/10 and analytical usefulness7/10 remain provisional assessments with the documented limits.
+
+Исправлены две реальные гонки первого запуска, найденные при повторной платформенной проверке. Локальные тесты пройдены; результаты CI и готовых пакетов записываются отдельно. Инструкции различают Mac ARM64/Intel, Windows x64 и Linux без виджета. Прохождение CI не заменяет проверку на физическом компьютере.
+
 0.9.2 выпущена: проверки исходников пройдены на четырёх платформах, сборки всех трёх пакетов успешны, скачанная ARM64-версия установлена и проверена на живых данных. 192 теста; личные ключи в проверенных исходниках и пакетах не найдены. Подробности в QA.md. Код 8.5/10, аналитика 7/10; физические проверки и удобство длинной истории моделей ещё требуют работы.
 
 ## 0.9.2 · 2026-10-07

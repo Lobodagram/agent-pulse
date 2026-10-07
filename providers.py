@@ -64,7 +64,8 @@ def patch_config(directory,changes):
     with os.fdopen(fd,'r+b') as lock:
         if os.name=='nt':
             import msvcrt
-            if os.fstat(lock.fileno()).st_size==0:lock.write(b'0');lock.flush()
+            # Byte-range locking supports empty files; do not write into a
+            # region another process may already have locked beyond EOF.
         else:
             import fcntl
             os.fchmod(lock.fileno(),0o600)

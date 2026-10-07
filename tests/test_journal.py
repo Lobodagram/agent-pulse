@@ -1,6 +1,7 @@
 import concurrent.futures
 import io
 import json
+import multiprocessing
 import os
 from pathlib import Path
 import subprocess
@@ -15,6 +16,16 @@ from analytics import report, compare
 import instrumentation
 from mcp_server import dispatch
 from scripts.hook_bridge import receive
+
+def held_schema_initialization(state,entered,release):
+    import journal
+    connect=journal.sqlite3.connect
+    def delayed(*args,**kwargs):
+        entered.set()
+        if not release.wait(5):raise TimeoutError('test_release')
+        return connect(*args,**kwargs)
+    with patch('journal.sqlite3.connect',side_effect=delayed):
+        j=Journal(state);j.close()
 
 class JournalTests(unittest.TestCase):
     def setUp(self):
@@ -155,6 +166,37 @@ class JournalTests(unittest.TestCase):
         def run(_):return subprocess.check_output([sys.executable,'-c',code,str(state)],text=True).strip()
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:values=list(pool.map(run,range(4)))
         self.assertEqual(len(set(values)),1)
+    def test_key_lock_bytes_unchanged_across_reopening(self):
+        lock=self.state/'.journal-key.lock'
+        self.assertEqual(lock.read_bytes(),b'')
+        for content in (b'',b'legacy-marker'):
+            lock.write_bytes(content)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+                def reopen(_):
+                    j=Journal(self.state)
+                    try:return j.digest('test','same-key')
+                    finally:j.close()
+                values=list(pool.map(reopen,range(4)))
+            self.assertEqual(len(set(values)),1)
+            self.assertEqual(lock.read_bytes(),content)
+    def test_key_lock_stays_held_through_schema_initialization(self):
+        state=Path(self.tmp.name)/'initializing'
+        ctx=multiprocessing.get_context('spawn');entered=ctx.Event();release=ctx.Event()
+        worker=ctx.Process(target=held_schema_initialization,args=(str(state),entered,release));worker.start()
+        try:
+            self.assertTrue(entered.wait(5))
+            with (state/'.journal-key.lock').open('r+b') as lock:
+                if os.name=='nt':
+                    import msvcrt
+                    with self.assertRaises(OSError):msvcrt.locking(lock.fileno(),msvcrt.LK_NBLCK,1)
+                else:
+                    import fcntl
+                    with self.assertRaises(BlockingIOError):fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        finally:
+            release.set();worker.join(8)
+            if worker.is_alive():worker.terminate();worker.join()
+        self.assertEqual(worker.exitcode,0)
+        self.assertEqual((state/'.journal-key.lock').read_bytes(),b'')
     def test_silent_fail_open(self):
         with patch('sys.stdout',new_callable=io.StringIO) as out:
             self.assertFalse(receive('codex',self.state,io.BytesIO(b'invalid')));self.assertFalse(receive('codex',self.state,io.BytesIO(b'x'*(MAX_INPUT+1))));self.assertEqual(out.getvalue(),'')

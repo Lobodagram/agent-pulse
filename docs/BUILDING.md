@@ -54,7 +54,7 @@ Keep `AgentPulse.exe`, `pulse-collector.exe` and the `pulse-runtime` directory t
 
 ## CI and release
 
-`Checks` runs tests on Linux/macOS/Windows and fixture UI smoke checks on desktop runners. `Release packages` builds macOS ARM64/Intel and Windows x64, tests a frozen collector/catalog or frozen Windows demo, then uploads zip packages and SHA256SUMS to the tagged release (the current 0.9.6 is a public preview; GitHub lists it as a regular release). Only the publish job has repository contents write permission. No user credentials or telemetry are needed in CI.
+`Checks` runs tests on Linux/macOS/Windows and fixture UI smoke checks on desktop runners. `Release packages` builds macOS ARM64/Intel and Windows x64, tests a frozen collector/catalog or frozen Windows demo, then uploads zip packages and SHA256SUMS to the tagged release. Only the publish job has repository contents write permission. No user credentials or telemetry are needed in CI.
 
 Release notes are bilingual. Package checksum files verify the downloaded bytes; they do not substitute for code signing. Tags describe preview scope; no blanket fully verified provider/OS claim is made.
 

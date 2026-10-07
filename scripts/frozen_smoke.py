@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check delivered helper bytes with invented events, without accounts/models."""
 import json
+import concurrent.futures
 import os
 from pathlib import Path
 import subprocess
@@ -59,4 +60,19 @@ with tempfile.TemporaryDirectory() as tmp:
     assert sorted(c['outcome'] for c in report['recentCalls'])==['success','unknown','unknown']
     assert {c['outcomeSource'] for c in report['recentCalls']}=={'structured-exit','conflicting-or-invalid-exit','result-limit-exceeded'}
     assert 'PRIVATE_RESULT_CANARY' not in r.stdout.decode()
-print(json.dumps({'frozenHookJournalMcp':'passed','mcpConfigBusyRetry':'passed','conservativeResultMetadata':'passed','modelsCalled':0,'syntheticDataOnly':True}))
+    parallel=[str(exe),'--state',str(Path(tmp)/'parallel-first-start')]
+    def first_pair(index):
+        for event in ('PreToolUse','PostToolUse'):
+            raw={'hook_event_name':event,'session_id':'parallel-demo','turn_id':'demo',
+                 'tool_use_id':str(index),'tool_name':'Bash','tool_input':{'command':'git status'},
+                 'tool_response':{'exit_code':0}}
+            result=subprocess.run(parallel+['hook','--provider','codex'],input=json.dumps(raw).encode(),
+                                  capture_output=True,timeout=2,check=True)
+            assert not result.stdout and not result.stderr
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+        list(pool.map(first_pair,range(4)))
+    result=subprocess.run(parallel+['journal'],capture_output=True,timeout=20,check=True)
+    concurrent_report=json.loads(result.stdout)
+    assert concurrent_report['calls']==4 and all(c['paired'] and c['outcome']=='success' for c in concurrent_report['recentCalls'])
+    assert (Path(tmp)/'parallel-first-start'/'.journal-key.lock').read_bytes()==b''
+print(json.dumps({'frozenHookJournalMcp':'passed','mcpConfigBusyRetry':'passed','conservativeResultMetadata':'passed','concurrentFirstHooks':'passed','modelsCalled':0,'syntheticDataOnly':True}))

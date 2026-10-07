@@ -83,14 +83,25 @@ class Journal:
         self.state=private_dir(state)
         keyfile=self.state/'Secrets.json'
         if keyfile.is_symlink():raise ValueError('symlink_secret')
-        # Cross-process lock is separate from Secrets.json: atomic rename retains the lock.
+        # Keep key and schema initialization in one cross-process critical
+        # section. WAL negotiation can fail immediately on simultaneous opens.
+        # The separate lock survives atomic replacement of Secrets.json.
         lockpath=self.state/'.journal-key.lock'
         if lockpath.is_symlink():raise ValueError('symlink_lock')
         with open(lockpath,'a+b') as lock:
             if os.name=='nt':
                 import msvcrt
-                lock.seek(0);lock.write(b'0');lock.flush();lock.seek(0)
-                msvcrt.locking(lock.fileno(),msvcrt.LK_LOCK,1)
+                # Windows can lock beyond EOF. Writing a marker first races
+                # with another process already holding this mandatory byte lock.
+                lock.seek(0)
+                deadline=time.monotonic()+.75
+                while True:
+                    try:
+                        lock.seek(0);msvcrt.locking(lock.fileno(),msvcrt.LK_NBLCK,1)
+                        break
+                    except OSError:
+                        if time.monotonic()>=deadline:raise
+                        time.sleep(.01)
             else:
                 import fcntl
                 fcntl.flock(lock,fcntl.LOCK_EX)
@@ -103,6 +114,8 @@ class Journal:
             if not isinstance(key,str) or not re.fullmatch('[a-f0-9]{64}',key):raise ValueError('invalid_journal_key')
             if os.name!='nt':os.chmod(keyfile,0o600)
             self.key=bytes.fromhex(key)
+            self._initialize_database()
+    def _initialize_database(self):
         path=self.state/'journal.sqlite'
         if path.is_symlink():raise ValueError('symlink_db')
         self.db=sqlite3.connect(path,timeout=.75)

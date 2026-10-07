@@ -35,6 +35,15 @@ class SettingsConsistencyTests(unittest.TestCase):
     def test_read_absent_state_creates_nothing(self):
         self.assertEqual(agent_control.settings(self.state)['subscriptions'],{})
         self.assertFalse(self.state.exists())
+    def test_config_lock_bytes_unchanged_for_empty_and_existing_files(self):
+        agent_control.update_settings(self.state,{'language':'ru'})
+        lock=self.state/'.config.lock'
+        self.assertEqual(lock.read_bytes(),b'')
+        for content in (b'',b'legacy-marker'):
+            lock.write_bytes(content)
+            revision=agent_control.update_settings(self.state,{'metricMode':'today'})['configRevision']
+            self.assertGreater(revision,1)
+            self.assertEqual(lock.read_bytes(),content)
     def test_read_existing_legacy_database_does_not_migrate_or_change_bytes(self):
         self.state.mkdir();path=self.state/'metrics.sqlite'
         with closing(sqlite3.connect(path)) as db:
