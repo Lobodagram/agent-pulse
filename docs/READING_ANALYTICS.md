@@ -16,6 +16,10 @@ The timestamp is the last received call. Silence can mean an idle client. Paired
 
 ## Attribution limits
 
+Findings prioritize repeated failures, reads and identical requests before broad category sequences. Todo/plan updates, waits and clarification requests remain in the journal but do not generate automation candidates and act as sequence barriers. Exclusion from candidates neither deletes events nor proves wasted time.
+
+The review pack counts typed, unknown and bookkeeping operations. Allowlisted checksum/archive/plist/HTTP commands, GitHub CI tools and mesh/release/context helpers refine operation families. Names do not prove provenance, successful use or MCP availability. Known historical tool names can be projected again; unknown shell arguments cannot be recovered. Use fresh finding IDs after reclassification; a disappeared card does not prove a workflow was fixed.
+
 The detector recognises exact registered locators in Read/read_file/cat_file, explicit Skill/use_skill identifiers and matching registered MCP namespaces. Since 0.7.0, successful strict literal cat/sed/head/tail readers can match registered paths, without expansion or historical replay. Unregistered MCP namespaces appear separately and as tools; a namespace does not establish a plugin or live connection. Reading a skill does not establish application of its instructions. Do not delete a skill because its use is unconfirmed.
 
 ## Continue a long session

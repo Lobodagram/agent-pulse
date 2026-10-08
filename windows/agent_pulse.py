@@ -20,7 +20,7 @@ import instrumentation
 from journal import Journal
 import providers
 from agent_control import update_settings
-from platform_support import state_directory
+from platform_support import state_directory,windows_launch_at_login
 
 BG='#151a1d';FG='#f2f6f4';MINT='#a4e8cd';QUIET='#a6b4b0'
 
@@ -528,6 +528,21 @@ class Pulse:
         f=tk.Frame(canvas,bg=BG);canvas.create_window(10,10,window=f,anchor='nw');f.bind('<Configure>',lambda e:canvas.configure(scrollregion=canvas.bbox('all')))
         def label(s):tk.Label(f,text=s,bg=BG,fg=FG,anchor='w').pack(fill='x',pady=6)
         lang=tk.StringVar(value=self.language);ttk.Combobox(f,textvariable=lang,values=['en','ru'],state='readonly').pack(anchor='w')
+        startup=tk.BooleanVar(value=False)
+        startup_message=tk.StringVar(value=self.t('Demo: startup settings are unchanged.','Демо: автозапуск не меняется.') if self.fixture else self.t('For your account. Windows startup settings can also block this item.','Для вашей учётной записи. Windows также может отключить этот пункт в настройках автозагрузки.'))
+        def read_startup():
+            if self.fixture or sys.platform!='win32':return
+            try:startup.set(windows_launch_at_login())
+            except (OSError,ValueError):startup_message.set(self.t('Could not read startup settings.','Не удалось прочитать настройки автозапуска.'))
+        def change_startup():
+            if self.fixture or sys.platform!='win32':return
+            try:startup.set(windows_launch_at_login(startup.get()))
+            except (OSError,ValueError):
+                read_startup();startup_message.set(self.t('Could not change startup settings.','Не удалось изменить автозапуск.'))
+        read_startup()
+        tk.Checkbutton(f,text=self.t('Launch at login','Запускать при входе в систему'),variable=startup,command=change_startup,state='disabled' if self.fixture or sys.platform!='win32' else 'normal',bg=BG,fg=FG,selectcolor=BG).pack(anchor='w')
+        tk.Label(f,textvariable=startup_message,bg=BG,fg=QUIET,wraplength=510,justify='left').pack(anchor='w',pady=4)
+        w.bind('<FocusIn>',lambda e:read_startup() if e.widget is w else None,add='+')
         top=tk.BooleanVar(value=True);tk.Checkbutton(f,text=self.t('Always on top','Поверх окон'),variable=top,command=lambda:self.save_topmost(top.get()),bg=BG,fg=FG,selectcolor=BG).pack(anchor='w')
         label(self.t('Widget size · or drag the lower-right corner','Размер виджета · можно тянуть за нижний правый угол'))
         size=tk.DoubleVar(value=self.scale)

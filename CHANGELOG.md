@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.10.3 · 2026-10-08
+
+- On macOS the widget has one close button that hides it while observation continues. Quit stays in the menu-bar context menu and Command-Q. Closing the widget preserves its placement preference. Header controls use their full rectangular hit area.
+- Settings has visible fixed close/minimize buttons and native minimize support; closed/minimized windows reopen through the existing menu. An own-window fixture covers hide/restore and settings close/minimize/reopen.
+- На Mac крестик скрывает виджет, выход остаётся в меню строки состояния. В настройках появились заметные кнопки закрытия и сворачивания.
+
+## 0.10.2 · 2026-10-08
+
+- Add an opt-in Launch at login checkbox: native SMAppService on macOS, a current-user Run entry on Windows, inverse removal, approval/error states and fixture isolation. Opening the app never registers startup automatically.
+- Добавлена галочка «Запускать при входе в систему»: включение и отключение для текущего пользователя, без изменения автозапуска в демо.
+
+- Prioritize exact repeated operations, retain control calls as sequence boundaries, and choose examples across sessions. Recognize fixed 3D QA and release/CI tool families without retaining arguments or reconstructing unknown shell payloads.
+- Review packs expose operation classification coverage; the same frozen sample measures analyzer changes, not productivity or subscription savings.
+
+Точные повторы получают приоритет; служебные вызовы больше не становятся примерами автоматизации. В отчёте виден охват классификации, неизвестные результаты сохраняются.
+
 ## 0.10.1 · 2026-10-07
 
 - Display the actual installed version in the Mac/Windows Settings window title, helping identify historical copies. Correct stale candidate/publication wording in bundled EN/RU documentation. Analytics and Kimi contracts are unchanged.

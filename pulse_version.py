@@ -1,2 +1,2 @@
 """Single literal runtime/build metadata source; no application imports or side effects."""
-__version__ = '0.10.1'
+__version__ = '0.10.3'

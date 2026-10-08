@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Combine
+import ServiceManagement
 
 var pulseLanguageOverride: String?
 var pulseApplicationVersion: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "development" }
@@ -185,11 +186,15 @@ func subscriptionText(_ s: Subscription) -> String {
     @Published var menuFollowActive: Bool = UserDefaults.standard.bool(forKey: "menuFollowActive") { didSet { savePreference("menuFollowActive", menuFollowActive) } }
     let observerHome: String?; let stateOverride: String?; private var applyingSettings = false; private var settingsBytes: Data?; private var pendingPreferences: [String:Any] = [:]; private var writingPreferences = false
     let fixture: String?; private var timer: Timer?; private var limitTimer: Timer?; private var readingLimits = false; private var authTimer: Timer?; private var authMarks: [String: String] = [:]; private var authRevision = 0
+    let launchAtLogin: LaunchAtLoginController
     init() {
         let args = CommandLine.arguments
         observerHome = args.firstIndex(of: "--observer-home").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
         stateOverride = args.firstIndex(of: "--state").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
         fixture = args.firstIndex(of: "--fixture").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
+        let appPath = Bundle.main.bundleURL.path
+        let installed = Bundle.main.bundleIdentifier == "app.agentpulse.desktop" && ["/Applications/Agent Pulse.app", NSHomeDirectory() + "/Applications/Agent Pulse.app"].contains(appPath)
+        launchAtLogin = LaunchAtLoginController(service: MacLoginItemService(), preview: fixture != nil || stateOverride != nil, allowed: installed)
         if let i = args.firstIndex(of: "--language"), i + 1 < args.count { language = args[i + 1] }
         if let i = args.firstIndex(of: "--scale"), i + 1 < args.count, let value = Double(args[i + 1]) { widgetScale = min(1, max(0.8, value)) }
         if let i = args.firstIndex(of: "--metric-mode"), i + 1 < args.count { metricMode = args[i + 1] == "today" ? "today" : "limits" }
@@ -372,7 +377,7 @@ struct DragHandle: NSViewRepresentable {
 }
 struct ActionButton: View {
     var symbol: String; var help: String; var action: () -> Void
-    var body: some View { Button(action: action) { Image(systemName: symbol).frame(width: 30, height: 30) }.buttonStyle(.plain).foregroundStyle(quiet).help(help).accessibilityLabel(help) }
+    var body: some View { Button(action: action) { Image(systemName: symbol).frame(width: 30, height: 30).contentShape(Rectangle()) }.buttonStyle(.plain).foregroundStyle(quiet).help(help).accessibilityLabel(help) }
 }
 func todayText(_ p: Provider) -> String {
     if let value = p.todayTokens { return shortNumber(value) + (p.todayTokenCoverage == "partial-local" ? tr(" · partial", " · частично") : "") }
@@ -438,8 +443,7 @@ struct WidgetView: View {
                 ActionButton(symbol: "arrow.clockwise", help: tr("Refresh", "Обновить"), action: store.refresh)
                 ActionButton(symbol: "chart.bar.xaxis", help: tr("Analytics", "Аналитика"), action: actions.showAnalysis)
                 ActionButton(symbol: "gearshape", help: tr("Settings", "Настройки"), action: actions.showSettings)
-                ActionButton(symbol: "minus", help: tr("Collapse to menu bar", "Свернуть в строку меню"), action: actions.collapseToMenu)
-                ActionButton(symbol: "xmark", help: tr("Quit Agent Pulse", "Завершить Agent Pulse"), action: { actions.quit() })
+                ActionButton(symbol: "xmark", help: tr("Hide widget · Agent Pulse keeps running", "Скрыть виджет · Agent Pulse продолжит работать"), action: actions.hidePanel)
             }
             if let snapshot = store.snapshot {
                 ForEach(store.visibleProviders) { p in ProviderLine(provider: p, metricMode: store.metricMode).frame(height: 78, alignment: .topLeading); Rectangle().fill(divider).frame(height: 1) }
@@ -932,16 +936,44 @@ struct SubscriptionRow: View {
         }.onAppear { date = provider.subscription.date ?? ""; kind = provider.subscription.kind }
     }
 }
+struct LaunchAtLoginSettings: View {
+    @ObservedObject var controller: LaunchAtLoginController
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle(tr("Launch at login", "Запускать при входе в систему"), isOn: Binding(get: { controller.checked }, set: { controller.setEnabled($0) }))
+                .disabled(controller.preview || !controller.allowed)
+            if controller.preview {
+                Text(tr("Demo: login items are unchanged.", "Демо: автозапуск не меняется."))
+            } else if !controller.allowed {
+                Text(tr("Move Agent Pulse to Applications to manage launch at login.", "Переместите Agent Pulse в Программы, чтобы настроить автозапуск."))
+            } else if controller.status == .requiresApproval {
+                Text(tr("Allow Agent Pulse in System Settings → General → Login Items.", "Разрешите Agent Pulse в Настройках системы → Основные → Объекты входа."))
+                Button(tr("Open Login Items", "Открыть объекты входа")) { SMAppService.openSystemSettingsLoginItems() }
+            } else {
+                Text(controller.status == .enabled ? tr("Enabled for your account. Uncheck to disable.", "Включено для вашей учётной записи. Снимите галочку для отключения.") : controller.status == .disabled ? tr("Off. Enable to start after you sign in.", "Выключено. Включите для запуска после входа в систему.") : tr("System status is unavailable.", "Состояние в системе недоступно."))
+            }
+            if controller.failed { Text(tr("Could not change launch at login. The checkbox shows the current system state.", "Не удалось изменить автозапуск. Галочка показывает текущее состояние системы.")).foregroundStyle(amber) }
+        }.font(.system(size: 12)).onAppear { controller.refresh() }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in controller.refresh() }
+    }
+}
 struct SettingsView: View {
     @ObservedObject var store: PulseStore; var actions: AppDelegate
     @State var providerKeys: [String:String] = [:]
     @State var kimiRegion = "mainland-cn"
     @State var selected: Set<String> = []; @State var patterns = false; @State var tokens = false
     var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(tr("Agent Pulse settings", "Настройки Agent Pulse")).font(.system(size: 23, weight: .medium))
+                Spacer()
+                ActionButton(symbol: "minus", help: tr("Minimize settings", "Свернуть настройки"), action: actions.minimizeSettings)
+                ActionButton(symbol: "xmark", help: tr("Close settings", "Закрыть настройки"), action: actions.closeSettings)
+            }.padding(.horizontal, 26).padding(.top, 18).padding(.bottom, 8)
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text(tr("Agent Pulse settings", "Настройки Agent Pulse")).font(.system(size: 23, weight: .medium))
                 Picker(tr("Language", "Язык"), selection: $store.language) { Text("English").tag("en"); Text("Русский").tag("ru") }.frame(width: 260)
+                LaunchAtLoginSettings(controller: store.launchAtLogin)
                 Toggle(tr("Keep widget above windows", "Держать поверх окон"), isOn: $store.topmost).onChange(of: store.topmost) { _, value in actions.panel?.level = value ? .floating : .normal }
                 Text(tr("Widget size", "Размер виджета")).font(.system(size: 16, weight: .semibold))
                 HStack { ForEach([0.8, 0.9, 1.0], id: \.self) { value in Button("\(Int(value * 100))%") { actions.setScale(value) } }; Text("\(Int(store.widgetScale * 100))%") }
@@ -986,6 +1018,7 @@ struct SettingsView: View {
                 if let m = store.settingsMessage { Text(m).foregroundStyle(mint) }
                 Text(tr("Counters every 5 minutes; Codex limits every minute. Configure bridges/imports as documented in the provider guide. No screen, microphone or Accessibility permission required.", "Счётчики — каждые 5 минут; лимиты Codex — каждую минуту. Мосты и импорт настраиваются по инструкции. Доступ к экрану, микрофону и Accessibility не требуется.")).font(.system(size: 11)).foregroundStyle(quiet)
             }.padding(26)
+        }
         }.frame(width: 560, height: 620).background(bg).foregroundStyle(ink).colorScheme(.dark)
         .onAppear { selected = Set((store.snapshot?.providers ?? []).map { $0.id }); patterns = store.snapshot?.localPatterns ?? false; tokens = store.snapshot?.localTokens ?? false }
     }
@@ -1004,6 +1037,7 @@ final class FloatingPanel: NSPanel {
     var settingsWindow: NSWindow?
     var fixtureTogglePassed = false
     var fixtureFocusChecks: [String: Bool] = [:]
+    var fixtureControlChecks: [String: Bool] = [:]
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         store = PulseStore()
@@ -1116,7 +1150,6 @@ final class FloatingPanel: NSPanel {
     @objc func quit() { NSApp.terminate(nil) }
     @objc func togglePanel() { if panel?.isVisible == true { hidePanel() } else { panel?.orderFrontRegardless() } }
     func hidePanel() { panel?.orderOut(nil) }
-    func collapseToMenu() { setDisplayMode("menu") }
     func toggleExpanded() {
         guard panel != nil else { return }
         store.expanded.toggle(); resizePanel()
@@ -1148,9 +1181,11 @@ final class FloatingPanel: NSPanel {
         presentUtilityWindow(analysisWindow)
     }
     @objc func openSettings() { toggleUtilityWindow(settingsWindow, show: showSettings) }
+    func closeSettings() { settingsWindow?.close() }
+    func minimizeSettings() { settingsWindow?.miniaturize(nil) }
     func showSettings() {
         if settingsWindow == nil {
-            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 620), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 620), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
             w.title = "Agent Pulse " + pulseApplicationVersion + tr(" · settings", " · настройки"); w.isReleasedWhenClosed = false
             w.contentView = NSHostingView(rootView: SettingsView(store: store, actions: self)); w.center(); settingsWindow = w
         }
@@ -1177,6 +1212,44 @@ final class FloatingPanel: NSPanel {
             fixtureTogglePassed = fixtureFocusChecks["hidden"] == true && fixtureFocusChecks["widgetKey"] == true && fixtureFocusChecks["utilityMain"] == true
         }
     }
+    func checkFixtureWindowControls(stage: Int, deadline: Date) {
+        guard store.isFixture, let panel else { return }
+        if stage == 0 {
+            let displayMode = store.displayMode
+            hidePanel()
+            fixtureControlChecks["widgetCloseHides"] = !panel.isVisible
+            fixtureControlChecks["hidePreservesPlacement"] = store.displayMode == displayMode
+            togglePanel()
+            fixtureControlChecks["statusRestoresWidget"] = panel.isVisible
+            showSettings()
+            fixtureControlChecks["settingsCanMinimize"] = settingsWindow?.styleMask.contains(.miniaturizable) == true
+            // Let presentation and AppKit's minimize animation run on the main loop.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.minimizeSettings()
+                self?.checkFixtureWindowControls(stage: 1, deadline: Date().addingTimeInterval(2))
+            }
+        } else if stage == 1 {
+            if settingsWindow?.isMiniaturized == true || Date() >= deadline {
+                fixtureControlChecks["settingsMinimized"] = settingsWindow?.isMiniaturized == true
+                showSettings()
+                checkFixtureWindowControls(stage: 2, deadline: Date().addingTimeInterval(2))
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in self?.checkFixtureWindowControls(stage: 1, deadline: deadline) }
+            }
+        } else {
+            if settingsWindow?.isVisible == true && settingsWindow?.isMiniaturized == false || Date() >= deadline {
+                let settings = settingsWindow
+                fixtureControlChecks["settingsRestored"] = settings?.isVisible == true && settings?.isMiniaturized == false
+                closeSettings()
+                fixtureControlChecks["settingsClosed"] = settings?.isVisible == false
+                showSettings()
+                fixtureControlChecks["settingsReopened"] = settingsWindow === settings && settings?.isVisible == true
+                closeSettings()
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in self?.checkFixtureWindowControls(stage: 2, deadline: deadline) }
+            }
+        }
+    }
     func handleSnapshotArguments() {
         let args = CommandLine.arguments
         guard let index = args.firstIndex(of: "--snapshot"), index + 1 < args.count else { return }
@@ -1191,6 +1264,7 @@ final class FloatingPanel: NSPanel {
         if mode.hasPrefix("analysis") { showAnalysis() }
         if mode == "analysis-small" { analysisWindow?.setContentSize(NSSize(width: 620, height: 520)) }
         if mode == "settings" { showSettings() }
+        if mode == "window-controls", store.isFixture { checkFixtureWindowControls(stage: 0, deadline: Date().addingTimeInterval(2)) }
         if mode == "window-focus", store.isFixture {
             showAnalysis(); analysisWindow?.miniaturize(nil); showAnalysis()
             showSettings(); settingsWindow?.orderOut(nil); showSettings()
@@ -1203,7 +1277,7 @@ final class FloatingPanel: NSPanel {
             let drag = NSEvent.mouseEvent(with: .leftMouseDragged, location: NSPoint(x: 340, y: 10), modifierFlags: [], timestamp: 0.1, windowNumber: panel?.windowNumber ?? 0, context: nil, eventNumber: 2, clickCount: 1, pressure: 1)!
             grip.mouseDown(with: down); grip.mouseDragged(with: drag)
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + (store.isFixture && args.contains("--rotation-check") ? 9 : 2)) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + (store.isFixture && args.contains("--rotation-check") ? 9 : mode == "window-controls" ? 6 : 2)) { [weak self] in
             guard let self else { return }
             let w = mode.hasPrefix("analysis") ? self.analysisWindow : mode == "settings" ? self.settingsWindow : self.panel
             let captureView = mode == "menu-bar" ? self.statusItem.button : w?.contentView
@@ -1216,7 +1290,8 @@ final class FloatingPanel: NSPanel {
                 self.hidePanel(); let hidden = !panel.isVisible
                 self.togglePanel(); let restored = panel.isVisible
                 let report: [String: Any] = ["view": mode, "utilityFocusChecks": self.fixtureFocusChecks, "utilityTogglePassed": mode != "window-focus" || self.fixtureTogglePassed, "utilityRestorePassed": mode != "window-focus" || (self.analysisWindow?.isVisible == true && self.analysisWindow?.isMiniaturized == false && self.settingsWindow?.isVisible == true), "utilityFocusPassed": mode != "window-focus" || (self.settingsWindow?.isKeyWindow == true && NSApp.isActive), "utilityPlacementPassed": mode != "window-focus" || (self.settingsWindow?.level == .normal && self.settingsWindow?.collectionBehavior.contains(.moveToActiveSpace) == true), "panelWidth": panel.frame.width, "panelHeight": panel.frame.height, "floatingLevel": panel.level == .floating, "joinsAllSpaces": panel.collectionBehavior.contains(.canJoinAllSpaces), "fullScreenAuxiliary": panel.collectionBehavior.contains(.fullScreenAuxiliary), "movable": panel.isMovableByWindowBackground, "visibleBefore": before, "hidePassed": hidden, "restorePassed": restored, "statusItem": self.statusItem.button != nil, "fixtureMode": self.store.isFixture, "metricMode": self.store.metricMode, "scale": self.store.widgetScale, "menuClickShowsPanel": mode == "menu-widget" && before, "menuTooltip": self.statusItem.button?.toolTip ?? "", "displayMode": self.store.displayMode, "menuTitle": self.statusItem.button?.title ?? "", "capturedSize": [w?.contentView?.bounds.width ?? 0, w?.contentView?.bounds.height ?? 0]]
-                if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) {
+                var result = report; result["windowControlChecks"] = self.fixtureControlChecks
+                if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]) {
                     try? data.write(to: URL(fileURLWithPath: path + ".json"))
                 }
             }

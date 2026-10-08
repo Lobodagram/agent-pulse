@@ -12,7 +12,7 @@ A local tool for improving coding-agent workspaces: collect sanitized tool event
 
 [Architecture and module ownership](docs/ARCHITECTURE.md) · [Linux/headless runtime](docs/HEADLESS.md) · Runtime wheel: Python 3.11+
 
-**0.10.1 public preview.** Kimi account limits and live native delivery remain unverified; settings and fixtures are tested. Downloadable packages and their verification are linked below and recorded in [QA](docs/QA.md). macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
+**0.10.3 public preview.** Kimi account limits and live native delivery remain unverified; settings and fixtures are tested. Downloadable packages and their verification are linked below and recorded in [QA](docs/QA.md). macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
 
 **Confirm collection first:** configured observers are not proof of observation. After setup, start a new native session, review hook trust when required, perform an ordinary task, and check Workflows for actual paired calls. See the [readiness audit](docs/AUDIT.md). Capabilities separates exact registered skill-file loads, explicit invocations and manual declarations. No observed use is not proof of non-use; command families are bounded static classifications, not semantic understanding of arbitrary code.
 
@@ -42,6 +42,7 @@ Open Analytics → Tokens: readable token units, hover preview, click a day or u
 - Import or explicitly scan skill/MCP names; configured, available and unknown are distinct. Category matching does not prove a missing capability.
 - Offer bounded evidence to your agent through an optional local read-only stdio MCP. Analysis itself calls no model.
 - Refresh Codex quota reads every minute, counters every five minutes; show quota-source timestamps. Independent client reads can still briefly differ.
+- Optional launch at login, controlled by a Settings checkbox; disabled by default.
 - Switch between English and Russian. macOS: menu bar, compact/detail view and charts. Windows preview: floating widget, tabbed workflows/sessions/comparison and settings.
 - Run without model calls, prompts, telemetry uploads, browser credential scraping or corporate integrations.
 
@@ -101,7 +102,7 @@ A missing Codex daily bucket means **awaiting report**, not zero. Enable **Local
 
 ![Active-app setting — invented demo account data](docs/screenshots/settings-active-en.png)
 
-The **− / ⌄** button collapses into the menu bar/compact strip; **×** quits Agent Pulse. Reopening a production app does not create another instance. Test fixtures are isolated and automatically closed.
+On macOS **×** hides the widget while Agent Pulse keeps observing. Click the menu-bar item to show it again; right-click (or two-finger click) for **Quit Agent Pulse**, or use Command-Q. Settings has visible close/minimize controls; closing Settings does not quit. On Windows **⌄** opens the compact strip and **×** quits. Reopening a production app does not create another instance. Test fixtures are isolated and automatically closed.
 
 [Plugin and in-client integration feasibility](docs/INTEGRATIONS.md). No badge-in-every-desktop-chat plugin is included in this release.
 

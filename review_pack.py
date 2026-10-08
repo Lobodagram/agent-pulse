@@ -13,6 +13,13 @@ def markdown_pack(report,language='en'):
            '| '+tr('Client | Calls | Paired | Known result | Gaps','Клиент | Вызовы | Пары | Результат известен | Пропуски')+' |','| --- | ---: | ---: | ---: | ---: |']
     for r in report['coverage']:
         lines.append('| '+' | '.join(value(r.get(k)) for k in ['provider','calls','pairedCalls','knownOutcomes','collectionGaps'])+' |')
+    analysis=report.get('analysisCoverage',{})
+    if analysis:
+        lines+=['',tr('Operation families recognized: ','Распознаны семейства операций: ')+str(analysis['typedOperationCalls'])+
+                tr('; unknown: ','; неизвестны: ')+str(analysis['unknownOperationCalls'])+
+                tr('; bookkeeping excluded from pattern candidates: ','; служебных вызовов исключено из кандидатов: ')+str(analysis['bookkeepingCalls'])+'.',
+                tr('Exact repeats precede broad sequence hypotheses. Historical unknown shell calls remain unknown.',
+                   'Точные повторы показаны раньше общих цепочек. Старые неизвестные shell-вызовы остаются неизвестными.')]
     lines+=['','## '+tr('Tools (top 20)','Инструменты (первые 20)'),'', '| '+tr('Client | Tool | Calls | Failed | Unknown | Pending','Клиент | Инструмент | Вызовы | Ошибки | Неизвестно | Не завершено')+' |','| --- | --- | ---: | ---: | ---: | ---: |']
     for r in report.get('toolUsage',[])[:20]:lines.append('| '+' | '.join(value(r.get(k)) for k in ['provider','tool','calls','failed','unknown','pending'])+' |')
     lines+=['','## '+tr('Findings (top 10)','Находки (первые 10)'),'']

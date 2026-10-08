@@ -4,6 +4,7 @@ import statistics
 import time
 from capability_report import capabilities
 from model_evidence import model_history
+from command_profile import control_tool
 
 TEXT = {
  'sequence':('Repeated workflow','Повторяющийся сценарий','Review this sequence for a tested script or skill.','Проверьте цепочку как кандидата на скрипт или скилл.'),
@@ -14,7 +15,22 @@ TEXT = {
 
 def recommendation(j,key,kind,calls,sequence=None,*,summary_only=False):
     unique={c['id']:c for c in calls};calls=list(unique.values())
-    provider=calls[0]['provider'];examples=[c['id'] for c in calls[:10]]
+    provider=calls[0]['provider']
+    # Sample recent distinct sessions/turns before filling remaining slots.
+    selected=[];seen_sessions=set();seen_turns=set()
+    for c in reversed(calls):
+        if c['session'] not in seen_sessions:
+            selected.append(c);seen_sessions.add(c['session']);seen_turns.add((c['session'],c['turn']))
+        if len(selected)>=10:break
+    for c in reversed(calls):
+        if len(selected)>=10:break
+        if (c['session'],c['turn']) not in seen_turns:
+            selected.append(c);seen_turns.add((c['session'],c['turn']))
+    selected_ids={c['id'] for c in selected}
+    for c in reversed(calls):
+        if len(selected)>=10:break
+        if c['id'] not in selected_ids:selected.append(c);selected_ids.add(c['id'])
+    examples=[c['id'] for c in selected]
     summary={'id':j.digest('finding',[provider,kind,key]),'provider':provider,'kind':kind,
              'occurrences':len(calls),'sessions':len({c['session'] for c in calls}),'evidenceIds':examples}
     # Rechecks need qualification/counts, not inventory routing or display metadata.
@@ -50,7 +66,7 @@ def recommendation(j,key,kind,calls,sequence=None,*,summary_only=False):
     # Frequency is evidence, not a promised token saving. Tool duration sums can overlap.
     return {**summary,'title':title,'titleRu':ru,
       'suggestion':suggest,'suggestionRu':suggest_ru,'action':action,'confidence':'medium' if kind!='template' else 'low',
-      'sequence':sequence or [],'evidenceSessions':list(dict.fromkeys(c['session'] for c in calls[:10])),
+      'sequence':sequence or [],'evidenceSessions':list(dict.fromkeys(c['session'] for c in selected)),
       'medianDurationMs':statistics.median(durations) if durations else None,'failedCalls':sum(c['outcome']=='failed' for c in calls),
       'unknownOutcomes':sum(c['outcome']=='unknown' for c in calls),'sampledCapabilityInvocations':observed_candidates,
       'models':sorted({c['model'] for c in calls if c['model']!='other'}),'unknownModelCalls':sum(c['model']=='other' for c in calls),
@@ -58,13 +74,17 @@ def recommendation(j,key,kind,calls,sequence=None,*,summary_only=False):
       'measuredTokenSavings':None,'limitations':['Observed calls only; unknown coverage outside this journal.','Frequency does not prove waste or exact per-tool token cost.']}
 
 def findings(j,calls,*,summary_only=False):
+    ranks={}
     def card(key,kind,items,sequence=None):
-        return recommendation(j,key,kind,items,sequence,summary_only=summary_only)
+        entry=recommendation(j,key,kind,items,sequence,summary_only=summary_only)
+        typed=all(c.get('operation') not in {'unknown','legacy','shell','other','remote',None} for c in items)
+        ranks[entry['id']]={'retry':0,'repeat_read':1,'repeat_call':2,'template':4}.get(kind,3 if typed else 5)
+        return entry
     groups=defaultdict(list);reads=defaultdict(list);families=defaultdict(list);lanes=defaultdict(list)
     for c in calls:
-        if c['paired']:
+        if c['paired'] and not control_tool(c.get('tool','')):
             groups[(c['provider'],c['project'],c['fingerprint'])].append(c)
-            families[(c['provider'],c['project'],c['template'])].append(c)
+            families[(c['provider'],c['project'],c['template'],c.get('operation'))].append(c)
             if c['category']=='read' and c['resource'] and c['revision']:
                 reads[(c['provider'],c['project'],c['turn'],c['resource'],c['revision'])].append(c)
         # Keep failures/pending calls as barriers instead of joining their neighbours.
@@ -82,7 +102,7 @@ def findings(j,calls,*,summary_only=False):
         # Build only execution-order segments: overlapping calls cannot establish causal chains.
         segments=[];segment=[];busy_until=0
         for c in items:
-            if not c['paired'] or c['outcome']=='failed' or c.get('outcomeSource')=='running-process' or c['endedAt']<c['startedAt']:
+            if control_tool(c.get('tool','')) or not c['paired'] or c['outcome']=='failed' or c.get('outcomeSource')=='running-process' or c['endedAt']<c['startedAt']:
                 segments.append(segment);segment=[]
                 if c['endedAt'] is None or c.get('outcomeSource')=='running-process':busy_until=float('inf')
                 elif c['startedAt'] is not None and c['endedAt']>=c['startedAt']:busy_until=max(busy_until,c['endedAt'])
@@ -98,9 +118,11 @@ def findings(j,calls,*,summary_only=False):
             for n in range(2,5):
                 for i in range(len(items)-n+1):
                     chunk=items[i:i+n];shape=tuple(c['category'] for c in chunk)
-                    # Repeated writes alone and test-only runs are not useful workflow suggestions.
-                    if len(set(shape))<2:continue
                     operations=tuple(c.get('operation','legacy') for c in chunk)
+                    # A typed blob/tree/commit chain has one category but distinct operations.
+                    # Repeated writes/test runs and generic same-category calls remain excluded.
+                    if len(set(shape))<2 and (shape[0] in {'edit','test'} or len(set(operations))<2 or
+                        any(o in {'unknown','legacy','remote','other','shell'} for o in operations)):continue
                     sequences[(lane[0],lane[1],shape,operations)].append(chunk)
     accepted=[]
     for key,chunks in sequences.items():
@@ -119,15 +141,24 @@ def findings(j,calls,*,summary_only=False):
         if not summary_only:
             entry['operations']=list(key[3])
             entry['sequenceBasis']='operation-family' if not any(o in {'legacy','unknown'} for o in key[3]) else 'category-only'
-            if entry['sequenceBasis']=='category-only':entry['confidence']='low'
+            if ranks[entry['id']]==5:entry['confidence']='low';entry['sequenceBasis']='category-only'
         result.append(entry)
     for key,items in families.items():
         if any(c.get('operation') in {'unknown','legacy'} for c in items):continue
         if len(items)>=10 and len({c['turn'] for c in items})>=3 and not any(r['provider']==key[0] and set(r['evidenceIds']) & {c['id'] for c in items} for r in result):
             result.append(card(key,'template',items))
     # Prioritize failure/repetition evidence; no fabricated numeric saving score.
-    priority={'retry':0,'sequence':1,'repeat_read':2,'repeat_call':3,'template':4}
-    return sorted(result,key=lambda r:(priority[r['kind']],-r['sessions'],-r['occurrences']))[:30]
+    ordered=sorted(result,key=lambda r:(ranks[r['id']],-r['sessions'],-r['occurrences'],r['id']))
+    # Keep exact evidence first; diversify only broad category-only sequences.
+    projects={c['id']:c['project'] for c in calls}
+    precise=[r for r in ordered if ranks[r['id']]<5]
+    broad=[r for r in ordered if ranks[r['id']]==5];counts=defaultdict(int);chosen=[];remaining=[]
+    for r in broad:
+        project=next((projects[cid] for cid in r['evidenceIds'] if cid in projects), 'unknown')
+        key=(r['provider'],project)
+        if counts[key]<3:chosen.append(r);counts[key]+=1
+        else:remaining.append(r)
+    return (precise+chosen+remaining)[:30]
 
 def report(j,providers=None):
     j.prune();calls=j.calls();calls=[c for c in calls if providers is None or c['provider'] in providers]
@@ -211,6 +242,10 @@ def report(j,providers=None):
       'quality':{'pairedCalls':sum(c['paired'] for c in calls),'knownOutcomes':sum(c['paired'] and c['outcome'] in {'success','failed'} for c in calls),
                  'unpairedCalls':sum(not c['paired'] for c in calls),'windowDays':30,'completeCoverage':False},
       'tokenAttribution':'native turn usage only; no per-tool costs or subscription-token conversion',
+      'analysisCoverage':{'bookkeepingCalls':sum(control_tool(c.get('tool','')) for c in calls),
+        'typedOperationCalls':sum(c.get('operation') not in {'unknown','legacy','shell','other','remote','bookkeeping',None} for c in calls),
+        'unknownOperationCalls':sum(c.get('operation') in {'unknown','legacy',None} for c in calls),
+        'basis':'Allowlisted command/tool names; historical unknown shell payloads cannot be reconstructed.'},
       'inventoryCount':j.db.execute('SELECT count(*) FROM inventory').fetchone()[0],'localOnly':True}
 
 def compare(j,label,before,after):

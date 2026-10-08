@@ -61,11 +61,12 @@ def timestamp(raw,now):
     if raw.get('timestamp',raw.get('at')) is not None and (v is None or not now-31*86400<=v<=now+60):raise ValueError('invalid_event_time')
     return v if v is not None else now
 
-from command_profile import command_shape, profile
+from command_profile import command_shape, profile, control_tool, tool_operation
 from result_metadata import classify
 
 def category(tool,args):
     name=tool.lower()
+    if control_tool(tool):return 'other'
     if any(x in name for x in ['apply_patch','write','edit']):return 'edit'
     if any(x in name for x in ['read','cat_file']):return 'read'
     if any(x in name for x in ['search','grep','glob','query']):return 'search'
@@ -208,7 +209,7 @@ class Journal:
         p=profile(command) if command else None
         signature='unknown' if p and (not p['operations'] or any(o['family']=='unknown' for o in p['operations'])) else (
             ' '.join(o['category']+'.'+o['family']+(' '+p['operators'][i] if i<len(p['operators']) else '')
-                     for i,o in enumerate(p['operations'])) if p else kind)
+                     for i,o in enumerate(p['operations'])) if p else tool_operation(tool,kind))
         self.db.execute('INSERT OR IGNORE INTO call_metadata VALUES (?,?,?)',(eid,signature,osource))
         if phase=='finish':
             previous=self.db.execute('SELECT outcome,exit_code,at,outcome_source FROM observation JOIN call_metadata ON observation.id=call_metadata.event WHERE id=?',(eid,)).fetchone()
@@ -326,7 +327,7 @@ class Journal:
             result.append({k:r[k] for k in ['provider','session','turn','project','actor','call','tool','category','fingerprint','template','resource','revision','source','turn_source','model']} | {
                 'id':r['call'],'startedAt':start['at'] if start else None,'endedAt':end['at'] if end else None,
                 'outcome':status,'exitCode':end['exit_code'] if end else None,'durationMs':duration,'durationSource':dsource,
-                'operation':r['signature'] or 'legacy','outcomeSource':end['outcome_source'] or 'legacy' if end else 'not-finished',
+                'operation':tool_operation(r['tool'],r['signature'] or 'legacy'),'outcomeSource':end['outcome_source'] or 'legacy' if end else 'not-finished',
                 'model':model,'modelSource':model_source,
                 'collectionIssue':('missing-finish-after-boundary' if boundaries.get((r['provider'],r['session'],r['actor']),0)>=r['at'] else
                                    'stale-unpaired' if time.time()-r['received']>600 else 'awaiting-finish') if not end else 'missing-start' if not start else None,
