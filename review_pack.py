@@ -13,6 +13,7 @@ def markdown_pack(report,language='en'):
            '| '+tr('Client | Calls | Paired | Known result | Gaps','Клиент | Вызовы | Пары | Результат известен | Пропуски')+' |','| --- | ---: | ---: | ---: | ---: |']
     for r in report['coverage']:
         lines.append('| '+' | '.join(value(r.get(k)) for k in ['provider','calls','pairedCalls','knownOutcomes','collectionGaps'])+' |')
+    for source,count in sorted(report.get('quality',{}).get('outcomeSources',{}).items()):lines.append(f'- {value(source)}: {count}')
     analysis=report.get('analysisCoverage',{})
     if analysis:
         lines+=['',tr('Operation families recognized: ','Распознаны семейства операций: ')+str(analysis['typedOperationCalls'])+
@@ -31,7 +32,12 @@ def markdown_pack(report,language='en'):
     lines+=['','## '+tr('Capability evidence','Подтверждения навыков'),'']
     caps=[r for r in report.get('capabilities',[]) if r['loaded']+r['invoked']+r['declared']]
     for r in caps[:20]:lines.append(f"- {r['provider']} · {value(r['id'])} · read {r['loaded']} · invoked {r['invoked']} · declared {r['declared']}")
-    lines+=['',tr('Bounded summary; use session/evidence continuation for details. No per-tool costs, causal savings or universal skill non-use claim.','Это ограниченная сводка; подробности — в страницах сессий и примерах находок. Токены каждому инструменту и экономия не приписываются; неиспользование скиллов не доказано.'),'']
+    lines+=['','## '+tr('Versioned usefulness (top 20)','Польза версий (первые 20)'),'',
+            '| '+tr('Client | Asset | Version | Accepted / reviewed | Tokens / accepted | Cache / input','Клиент | Навык | Версия | Принято / проверено | Токены / результат | Кэш / вход')+' |','| --- | --- | --- | --- | ---: | ---: |']
+    for r in report.get('efficiency',{}).get('assets',[])[:20]:
+        lines.append('| '+' | '.join(value(v) for v in [r['provider'],r['assetId'],r['version'],f"{r['accepted']} / {r['reviewed']}",r['tokensPerAccepted'],r['cacheHitRate']])+' |')
+    lines+=['',tr('Usage includes selected failed attempts. Missing is unknown; manual version attestations are not native version invocation. Subscription savings are unavailable.','Расход включает выбранные неудачные попытки. Пропуск неизвестен; ручная отметка версии не равна штатному вызову версии. Экономия подписки недоступна.'),
+            '',tr('Bounded summary; use session/evidence continuation for details. No per-tool costs, causal savings or universal skill non-use claim.','Это ограниченная сводка; подробности — в страницах сессий и примерах находок. Токены каждому инструменту и экономия не приписываются; неиспользование скиллов не доказано.'),'']
     text='\n'.join(lines)
     if len(text.encode())>32768:raise ValueError('review_pack_too_large')
     return text

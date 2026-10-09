@@ -2,7 +2,7 @@
 import json
 import math
 
-SHELL = {'bash','shell','exec_command','functions.exec_command','functions.exec','exec','terminal'}
+SHELL = {'bash','shell','exec_command','functions.exec_command','functions.exec','exec','terminal','write_stdin','functions.write_stdin'}
 
 def exit_code(value):
     return value if isinstance(value,int) and not isinstance(value,bool) and -255<=value<=255 else None
@@ -23,6 +23,15 @@ def classify(event,raw,tool):
             code=exit_code(response[key])
             if code is None:invalid=True
             else:codes.append(code)
+    # MCP structuredContent is a typed envelope; never parse arbitrary stdout.
+    structured=response.get('structuredContent')
+    if shell and isinstance(structured,dict):
+        for key in ('exit_code','exitCode'):
+            if key in structured and structured[key] is not None:
+                code=exit_code(structured[key])
+                if code is None:invalid=True
+                else:codes.append(code)
+        failed |= any(structured.get(k) is True for k in ('isError','is_error','failed'))
     source='structured-exit'
     if shell:
         # Accept complete code-mode result objects, never regexes inside command output.
@@ -46,6 +55,6 @@ def classify(event,raw,tool):
     if invalid or len(set(codes))>1:return 'unknown',None,'conflicting-or-invalid-exit'
     if codes:return ('success' if codes[0]==0 else 'failed'),codes[0],source
     if shell:
-        running=any(response.get(k) is not None for k in ('session_id','process_id','sessionId'))
+        running=any(response.get(k) is not None or isinstance(structured,dict) and structured.get(k) is not None for k in ('session_id','process_id','sessionId'))
         return 'unknown',None,'running-process' if running else 'exit-not-reported'
     return 'success',None,'completed-non-shell'

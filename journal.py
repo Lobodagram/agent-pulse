@@ -131,6 +131,8 @@ class Journal:
         CREATE TABLE IF NOT EXISTS finding_review(id TEXT PRIMARY KEY,provider TEXT,project TEXT,kind TEXT,status TEXT,
           reason TEXT,at REAL,seconds INTEGER,title TEXT,title_ru TEXT,baseline TEXT);
         ''')
+        from efficiency import initialize
+        initialize(self.db)
         self.db.commit()
     def close(self):self.db.close()
     def digest(self,label,value):
@@ -233,13 +235,17 @@ class Journal:
         rowid=self.db.execute('SELECT rowid FROM observation WHERE id=?',(eid,)).fetchone()
         if rowid and rowid[0]%500==0:self.prune()
         return eid
-    def usage(self,provider,sid,tid,usage,source='native-turn'):
+    def usage(self,provider,sid,tid,usage,source='native-turn',complete=False,model_requests=None):
         # Only explicit per-turn native usage. No differencing overlapping account counters.
         if provider not in PROVIDERS or not isinstance(usage,dict) or not sid or not tid:raise ValueError('invalid_usage')
         vals=[number(usage.get(x)) for x in ['input','cached_input','output']]
-        if all(v is None for v in vals):raise ValueError('missing_usage')
+        if all(v is None for v in vals) and model_requests is None:raise ValueError('missing_usage')
         if vals[1] is not None and vals[0] is not None and vals[1]>vals[0]:raise ValueError('invalid_cached_input')
-        self.db.execute('INSERT OR REPLACE INTO turn_usage VALUES (?,?,?,?,?,?,?,?)',(provider,self.digest('session',[provider,sid]),self.digest('turn',[provider,sid,tid]),*vals,safe_name(source),time.time()));self.db.commit()
+        if type(complete)!=bool or model_requests is not None and (type(model_requests)!=int or not 0<=model_requests<=1000000):raise ValueError('invalid_usage_status')
+        session=self.digest('session',[provider,sid]);turn=self.digest('turn',[provider,sid,tid]);source=safe_name(source)
+        with self.db:
+            self.db.execute('INSERT OR REPLACE INTO turn_usage VALUES (?,?,?,?,?,?,?,?)',(provider,session,turn,*vals,source,time.time()))
+            self.db.execute('INSERT OR REPLACE INTO turn_usage_status VALUES (?,?,?,?,?,?)',(provider,session,turn,source,int(complete),model_requests))
     def annotate(self,session,label,outcome,variant):
         if not re.fullmatch(r'[a-f0-9]{32}',session):raise ValueError('invalid_session')
         if not self.db.execute('SELECT 1 FROM observation WHERE session=?',(session,)).fetchone():raise ValueError('unknown_session')
@@ -337,6 +343,9 @@ class Journal:
         cutoff=time.time()-30*86400
         self.db.execute('DELETE FROM observation WHERE received<?',(cutoff,))
         self.db.execute('DELETE FROM turn_usage WHERE at<?',(cutoff,))
+        self.db.execute('DELETE FROM turn_usage_status WHERE NOT EXISTS (SELECT 1 FROM turn_usage u WHERE u.provider=turn_usage_status.provider AND u.session=turn_usage_status.session AND u.turn=turn_usage_status.turn AND u.source=turn_usage_status.source)')
+        self.db.execute('DELETE FROM reviewed_task WHERE at<?',(cutoff,))
+        self.db.execute('DELETE FROM task_call WHERE task NOT IN (SELECT id FROM reviewed_task)')
         self.db.execute('DELETE FROM annotation WHERE session NOT IN (SELECT session FROM observation)')
         self.db.execute('DELETE FROM live_turn WHERE turn NOT IN (SELECT DISTINCT turn FROM observation)')
         self.db.execute('DELETE FROM observation WHERE id IN (SELECT id FROM observation ORDER BY received DESC LIMIT -1 OFFSET ?)',(MAX_EVENTS,))

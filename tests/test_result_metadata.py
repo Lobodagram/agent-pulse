@@ -9,6 +9,12 @@ def wrapped(code):
 
 
 class ResultMetadataTests(unittest.TestCase):
+    def test_structured_mcp_shell_exit_and_process_polling(self):
+        self.assertEqual(classify('PostToolUse',{'tool_response':{'structuredContent':{'exit_code':0}}},'Bash'),('success',0,'structured-exit'))
+        self.assertEqual(classify('PostToolUse',{'tool_response':{'exit_code':0,'structuredContent':{'exit_code':1}}},'Bash')[0],'unknown')
+        self.assertEqual(classify('PostToolUse',{'tool_response':{'structuredContent':{'session_id':42}}},'functions.write_stdin'),('unknown',None,'running-process'))
+        self.assertEqual(classify('PostToolUse',{'tool_response':{'output':'exit_code: 0'}},'functions.write_stdin')[0],'unknown')
+
     def test_invalid_wrapped_exit_cannot_hide_behind_valid_exit(self):
         for code in (True, '0', 300, -300, 0.5):
             for response in ({'exit_code':0,'content':[wrapped(code)]},

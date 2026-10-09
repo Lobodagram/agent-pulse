@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.11.0 · 2026-10-09
+
+- Local immutable skill/MCP/tool versions link findings to bounded, non-overlapping reviewed tasks. Acceptance, declared application and observed name invocations remain separate.
+- Per-client/version cards show tokens per accepted result including selected failed attempts, reported model requests, cache/input ratio and observed wall time with coverage.
+- Reviewed-task comparisons require matching observed cohorts, reviewed quality and complete per-turn receipts. Missing counters do not produce subscription savings; default MCP remains read-only.
+- Structured shell exit metadata and result-source diagnostics improve collection transparency. Historical session comparisons include observations beyond the 100-session UI preview.
+- Explicit macOS app reopening restores a hidden widget or visible utility window without changing its placement preference.
+- Добавлены версии навыков, приёмка отдельных задач и карточки пользы. Сравнение объясняет недостаток данных; токены, кэш и лимиты подписки учитываются отдельно.
+
 ## 0.10.4 · 2026-10-09
 
 - Supplied Agent Pulse logo in macOS app icon/widget/utility headers, Windows executable/tray/window/header and GitHub identity.

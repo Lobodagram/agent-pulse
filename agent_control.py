@@ -56,6 +56,9 @@ def control(name,args,directory):
     from journal import Journal
     j=Journal(directory)
     try:
+        if name in {'pulse_register_asset','pulse_record_task','pulse_record_usage'}:
+            from efficiency import register_asset,record_task,ingest_usage
+            return {'pulse_register_asset':register_asset,'pulse_record_task':record_task,'pulse_record_usage':ingest_usage}[name](j,args)
         if name=='pulse_review_finding' and set(args)=={'findingId','status','reason','days'}:
             from finding_review import review_finding
             return review_finding(j,args['findingId'],args['status'],args['reason'],args['days'])

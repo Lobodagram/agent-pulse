@@ -47,7 +47,7 @@ agent-pulse journal --format markdown --language en
 agent-pulse-mcp
 ```
 
-Read-only MCP tools: `pulse_report`, `pulse_session`, `pulse_evidence`, `pulse_compare`, `pulse_review_pack`, `pulse_settings`. To add it to Codex CLI with an installed executable on PATH:
+Read-only MCP tools: `pulse_report`, `pulse_session`, `pulse_evidence`, `pulse_compare`, `pulse_review_pack`, `pulse_settings`, `pulse_efficiency`, `pulse_compare_tasks`. To add it to Codex CLI with an installed executable on PATH:
 
 ```sh
 codex mcp add agent-pulse -- agent-pulse-mcp
@@ -93,3 +93,5 @@ Identify the actual client/version first. The observer targets TypeScript Kimi C
 In Settings, use **Launch at login** to start Agent Pulse after signing in. It is off until you enable it; opening the app never registers startup automatically. On macOS, keep the app in Applications and use the native [SMAppService main app login item](https://developer.apple.com/documentation/servicemanagement/smappservice/mainapp). If macOS requires approval, Settings shows the pending state and an explicit button to open Login Items. Unchecking unregisters it without quitting the current app. External system changes refresh when the app becomes active.
 
 Windows uses only this user's `AgentPulse` value in the [Run key](https://learn.microsoft.com/en-us/windows/win32/setupapi/run-and-runonce-registry-keys); unchecking removes that value and preserves other programs. The packaged app registers its exact executable; source mode registers the interpreter and script without copying fixture/CLI arguments. Windows startup policy/Task Manager can independently block launch. Fixture mode never changes startup. Enabling does not reboot or log out the computer; a real login/reboot remains a separate acceptance check.
+
+[Versioned task metrics / Польза версий](EFFICIENCY.md).

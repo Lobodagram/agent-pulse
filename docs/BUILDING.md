@@ -61,3 +61,5 @@ Release notes are bilingual. Package checksum files verify the downloaded bytes;
 Before publication, `scripts/public_export.py NEW_DIRECTORY` exports an allowlisted tree, excludes private Git history/local state and scans text for personal home paths/credential patterns. Use only `examples/demo.json` to render public screenshots. Private project context/QA are not part of that export.
 
 Local Mac development: `script/build_and_run.sh` builds/launches an isolated local-run bundle; `--verify`, `--debug`, `--logs`, `--telemetry` supported. Set `AGENT_PULSE_PYTHON` to a Python 3.11+ interpreter for source builds without the frozen collector. Fixture/snapshot paths are resolved from the repository. Public release bundles still use `build.sh` and bundled Python.
+
+For isolated acceptance, pass an explicit temporary output directory to `build.sh` and set `AGENT_PULSE_COLLECTOR_DIR` to a freshly frozen onedir helper. This avoids replacing the active `dist` observer or accidentally using a stale helper from `.build`. Keep runtime and helper together.

@@ -11,6 +11,21 @@ from session_view import session_page
 def run(args):
     j=Journal(args.state)
     try:
+        if args.action in {'asset','task','usage'}:
+            metadata=getattr(args,'metadata',None)
+            if metadata is not None:
+                if args.file or len(metadata.encode())>65536:raise ValueError('invalid_metadata')
+                spec=json.loads(metadata)
+            else:
+                if not args.file or args.file.is_symlink() or args.file.stat().st_size>65536:raise ValueError('invalid_metadata_file')
+                spec=json.loads(args.file.read_text())
+            from efficiency import register_asset,record_task,ingest_usage
+            if args.action=='asset':return register_asset(j,spec)
+            if args.action=='task':return record_task(j,spec)
+            return ingest_usage(j,spec)
+        if args.action=='compare-tasks':
+            from efficiency import compare_tasks
+            return compare_tasks(j,args.label,args.before,args.after,args.provider)
         if args.action=='review':
             from finding_review import review_finding
             return review_finding(j,args.finding,args.status,args.reason,args.days)

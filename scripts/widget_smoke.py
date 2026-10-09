@@ -71,7 +71,7 @@ with tempfile.TemporaryDirectory() as tmp:
         if mode=='glm-menu-quotas':assert r['menuTitle'].startswith('GLM 5ч') and '7д' in r['menuTitle'],r
         if mode=='kimi-menu-quotas':assert r['menuTitle'].startswith('KIMI 5ч') and '7д' in r['menuTitle'],r
         assert r['hidePassed'] and r['restorePassed'],r
-        if mode=='window-controls':assert all(r['windowControlChecks'].values()) and len(r['windowControlChecks'])==8,r
+        if mode=='window-controls':assert all(r['windowControlChecks'].values()) and len(r['windowControlChecks'])==12,r
         if mode=='window-focus':
             assert r['utilityTogglePassed'] and r['utilityRestorePassed'] and r['utilityFocusPassed'] and r['utilityPlacementPassed'],r
             assert all(r['utilityFocusChecks'].get(k) is True for k in ('readyBefore','readyAfter','widgetKey','utilityMain','hidden')),r

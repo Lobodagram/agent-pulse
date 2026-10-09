@@ -102,6 +102,17 @@ struct AnalyticsReport: Codable {
     var coverage: [EventCoverage]; var findings: [WorkflowFinding]; var sessions: [JournalSession]; var recentCalls: [JournalCall]
     var capabilities: [CapabilityStat]?; var toolUsage: [ToolStat]?
     var findingReviews: [FindingReview]?; var mcpNamespaces: [McpNamespace]?
+    var efficiency: EfficiencyReport?
+    var quality: OutcomeQuality?
+}
+struct OutcomeQuality: Codable { var outcomeSources: [String: Int]? }
+struct EfficiencyReport: Codable { var assets: [AssetMetric]; var totalTasks: Int; var tasksTruncated: Bool }
+struct AssetMetric: Codable, Identifiable {
+    var provider: String; var assetId: String; var version: String; var kind: String; var findingId: String
+    var tasks: Int; var accepted: Int; var reviewed: Int; var usageCompleteTasks: Int; var elapsedTasks: Int?
+    var nativeUses: Int; var nativeIdentityUses: Int?; var declaredUses: Int; var observedCalls: Int; var knownResults: Int
+    var tokensPerAccepted: Double?; var cacheHitRate: Double?; var medianElapsedMs: Double?; var modelRequests: Double?
+    var id: String { provider + "." + assetId + "." + version }
 }
 struct CapabilityStat: Codable {
     var provider: String; var id: String; var kind: String; var status: String; var evidenceStatus: String
@@ -604,6 +615,23 @@ struct TokenHistoryView: View {
     }
 }
 
+func resultSourceText(_ source: String) -> String {
+    let names = ["exit-not-reported": tr("Exit code not reported", "Код завершения не передан"), "running-process": tr("Process still running", "Процесс ещё работает"), "structured-exit": tr("Explicit exit code", "Явный код завершения"), "native-failure": tr("Native failure event", "Штатное событие ошибки"), "error-flag": tr("Explicit error flag", "Явный признак ошибки"), "completed-non-shell": tr("Completed non-shell tool", "Завершённый инструмент"), "conflicting-exit": tr("Conflicting exit codes", "Противоречивые коды завершения")]
+    return names[source] ?? source
+}
+func taskComparisonText(_ obj: [String: Any]) -> String {
+    let reasons = obj["reasons"] as? [String] ?? []
+    let names = ["insufficient-tasks": tr("At least 3 tasks per variant", "Нужно хотя бы 3 задачи на вариант"), "different-cohorts": tr("Different model, project or acceptance criterion", "Разные модели, проекты или критерии приёмки"), "unknown-model-or-selection": tr("Unknown model or incomplete selection", "Неизвестная модель или неполная выборка"), "unreviewed-tasks": tr("Some tasks await review", "Не все задачи проверены"), "quality-not-established": tr("Quality is unverified or decreased", "Качество не подтверждено или снизилось"), "incomplete-usage": tr("Incomplete reported token usage", "Неполные переданные счётчики токенов")]
+    var lines = [tr("Token reduction per accepted result: ", "Снижение токенов на принятый результат: ") + ((obj["tokenReduction"] as? Double).map { String(format: "%.1f%%", $0 * 100) } ?? "—")]
+    for reason in reasons { lines.append("• " + (names[reason] ?? reason)) }
+    if let groups = obj["groups"] as? [String: [String: Any]] {
+        for variant in groups.keys.sorted() { let g = groups[variant]!
+            lines.append(variant + ": \(g["accepted"] ?? 0)/\(g["reviewed"] ?? 0) " + tr("accepted · ", "принято · ") + "\(g["usageCompleteTasks"] ?? 0)/\(g["tasks"] ?? 0) " + tr("with reported usage", "с переданным расходом"))
+        }
+    }
+    lines.append(tr("Observed difference; review task difficulty. Subscription savings are unknown.", "Разница наблюдений; проверьте сложность задач. Экономия подписки неизвестна."))
+    return lines.joined(separator: "\n")
+}
 struct AnalysisView: View {
     @ObservedObject var store: PulseStore
     @State var tab = CommandLine.arguments.firstIndex(of: "--tab").flatMap { $0 + 1 < CommandLine.arguments.count ? CommandLine.arguments[$0 + 1] : nil } ?? "overview"
@@ -616,10 +644,35 @@ struct AnalysisView: View {
     @State var sessionTotal = 0; @State var pageOffset = 0; @State var pageLoading = false; @State var pageRequest = UUID()
     @State var showUnobservedCapabilities = false
     @State var reviewBusy = false; @State var reviewMessage = ""
+    @State var assetName = ""; @State var assetVersion = "v1"; @State var assetKind = "skill"; @State var assetProvider = "codex"; @State var assetFinding = ""
+    @State var chosenAsset = ""; @State var taskCriterion = "quality-v1"; @State var taskApplied = false
+    @State var taskFirst = 0; @State var taskLast = 0; @State var compareTasks = true
+    @State var compareProvider = "codex"
+    @State var registerExpanded = CommandLine.arguments.contains("--fixture") && CommandLine.arguments.contains("--efficiency-demo")
+    @State var taskExpanded = CommandLine.arguments.contains("--fixture") && CommandLine.arguments.contains("--efficiency-demo")
+    var assetMetrics: [AssetMetric] { store.snapshot?.analytics?.efficiency?.assets ?? [] }
+    func saveMetadata(_ action: String, _ metadata: [String: Any]) {
+        guard !reviewBusy, !store.isFixture, let data = try? JSONSerialization.data(withJSONObject: metadata), let text = String(data: data, encoding: .utf8) else { return }
+        reviewBusy = true; reviewMessage = ""; message = ""
+        store.run(["journal", "--action", action, "--metadata", text]) { result in
+            reviewBusy = false
+            if case .success = result { message = tr("Saved locally", "Сохранено локально"); reviewMessage = message; store.refresh() }
+            else { message = tr("Not saved: check public labels, version and non-overlapping task boundaries.", "Не сохранено: проверьте метки, версию и границы задачи без пересечений."); reviewMessage = message }
+        }
+    }
+    func saveTask() {
+        guard taskFirst >= 0, taskLast >= taskFirst, taskLast < calls.count else { return }
+        let selected = Array(calls[taskFirst...taskLast]); guard let first = selected.first else { return }
+        var spec: [String: Any] = ["provider": first.provider, "taskId": first.id + ":" + selected.last!.id, "label": label, "variant": variant, "criterion": taskCriterion, "outcome": outcome, "callIds": selected.map(\.id)]
+        if let asset = assetMetrics.first(where: { $0.id == chosenAsset }) { spec["assetId"] = asset.assetId; spec["version"] = asset.version; spec["applied"] = taskApplied }
+        saveMetadata("task", spec)
+    }
     func select(_ session: JournalSession, evidenceIds: [String] = []) {
         selectedSession = session.id; label = session.label ?? ""; variant = session.variant ?? "before"; outcome = session.outcome
+        taskFirst = 0; taskLast = max(0, session.calls - 1); chosenAsset = ""; taskApplied = false
         evidence = Set(evidenceIds); tab = "sessions"; message = ""
         calls = (store.snapshot?.analytics?.recentCalls ?? []).filter { $0.session == session.id }
+        taskLast = max(0, calls.count - 1)
         modelHistory = session.modelHistory
         sessionCursors = [nil]; sessionPage = 0; nextCursor = nil; pageOffset = 0; sessionTotal = session.calls
         if !store.isFixture {
@@ -636,6 +689,7 @@ struct AnalysisView: View {
             struct Page: Decodable { var calls: [JournalCall]; var cursor: String; var nextCursor: String?; var pageOffset: Int; var callCount: Int; var modelHistory: ModelHistory?; var eventLimitReached: Bool }
             if case .success(let data) = result, let value = try? JSONDecoder().decode(Page.self, from: data) {
                 calls = value.calls; nextCursor = value.nextCursor; pageOffset = value.pageOffset; sessionTotal = value.callCount; modelHistory = value.modelHistory
+                taskFirst = 0; taskLast = max(0, calls.count - 1)
                 sessionPage = index; sessionCursors[index] = value.cursor
                 if value.eventLimitReached { message = tr("Journal event limit reached; this snapshot is partial.", "Достигнут лимит событий журнала; снимок частичный.") }
             } else { message = tr("Page unavailable. Reopen the session for a fresh snapshot.", "Страница недоступна. Откройте сессию заново для свежего снимка.") }
@@ -673,6 +727,7 @@ struct AnalysisView: View {
                 Text(tr("Capabilities", "Навыки")).tag("capabilities")
                 Text(tr("Tokens", "Токены")).tag("tokens")
             }.pickerStyle(.segmented).labelsHidden()
+            ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if let snapshot = store.snapshot {
@@ -686,6 +741,15 @@ struct AnalysisView: View {
                         } else { Text(tr("No event journal yet. Enable a local observer in Settings.", "Журнал ещё пуст. Включите локальный наблюдатель в настройках.")).foregroundStyle(quiet) }
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8)
+            }
+            .onAppear {
+                if store.isFixture && CommandLine.arguments.contains("--efficiency-demo") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        if tab == "sessions" { proxy.scrollTo("task-review", anchor: .top) }
+                        if tab == "capabilities" { proxy.scrollTo("register-version", anchor: .top) }
+                    }
+                }
+            }
             }
             Text(tr("Local evidence · partial coverage · no model calls or per-tool token estimates", "Локальные данные · частичный охват · без вызовов моделей и оценки токенов каждого инструмента")).font(.system(size: 10)).foregroundStyle(quiet)
         }.padding(24).background(bg).foregroundStyle(ink).colorScheme(.dark)
@@ -736,6 +800,13 @@ struct AnalysisView: View {
                 if let at = c.lastToolEventAt { Text(tr("Last received call: ", "Последний полученный вызов: ") + stamp(at, compact: true)).font(.system(size: 10)).foregroundStyle(quiet) }
             }
             Text(tr("Silence may mean an idle client. Paired calls count only received events; total coverage is unknown.", "Тишина может означать простой клиента. Пары считаются среди полученных событий; полный охват неизвестен.")).font(.system(size: 10)).foregroundStyle(quiet)
+            if let sources = report.quality?.outcomeSources {
+                DisclosureGroup(tr("Result evidence", "Основания результатов")) {
+                    ForEach(sources.keys.sorted(), id: \.self) { source in
+                        Text("\(sources[source] ?? 0) · " + resultSourceText(source)).font(.system(size: 10)).foregroundStyle(quiet)
+                    }
+                }
+            }
             if report.eventLimitReached { Text(tr("Analysis limited to the latest 20,000 events", "Анализ ограничен последними 20 000 событиями")).foregroundStyle(amber) }
         }.font(.system(size: 11))
     }
@@ -747,6 +818,26 @@ struct AnalysisView: View {
             return x == y ? a.identity < b.identity : x > y
         } : observed
         return VStack(alignment: .leading, spacing: 12) {
+            efficiencyCards(report)
+            DisclosureGroup(tr("Register a version", "Добавить версию"), isExpanded: $registerExpanded) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Picker(tr("Client", "Клиент"), selection: $assetProvider) { ForEach(Array(Set(report.coverage.map(\.provider) + ["codex", "glm"])).sorted(), id: \.self) { Text($0.uppercased()).tag($0) } }
+                        Picker(tr("Type", "Тип"), selection: $assetKind) { ForEach(["skill", "mcp", "tool"], id: \.self) { Text($0).tag($0) } }
+                    }
+                    HStack { TextField(tr("Public name", "Публичная метка"), text: $assetName); TextField(tr("Version", "Версия"), text: $assetVersion) }
+                    Picker(tr("Finding", "Находка"), selection: $assetFinding) {
+                        Text(tr("Without a finding", "Без находки")).tag("")
+                        ForEach(report.findings.filter { $0.provider == assetProvider }) { Text((russian ? $0.titleRu : $0.title) + " · \($0.occurrences)").tag($0.id) }
+                    }
+                    Text(tr("Use nonsensitive ASCII labels. A registered version is not proof of use.", "Используйте нечувствительные ASCII-метки. Регистрация версии не подтверждает применение.")).font(.system(size: 11)).foregroundStyle(quiet)
+                    Button(tr("Save version", "Сохранить версию")) {
+                        var spec: [String: Any] = ["provider": assetProvider, "assetId": assetName, "version": assetVersion, "kind": assetKind]
+                        if !assetFinding.isEmpty { spec["findingId"] = assetFinding }
+                        saveMetadata("asset", spec)
+                    }.disabled(store.isFixture || reviewBusy || assetName.isEmpty || assetVersion.isEmpty)
+                }.padding(.top, 8)
+            }.id("register-version").onChange(of: assetProvider) { _, _ in assetFinding = "" }
             VStack(alignment: .leading, spacing: 8) {
             Text(tr("Read ≠ invoked ≠ manually declared. No observed use does not prove non-use.", "Чтение ≠ вызов ≠ ручная отметка. Отсутствие наблюдения не доказывает неиспользование.")).font(.system(size: 12)).foregroundStyle(quiet)
             Text("\(all.count) " + tr("catalog entries · ", "записей каталога · ") + "\(observed.count) " + tr("with evidence · ", "с подтверждением · ") + "\((report.toolUsage ?? []).count) " + tr("observed tools", "наблюдаемых инструментов")).font(.system(size: 12)).foregroundStyle(mint)
@@ -773,6 +864,31 @@ struct AnalysisView: View {
         let suffix = row.registered ? "" : tr(" · not registered", " · вне каталога")
         let label = "\(row.provider.uppercased()) · MCP \(row.namespace) · \(row.calls) " + tr("calls", "вызовов") + suffix
         return Text(label).font(.system(size: 11)).foregroundStyle(quiet)
+    }
+    func efficiencyCards(_ report: AnalyticsReport) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(tr("Useful results", "Польза инструментов")).font(.system(size: 17, weight: .semibold))
+            Text(tr("Per client and version · reviewed tasks · tokens include selected failed attempts. Quotas stay separate.", "По клиентам и версиям · проверенные задачи · токены включают выбранные неудачные попытки. Лимиты отдельно.")).font(.system(size: 11)).foregroundStyle(quiet)
+            if (report.efficiency?.assets ?? []).isEmpty { Text(tr("Register a version, then review a task in Sessions. Token metrics require sufficient reported data.", "Добавьте версию и оцените задачу в Сессиях. Для показателей токенов нужны достаточные переданные данные.")).font(.system(size: 12)).foregroundStyle(quiet) }
+            ForEach(report.efficiency?.assets ?? []) { row in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack { Text(row.assetId + " · " + row.version).font(.system(size: 14, weight: .semibold)); Spacer(); Text(row.provider.uppercased()).font(.system(size: 10, design: .monospaced)).foregroundStyle(mint) }
+                    Text("\(row.accepted)/\(row.reviewed) " + tr("accepted · ", "принято · ") + "\(row.tasks) " + tr("tasks · ", "задач · ") + "\(row.usageCompleteTasks)/\(row.tasks) " + tr("with complete reported usage", "с полным переданным расходом")).font(.system(size: 11)).foregroundStyle(quiet)
+                    HStack(alignment: .top, spacing: 24) {
+                        metric(tr("Tokens / accepted", "Токены / результат"), row.tokensPerAccepted.map { String(format: "%.0f", $0) } ?? "—")
+                        metric(tr("Input from cache", "Вход из кэша"), row.cacheHitRate.map { String(format: "%.1f%%", $0 * 100) } ?? "—")
+                        metric(tr("Median wall time", "Медиана времени"), row.medianElapsedMs.map { String(format: "%.1f", $0 / 1000) + tr(" s", " с") } ?? "—")
+                    }
+                    Text("\(row.nativeIdentityUses ?? 0) " + tr("name invocations · ", "вызовов имени · ") + "\(row.declaredUses) " + tr("version attestations · ", "отметок версии · ") + "\(row.knownResults)/\(row.observedCalls) " + tr("known tool results", "известных исходов")).font(.system(size: 10)).foregroundStyle(quiet)
+                    Text(tr("Reported model requests: ", "Передано вызовов модели: ") + (row.modelRequests.map { String(format: "%.0f", $0) } ?? "—") + " · \(row.elapsedTasks ?? 0)/\(row.tasks) " + tr("with wall time", "со временем")).font(.system(size: 10)).foregroundStyle(quiet)
+                    Text(tr("— means insufficient data; observed use does not establish savings.", "— означает недостаток данных; применение не доказывает экономию.")).font(.system(size: 10)).foregroundStyle(amber)
+                }.padding(.vertical, 8)
+                Divider()
+            }
+        }
+    }
+    func metric(_ title: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) { Text(value).font(.system(size: 20, weight: .medium, design: .monospaced)); Text(title).font(.system(size: 10)).foregroundStyle(quiet) }.frame(maxWidth: .infinity, alignment: .leading)
     }
     func capabilityCard(_ row: CapabilityStat) -> some View {
                 VStack(alignment: .leading, spacing: 4) {
@@ -854,7 +970,7 @@ struct AnalysisView: View {
                 Text(tr("Arguments are intentionally hidden. Safe command shape, outcome and wall time only; overlapping durations are not summed.", "Аргументы скрыты. Только безопасная форма команды, исход и время; длительности параллельных вызовов не складываются.")).font(.system(size: 11)).foregroundStyle(quiet)
                 if let history = modelHistory { modelTimeline(history) }
                 HStack { TextField(tr("Task label (slug)", "Метка задачи (slug)"), text: $label); TextField(tr("Variant", "Вариант"), text: $variant); Picker(tr("Outcome", "Исход"), selection: $outcome) { ForEach(["unknown", "accepted", "failed", "rework"], id: \.self) { Text(outcomeText($0)).tag($0) } }.labelsHidden().frame(width: 160) }
-                Button(tr("Save review", "Сохранить оценку")) {
+                Button(tr("Save session review", "Оценить всю сессию")) {
                     guard let sid = selectedSession else { return }
                     if store.isFixture { message = tr("Demo: review not saved", "Демо: оценка не сохраняется"); return }
                     store.run(["journal", "--action", "annotate", "--session", sid, "--label", label, "--variant", variant, "--outcome", outcome]) { r in
@@ -863,6 +979,20 @@ struct AnalysisView: View {
                     }
                 }
                 if !message.isEmpty { Text(message).font(.system(size: 11)).foregroundStyle(amber) }
+                DisclosureGroup(tr("Review a task within this page", "Оценить задачу на этой странице"), isExpanded: $taskExpanded) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(tr("Choose the first and last call of one actual task. Selection is limited to this page; shared or incomplete turns cannot receive a token total.", "Выберите первый и последний вызов одной реальной задачи. Выбор ограничен страницей; общие или неполные ходы не получают сумму токенов.")).font(.system(size: 11)).foregroundStyle(quiet)
+                        Picker(tr("First call", "Первый вызов"), selection: $taskFirst) { ForEach(calls.indices, id: \.self) { i in Text("\(pageOffset + i + 1) · " + calls[i].tool).tag(i) } }
+                        Picker(tr("Last call", "Последний вызов"), selection: $taskLast) { ForEach(calls.indices, id: \.self) { i in Text("\(pageOffset + i + 1) · " + calls[i].tool).tag(i) } }
+                        HStack { Text(tr("Acceptance criterion", "Критерий приёмки")); TextField(tr("Criterion version", "Версия критерия"), text: $taskCriterion) }
+                        Picker(tr("Asset version", "Версия инструмента"), selection: $chosenAsset) {
+                            Text(tr("Baseline / no asset", "Исходный вариант / без инструмента")).tag("")
+                            ForEach(assetMetrics.filter { $0.provider == calls.first?.provider }) { row in Text(row.assetId + " · " + row.version).tag(row.id) }
+                        }
+                        Toggle(tr("I confirm this version was applied", "Подтверждаю применение этой версии"), isOn: $taskApplied).disabled(chosenAsset.isEmpty)
+                        Button(tr("Save task review", "Сохранить оценку задачи"), action: saveTask).disabled(store.isFixture || reviewBusy || pageLoading || calls.isEmpty || label.isEmpty || taskLast < taskFirst)
+                    }.padding(.top, 8).id("task-review")
+                }
                 Text(tr("Fixed journal snapshot · observed calls only · 30-day retention", "Фиксированный снимок журнала · только полученные вызовы · хранение 30 дней")).font(.system(size: 10)).foregroundStyle(quiet)
                 HStack {
                     Text(pageLoading ? tr("Loading page…", "Загрузка страницы…") : "\(calls.isEmpty ? 0 : pageOffset + 1)–\(pageOffset + calls.count) / \(sessionTotal)").font(.system(size: 11)).foregroundStyle(quiet)
@@ -904,15 +1034,22 @@ struct AnalysisView: View {
     func comparison(_ report: AnalyticsReport) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(tr("Review the same task family before and after a change", "Сравните одну группу задач до и после изменения")).font(.system(size: 16, weight: .semibold))
-            Text(tr("Label sessions, variant and acceptance in Sessions. At least 3 observations per variant are needed. Model settings and task difficulty still require your review.", "Укажите метки, вариант и результат в Сессиях. Нужно хотя бы 3 наблюдения на вариант. Настройки моделей и сложность задач проверяете вы.")).font(.system(size: 12)).foregroundStyle(quiet)
-            Text("\(report.sessions.filter { !($0.label ?? "").isEmpty }.count) " + tr("labelled sessions in this view. Empty groups mean insufficient reviewed evidence, not zero improvement.", "размеченных сессий в этом разделе. Пустые группы означают недостаток проверенных данных, а не нулевое улучшение.")).font(.system(size: 11)).foregroundStyle(quiet)
+            Toggle(tr("Compare reviewed tasks", "Сравнивать отдельные задачи"), isOn: $compareTasks)
+            if compareTasks { Picker(tr("Client", "Клиент"), selection: $compareProvider) { ForEach(Array(Set(report.coverage.map(\.provider) + ["codex", "glm"])).sorted(), id: \.self) { Text($0.uppercased()).tag($0) } } }
+            Text("\(report.efficiency?.totalTasks ?? 0) " + tr("reviewed task selections. Tokens require complete native receipts; model requests are not tool calls.", "выбранных задач. Токены требуют полных штатных счётчиков; вызовы модели не равны вызовам инструментов.")).font(.system(size: 11)).foregroundStyle(quiet)
+            Text(compareTasks ? tr("Review task boundaries, variant and acceptance in Sessions. At least 3 tasks per variant are needed. Review task difficulty and model settings.", "Выберите границы задач, вариант и приёмку в Сессиях. Нужно хотя бы 3 задачи на вариант. Проверьте сложность и настройки модели.") : tr("Label sessions, variant and acceptance in Sessions. At least 3 observations per variant are needed. Model settings and task difficulty still require your review.", "Укажите метки, вариант и результат в Сессиях. Нужно хотя бы 3 наблюдения на вариант. Настройки моделей и сложность задач проверяете вы.")).font(.system(size: 12)).foregroundStyle(quiet)
+            if !compareTasks { Text("\(report.sessions.filter { !($0.label ?? "").isEmpty }.count) " + tr("labelled sessions in this view. Empty groups mean insufficient reviewed evidence, not zero improvement.", "размеченных сессий в этом разделе. Пустые группы означают недостаток проверенных данных, а не нулевое улучшение.")).font(.system(size: 11)).foregroundStyle(quiet) }
             HStack { TextField(tr("Task label", "Метка задачи"), text: $comparisonLabel); TextField(tr("Before", "До"), text: $before); TextField(tr("After", "После"), text: $after) }
             Button(tr("Compare observations", "Сравнить наблюдения")) {
                 if store.isFixture { comparisonMessage = tr("Demo comparison: use real reviewed sessions to measure effects.", "Демо: для оценки эффекта используйте реальные проверенные сессии."); return }
-                let queryLabel = comparisonLabel; let queryBefore = before; let queryAfter = after
-                store.run(["journal", "--action", "compare", "--label", queryLabel, "--before", queryBefore, "--after", queryAfter]) { r in
-                    guard comparisonLabel == queryLabel, before == queryBefore, after == queryAfter else { return }
-                    if case .success(let data) = r, let obj = try? JSONSerialization.jsonObject(with: data), let formatted = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]), let text = String(data: formatted, encoding: .utf8) { comparisonMessage = text }
+                let queryLabel = comparisonLabel; let queryBefore = before; let queryAfter = after; let queryMode = compareTasks; let queryProvider = compareProvider
+                let arguments = ["journal", "--action", compareTasks ? "compare-tasks" : "compare", "--label", queryLabel, "--before", queryBefore, "--after", queryAfter] + (compareTasks ? ["--provider", compareProvider] : [])
+                store.run(arguments) { r in
+                    guard comparisonLabel == queryLabel, before == queryBefore, after == queryAfter, compareTasks == queryMode, compareProvider == queryProvider else { return }
+                    if case .success(let data) = r, let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                        if queryMode { comparisonMessage = taskComparisonText(obj) }
+                        else if let formatted = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]), let text = String(data: formatted, encoding: .utf8) { comparisonMessage = text }
+                    }
                     else { comparisonMessage = tr("Use valid task and variant labels", "Проверьте метки задачи и вариантов") }
                 }
             }
@@ -921,6 +1058,8 @@ struct AnalysisView: View {
         }.onChange(of: comparisonLabel) { _, _ in comparisonMessage = "" }
         .onChange(of: before) { _, _ in comparisonMessage = "" }
         .onChange(of: after) { _, _ in comparisonMessage = "" }
+        .onChange(of: compareTasks) { _, _ in comparisonMessage = "" }
+        .onChange(of: compareProvider) { _, _ in comparisonMessage = "" }
     }
 }
 struct SubscriptionRow: View {
@@ -1109,9 +1248,17 @@ final class FloatingPanel: NSPanel {
             }
         }
     }
-    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        panel?.orderFrontRegardless()
-        return true
+    @objc func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if settingsWindow?.isVisible == true { presentUtilityWindow(settingsWindow) }
+        else if analysisWindow?.isVisible == true { presentUtilityWindow(analysisWindow) }
+        else { panel?.orderFrontRegardless(); sender.activate(ignoringOtherApps: true) }
+        return false
+    }
+    func applicationDidBecomeActive(_ notification: Notification) {
+        // A second executable launch activates the existing instance without a reopen event.
+        if panel?.isVisible == false && settingsWindow?.isVisible != true && analysisWindow?.isVisible != true {
+            panel?.orderFrontRegardless()
+        }
     }
     func updateStatus() {
         guard let button = statusItem?.button else { return }
@@ -1220,6 +1367,14 @@ final class FloatingPanel: NSPanel {
             hidePanel()
             fixtureControlChecks["widgetCloseHides"] = !panel.isVisible
             fixtureControlChecks["hidePreservesPlacement"] = store.displayMode == displayMode
+            _ = applicationShouldHandleReopen(NSApp, hasVisibleWindows: false)
+            fixtureControlChecks["explicitReopenShowsWidget"] = panel.isVisible
+            fixtureControlChecks["reopenPreservesPlacement"] = store.displayMode == displayMode
+            hidePanel()
+            applicationDidBecomeActive(Notification(name: NSApplication.didBecomeActiveNotification))
+            fixtureControlChecks["activationRestoresWidget"] = panel.isVisible
+            fixtureControlChecks["activationPreservesPlacement"] = store.displayMode == displayMode
+            hidePanel()
             togglePanel()
             fixtureControlChecks["statusRestoresWidget"] = panel.isVisible
             showSettings()
@@ -1264,6 +1419,7 @@ final class FloatingPanel: NSPanel {
         if mode == "expanded" { toggleExpanded() }
         if mode.hasPrefix("analysis") { showAnalysis() }
         if mode == "analysis-small" { analysisWindow?.setContentSize(NSSize(width: 620, height: 520)) }
+        if mode == "analysis-large" { analysisWindow?.setContentSize(NSSize(width: 900, height: 700)) }
         if mode == "settings" { showSettings() }
         if mode == "window-controls", store.isFixture { checkFixtureWindowControls(stage: 0, deadline: Date().addingTimeInterval(2)) }
         if mode == "window-focus", store.isFixture {

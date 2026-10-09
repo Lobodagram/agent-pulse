@@ -25,6 +25,18 @@ CONTROL_TOOLS=[
  {'name':'pulse_review_finding','description':'Record a human-reviewed finding decision. Actioned requires an implemented change; recheck is observational.','inputSchema':{'type':'object','properties':{'findingId':{'type':'string'},'status':{'type':'string','enum':['open','actioned','dismissed']},'reason':{'type':'string','enum':['unspecified','script','skill','mcp','routing','retrieval','fix','not-applicable','duplicate']},'days':{'type':'integer','enum':[1,3,7]}},'required':['findingId','status','reason','days'],'additionalProperties':False}},
  {'name':'pulse_annotate_session','description':'Save a genuinely reviewed task label and outcome; never fabricate accepted work to test analytics.','inputSchema':{'type':'object','properties':{'sessionId':{'type':'string'},'label':{'type':'string'},'variant':{'type':'string'},'outcome':{'type':'string','enum':['accepted','failed','rework','unknown']}},'required':['sessionId','label','variant','outcome'],'additionalProperties':False}}]
 TOOLS.append({'name':'pulse_settings','description':'Read allowlisted local settings and manual billing dates. Never returns keys, locators or native client files.','inputSchema':{'type':'object','properties':{},'additionalProperties':False}})
+TOOLS += [
+ {'name':'pulse_efficiency','description':'Versioned asset and reviewed-task metrics; unknown usage is not zero or subscription savings.','inputSchema':{'type':'object','properties':{},'additionalProperties':False}},
+ {'name':'pulse_compare_tasks','description':'Compare reviewed task cohorts; model/project/criterion and usage coverage gate observational token changes.','inputSchema':{'type':'object','properties':{'label':{'type':'string'},'before':{'type':'string'},'after':{'type':'string'},'provider':{'type':'string','enum':sorted(PROVIDER_IDS)}},'required':['label','before','after'],'additionalProperties':False}}]
+_str={'type':'string','minLength':1,'maxLength':1000}
+_asset_props={'provider':{'type':'string','enum':sorted(PROVIDER_IDS)},'assetId':_str,'version':_str,'kind':{'type':'string','enum':['skill','mcp','tool']},'findingId':_str,'operations':{'type':'array','maxItems':10,'items':_str}}
+_task_props={'provider':_asset_props['provider'],'taskId':_str,'label':_str,'variant':_str,'criterion':_str,'outcome':{'type':'string','enum':['accepted','failed','rework','unknown']},'callIds':{'type':'array','minItems':1,'maxItems':500,'items':{'type':'string','pattern':'^[a-f0-9]{32}$'}},'assetId':_str,'version':_str,'applied':{'type':'boolean'}}
+_usage_props={'provider':_asset_props['provider'],'sessionId':_str,'turnId':_str,**{k:{'type':'integer','minimum':0} for k in ['input','cached_input','output','modelRequests']},'complete':{'type':'boolean'}}
+for _name,_description,_props,_required in [
+ ('pulse_register_asset','Register an immutable public asset version, optionally linked to an observed finding.',_asset_props,['provider','assetId','version','kind']),
+ ('pulse_record_task','Record an actually reviewed contiguous task selection; declared application is not native invocation.',_task_props,['provider','taskId','label','variant','criterion','outcome','callIds']),
+ ('pulse_record_usage','Import actual native per-turn counters with explicit completeness; never estimate or fabricate receipts.',_usage_props,['provider','sessionId','turnId'])]:
+    CONTROL_TOOLS.append({'name':_name,'description':_description,'inputSchema':{'type':'object','properties':_props,'required':_required,'additionalProperties':False}})
 
 CONTROL_TOOLS[0]['inputSchema']['properties']['changes']={'type':'object','minProperties':1,'additionalProperties':False,'properties':{
  'enabledProviders':{'type':'array','items':{'type':'string','enum':sorted(PROVIDER_IDS)}},
@@ -57,6 +69,8 @@ def dispatch(request,state,allow_control=False):
     try:
         if name=='pulse_report' and not args:
             data=report(j);data.pop('recentCalls',None);data['sessions']=data['sessions'][:20];data['findings']=data['findings'][:10]
+            data['efficiency']['tasksTruncated'] |= bool(data['efficiency']['tasks']);data['efficiency']['tasks']=[]
+            data['efficiency']['assetsTruncated']=len(data['efficiency']['assets'])>10;data['efficiency']['assets']=data['efficiency']['assets'][:10]
             data['capabilitiesTruncated']=len(data['capabilities'])>20
             data['capabilities']=data['capabilities'][:20];data['toolUsage']=data['toolUsage'][:30];data['crossClientPatterns']=data['crossClientPatterns'][:10]
             data['findingReviewsTruncated'] |= len(data['findingReviews'])>10
@@ -76,6 +90,13 @@ def dispatch(request,state,allow_control=False):
             data=session_page(j,args['sessionId'],args.get('cursor'),limit)
             data['modelHistory']['truncated'] |= len(data['modelHistory']['segments'])>20
             data['modelHistory']['segments']=data['modelHistory']['segments'][-20:]
+        elif name=='pulse_efficiency' and not args:
+            from efficiency import efficiency_report
+            data=efficiency_report(j);data['tasksTruncated'] |= len(data['tasks'])>20;data['tasks']=data['tasks'][:20]
+            data['assetsTruncated']=len(data['assets'])>20;data['assets']=data['assets'][:20]
+        elif name=='pulse_compare_tasks' and {'label','before','after'}<=set(args)<={'label','before','after','provider'}:
+            from efficiency import compare_tasks
+            data=compare_tasks(j,args['label'],args['before'],args['after'],args.get('provider'))
         elif name=='pulse_compare' and set(args)=={'label','before','after'}:data=compare(j,args['label'],args['before'],args['after'])
         else:raise ValueError('tool_not_allowed')
         text=json.dumps(data,ensure_ascii=False,allow_nan=False)

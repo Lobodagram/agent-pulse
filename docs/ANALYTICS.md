@@ -1,5 +1,7 @@
 # Local workflow analytics
 
+[Versioned usefulness, reviewed tasks and cache metrics](EFFICIENCY.md) · new in 0.11.0.
+
 [Paged session viewing and empty-state guide](READING_ANALYTICS.md). Since 0.6.1 CLI/desktop returns up to 500 calls per page, MCP up to 100. Continue with nextCursor; general-export recentCalls remains a preview.
 
 [Русский](ANALYTICS.ru.md)

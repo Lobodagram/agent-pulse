@@ -117,3 +117,5 @@ On macOS **×** hides the widget while Agent Pulse keeps observing. Click the me
 ## Agent setup and control
 
 Give your agent this repository URL and ask it to follow [Agent setup](docs/AGENT_SETUP.md). Two portable skills cover setup and evidence-based workflow analysis. The stdio MCP is read-only by default; optional `--allow-control` enables bounded local preferences, billing dates and manual review decisions. It never accepts credentials or runs shell/model calls. [Russian guide](docs/AGENT_SETUP.ru.md).
+
+[Skill/MCP usefulness and cache metrics](docs/EFFICIENCY.md): reviewed task selections, immutable versions and coverage gates; no inferred subscription savings.

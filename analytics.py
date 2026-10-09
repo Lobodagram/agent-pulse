@@ -1,5 +1,5 @@
 """Deterministic workflow discovery. Suggestions are hypotheses with local evidence."""
-from collections import defaultdict
+from collections import Counter, defaultdict
 import statistics
 import time
 from capability_report import capabilities
@@ -41,7 +41,9 @@ def recommendation(j,key,kind,calls,sequence=None,*,summary_only=False):
     categories=set(sequence or [c['category'] for c in calls])
     inventory=[dict(r) for r in j.db.execute('SELECT * FROM inventory WHERE provider=?',(provider,))]
     # Generic other/shell buckets do not establish a useful substitution.
-    relevant=[r for r in inventory if r['category'] in categories-{'other','shell'}]
+    operations={c.get('operation') for c in calls}-{'unknown','legacy','shell','other','remote',None}
+    advertised={r['id'] for r in j.db.execute('SELECT id,operation FROM asset_operation WHERE provider=?',(provider,)) if r['operation'] in operations}
+    relevant=[r for r in inventory if r['category'] in categories-{'other','shell'} and (r['category'] not in {'remote','read','search'} or r['id'] in advertised)]
     recent=[r for r in relevant if time.time()-r['observed']<7*86400]
     available=[r for r in recent if r['status']=='available']
     configured=[r for r in recent if r['status']=='configured']
@@ -160,7 +162,7 @@ def findings(j,calls,*,summary_only=False):
         else:remaining.append(r)
     return (precise+chosen+remaining)[:30]
 
-def report(j,providers=None):
+def report(j,providers=None,session_limit=100):
     j.prune();calls=j.calls();calls=[c for c in calls if providers is None or c['provider'] in providers]
     sessions=defaultdict(list)
     for c in calls:sessions[(c['provider'],c['session'])].append(c)
@@ -172,7 +174,7 @@ def report(j,providers=None):
         usage_by_turn=defaultdict(list)
         for u in usage:usage_by_turn[u['turn']].append(u)
         totals={};conflicts=0
-        for component in ['input','output']:
+        for component in ['input','cached_input','output']:
             values=[];conflict=False
             for rows in usage_by_turn.values():
                 known={r[component] for r in rows if r[component] is not None}
@@ -184,7 +186,7 @@ def report(j,providers=None):
           'paired':sum(c['paired'] for c in items),'startedAt':min(starts) if starts else None,'endedAt':max(ends) if ends else None,
           'elapsedMs':(max(ends)-min(starts))*1000 if starts and ends and max(ends)>=min(starts) else None,
           'label':a['label'] if a else None,'outcome':a['outcome'] if a else 'unknown','variant':a['variant'] if a else None,
-          'reportedInputTokens':totals['input'],'reportedOutputTokens':totals['output'],
+          'reportedInputTokens':totals['input'],'reportedOutputTokens':totals['output'],'reportedCachedInputTokens':totals['cached_input'],
           'models':sorted({c['model'] for c in items if c['model']!='other'}),'modelHistory':model_history(items),
           'settingsCoverage':'model identifiers only when native hooks report them; effort and task difficulty unverified',
           'usageTurns':len(usage_by_turn),'usageConflicts':conflicts,'usageCoverage':'explicit turn reports only; conflicting components unknown; not a session total unless every turn is reported'})
@@ -232,7 +234,10 @@ def report(j,providers=None):
                'coverage':'native namespace only; plugin identity and live availability are not inferred'} for (p,n),items in namespaces.items()]
     from finding_review import reviewed_findings
     reviews=reviewed_findings(j,calls,providers)
-    return {'schemaVersion':4,'generatedAt':time.time(),'coverage':coverage,'sessions':sorted(summaries,key=lambda x:x['startedAt'] or 0,reverse=True)[:100],
+    from efficiency import efficiency_report
+    efficiency=efficiency_report(j,calls,providers)
+    return {'schemaVersion':5,'generatedAt':time.time(),'coverage':coverage,'sessions':sorted(summaries,key=lambda x:x['startedAt'] or 0,reverse=True)[:session_limit] if session_limit is not None else sorted(summaries,key=lambda x:x['startedAt'] or 0,reverse=True),
+      'sessionsTruncated':session_limit is not None and len(summaries)>session_limit,'efficiency':efficiency,
       'findings':findings(j,calls),'recentCalls':calls[-100:],'calls':len(calls),'eventLimitReached':total>20000,
       'capabilities':capabilities(j,providers),'toolUsage':sorted(tool_usage,key=lambda x:-x['calls'])[:100],
       'crossClientPatterns':sorted(cross,key=lambda x:-x['calls'])[:30],
@@ -240,6 +245,7 @@ def report(j,providers=None):
       'mcpNamespaces':sorted(mcp_usage,key=lambda x:-x['calls'])[:100],'findingReviews':reviews,
       'findingReviewsTruncated':j.db.execute('SELECT count(*) FROM finding_review').fetchone()[0]>30,
       'quality':{'pairedCalls':sum(c['paired'] for c in calls),'knownOutcomes':sum(c['paired'] and c['outcome'] in {'success','failed'} for c in calls),
+                 'outcomeSources':dict(Counter(c['outcomeSource'] for c in calls)),
                  'unpairedCalls':sum(not c['paired'] for c in calls),'windowDays':30,'completeCoverage':False},
       'tokenAttribution':'native turn usage only; no per-tool costs or subscription-token conversion',
       'analysisCoverage':{'bookkeepingCalls':sum(control_tool(c.get('tool','')) for c in calls),
@@ -251,7 +257,7 @@ def report(j,providers=None):
 def compare(j,label,before,after):
     from journal import safe_name
     if any(safe_name(x)=='other' for x in [label,before,after]) or before==after:raise ValueError('invalid_comparison')
-    rows=report(j)['sessions'];groups={v:[s for s in rows if s['label']==label and s['variant']==v] for v in [before,after]}
+    rows=report(j,session_limit=None)['sessions'];groups={v:[s for s in rows if s['label']==label and s['variant']==v] for v in [before,after]}
     result={'label':label,'before':before,'after':after,'groups':{},'confidence':'insufficient','tokenSavings':None,'causalClaim':False,
       'limitations':['User labels do not establish equal task difficulty or model settings.','Failed/rework outcomes count against an improvement.','Manual observations do not establish causation.']}
     for v,items in groups.items():

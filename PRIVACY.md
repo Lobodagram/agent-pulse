@@ -57,3 +57,9 @@ The default local stdio MCP exposes only bounded evidence/settings reads. Explic
 Kimi Code 2.x observer configuration is opt-in and byte-preserving outside its marked block; no native credential backup is created. Only projected metadata enters the own journal. Raw native tool_output is discarded. Own GLM/Kimi key edits share the journal-key initialization lock to preserve unrelated secrets/HMAC. Masked fields never load existing keys into the UI. A Kimi Work/Chat sign-in is not discovered or reused as a Code credential.
 
 Наблюдатель Kimi Code 2.x меняет только свой блок конфигурации и не сохраняет копию чужих ключей. Исходный tool_output отбрасывается. Записи личных ключей GLM/Kimi и ключа журнала защищены общей блокировкой; существующие ключи не загружаются в поля интерфейса. Вход Work/Chat не извлекается как доступ Code.
+
+## Versioned task evidence / Версии и приёмка задач
+
+0.11.0 adds public asset/version/criterion labels, HMAC task/call links, manual acceptance/application and explicit numeric per-turn receipts in own state. Native IDs are immediately hashed, arbitrary receipt source/content is rejected. Tasks and usage retain the existing 30-day window; the public version catalog persists, capped at 200 entries. No native conversation database access or automatic inference/evaluation is added. Reporter completeness and manual acceptance are not independently verified. Quotas remain separate from tokens and cache ratios.
+
+Хранятся публичные метки версий/критериев, хешированные связи задач/вызовов, ручная приёмка и числовые счётчики. Задачи/расход — 30 дней; каталог публичных версий — до очистки состояния, максимум 200. Нативные базы разговоров не читаются, модели не вызываются; полнота расхода и приёмка не проверяются независимо.

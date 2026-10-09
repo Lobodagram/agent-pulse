@@ -18,7 +18,7 @@ import collector
 from pulse_version import __version__
 import analytics
 import instrumentation
-from journal import Journal
+from journal import Journal, PROVIDERS
 import providers
 from agent_control import update_settings
 from platform_support import state_directory,windows_launch_at_login
@@ -402,6 +402,37 @@ class Pulse:
         for r in sorted(catalog,key=lambda r:(-(r['loaded']+r['invoked']+r['declared']),r['provider'],r['id'])):
             evidence=f"{r['loaded']} "+self.t('loaded','чтений')+f" · {r['invoked']} "+self.t('invoked','вызовов')+f" · {r['declared']} "+self.t('declared','отметок') if r['loaded']+r['invoked']+r['declared'] else self.t('No confirmed events','Нет подтверждённых событий')
             lines += [f"{r['provider']} · {r['kind']} · {r['id']}",evidence,r['status']+('' if r['inventoryFresh'] else self.t(' · refresh inventory',' · обновите каталог')),'']
+        asset_rows=report.get('efficiency',{}).get('assets',[])
+        lines=[self.t('USEFUL RESULTS · reviewed selections; quotas stay separate','ПОЛЬЗА · проверенные выборки; лимиты отдельно'),'']+lines
+        for r in asset_rows:
+            def metric(key,percent=False):
+                value=r.get(key)
+                return '—' if value is None else f'{value*100:.1f}%' if percent else f'{value:,.1f}'
+            lines += ['',f"{r['provider']} · {r['assetId']} · {r['version']}",
+                      f"{r['accepted']}/{r['reviewed']} "+self.t('accepted','принято')+f" · {r['usageCompleteTasks']}/{r['tasks']} "+self.t('complete reported usage','с полным переданным расходом'),
+                      self.t('Tokens / accepted: ','Токены / результат: ')+metric('tokensPerAccepted')+self.t(' · input from cache: ',' · вход из кэша: ')+metric('cacheHitRate',True),
+                      self.t('Reported model requests: ','Передано вызовов модели: ')+metric('modelRequests'),
+                      self.t('Median wall time, ms: ','Медиана времени, мс: ')+metric('medianElapsedMs')+f" · {r['elapsedTasks']}/{r['tasks']}",
+                      f"{r['nativeIdentityUses']} "+self.t('name invocations','вызовов имени')+f" · {r['declaredUses']} "+self.t('version attestations','отметок версии')]
+        lines += ['',self.t('Missing is unknown. Use and cache ratio do not prove subscription savings.','Пропуск неизвестен. Применение и доля кэша не доказывают экономию подписки.')]
+        def write_metadata(action,spec):
+            if self.fixture:return
+            from efficiency import register_asset,record_task
+            j=Journal(self.state)
+            try:
+                {'asset':register_asset,'task':record_task}[action](j,spec);self.refresh()
+                messagebox.showinfo('Agent Pulse',self.t('Saved locally','Сохранено локально'),parent=w)
+            except ValueError:messagebox.showerror('Agent Pulse',self.t('Check public labels, version and contiguous non-overlapping call selection.','Проверьте публичные метки, версию и последовательную непересекающуюся выборку вызовов.'),parent=w)
+            finally:j.close()
+        register=ttk.LabelFrame(capabilities,text=self.t('Register a version','Добавить версию'));register.pack(fill='x',padx=8,pady=4)
+        asset_provider=tk.StringVar(value='codex');asset_kind=tk.StringVar(value='skill');asset_name=tk.StringVar();asset_version=tk.StringVar(value='v1');asset_finding=tk.StringVar()
+        top=tk.Frame(register,bg=BG);top.pack(fill='x')
+        for var,values in [(asset_provider,sorted(PROVIDERS)),(asset_kind,['skill','mcp','tool'])]:ttk.Combobox(top,textvariable=var,values=values,width=10,state='readonly').pack(side='left',padx=2)
+        for title,var in [(self.t('Name','Имя'),asset_name),(self.t('Version','Версия'),asset_version)]:ttk.Label(top,text=title).pack(side='left');ttk.Entry(top,textvariable=var,width=16).pack(side='left',padx=2)
+        bottom=tk.Frame(register,bg=BG);bottom.pack(fill='x')
+        ttk.Label(bottom,text=self.t('Finding (optional)','Находка (необязательно)')).pack(side='left')
+        ttk.Combobox(bottom,textvariable=asset_finding,values=['']+[r['id'] for r in report.get('findings',[])],width=32,state='readonly').pack(side='left')
+        ttk.Button(bottom,text=self.t('Save version','Сохранить версию'),state='disabled' if self.fixture else 'normal',command=lambda:write_metadata('asset',{'provider':asset_provider.get(),'assetId':asset_name.get(),'version':asset_version.get(),'kind':asset_kind.get(),'findingId':asset_finding.get()})).pack(side='left',padx=3)
         textview(capabilities,lines)
         tk.Label(workflows,text=self.t('Suggestions need review; repeated does not mean waste.','Предложения требуют проверки; повтор не доказывает лишнюю работу.'),bg=BG,fg=QUIET,wraplength=670).pack(anchor='w',padx=8,pady=8)
         finder=ttk.Treeview(workflows,columns=('provider','repeats'),show='tree headings',height=7);finder.heading('#0',text=self.t('Workflow','Сценарий'));finder.heading('provider',text=self.t('Client','Клиент'));finder.heading('repeats',text=self.t('Occurrences','Повторы'));finder.column('provider',width=90,stretch=False);finder.column('repeats',width=80,stretch=False);finder.pack(fill='x',padx=8)
@@ -451,6 +482,27 @@ class Pulse:
         row=tk.Frame(sessions,bg=BG);row.pack(fill='x',padx=8);label=tk.StringVar();variant=tk.StringVar(value='before');outcome=tk.StringVar(value='unknown')
         for title,var in [(self.t('Task label','Метка'),label),(self.t('Variant','Вариант'),variant)]:tk.Label(row,text=title,bg=BG,fg=FG).pack(side='left');ttk.Entry(row,textvariable=var,width=13).pack(side='left',padx=3)
         ttk.Combobox(row,textvariable=outcome,values=['unknown','accepted','failed','rework'],width=10,state='readonly').pack(side='left')
+        review=ttk.LabelFrame(sessions,text=self.t('Review selected task · call numbers on this page','Оценить задачу · номера вызовов на странице'));review.pack(fill='x',padx=8,pady=4)
+        task_first=tk.StringVar(value='1');task_last=tk.StringVar(value='1');criterion=tk.StringVar(value='quality-v1');task_asset=tk.StringVar();task_applied=tk.BooleanVar(value=False)
+        task_assets={r['provider']+' · '+r['assetId']+' · '+r['version']:r for r in asset_rows}
+        review_top=tk.Frame(review,bg=BG);review_top.pack(fill='x')
+        for title,var,width in [(self.t('First','От'),task_first,4),(self.t('Last','До'),task_last,4),(self.t('Criterion','Критерий'),criterion,14)]:ttk.Label(review_top,text=title).pack(side='left');ttk.Entry(review_top,textvariable=var,width=width).pack(side='left',padx=3)
+        asset_picker=ttk.Combobox(review_top,textvariable=task_asset,values=['']+list(task_assets),width=25,state='readonly');asset_picker.pack(side='left')
+        review_bottom=tk.Frame(review,bg=BG);review_bottom.pack(fill='x')
+        ttk.Checkbutton(review_bottom,text=self.t('I confirm this version was applied','Подтверждаю применение этой версии'),variable=task_applied).pack(side='left')
+        def review_task():
+            if self.fixture or not tree.selection():return
+            try:
+                first=int(task_first.get())-1;last=int(task_last.get());calls=page_state.get('calls',[])
+                if not 0<=first<last<=len(calls):raise ValueError('invalid_selection')
+                selected_calls=calls[first:last]
+                spec={'provider':selected_calls[0]['provider'],'taskId':selected_calls[0]['id']+':'+selected_calls[-1]['id'],'label':label.get(),'variant':variant.get(),'criterion':criterion.get(),'outcome':outcome.get(),'callIds':[c['id'] for c in selected_calls]}
+                if task_asset.get():
+                    asset=task_assets[task_asset.get()];spec.update(assetId=asset['assetId'],version=asset['version'],applied=task_applied.get())
+                elif task_applied.get():raise ValueError('asset_required')
+                write_metadata('task',spec)
+            except (ValueError,KeyError):messagebox.showerror('Agent Pulse',self.t('Check task boundaries and version','Проверьте границы задачи и версию'),parent=w)
+        ttk.Button(review_bottom,text=self.t('Save task','Сохранить задачу'),command=review_task,state='disabled' if self.fixture else 'normal').pack(side='left',padx=3)
         detail=textview(sessions,[self.t('Select a session. Only sanitized metadata is shown.','Выберите сессию. Показываются только очищенные метаданные.')])
         pager=tk.Frame(sessions,bg=BG);pager.pack(fill='x',padx=8)
         position=tk.StringVar(value='');tk.Label(pager,textvariable=position,bg=BG,fg=QUIET).pack(side='left')
@@ -473,6 +525,8 @@ class Pulse:
                     position.set(self.t('Reopen session for a fresh snapshot','Откройте сессию заново для свежего снимка'));return
                 finally:j.close()
             else:position.set(self.t('Demo preview only','Только демо-просмотр'))
+            page_state['calls']=calls;task_first.set('1');task_last.set(str(max(1,len(calls))));task_asset.set('');task_applied.set(False)
+            asset_picker.configure(values=['']+[key for key,asset in task_assets.items() if asset['provider']==r['provider']])
             previous.configure(state='normal' if not self.fixture and page_state['index']>0 else 'disabled')
             following.configure(state='normal' if not self.fixture and page_state['next'] else 'disabled')
             unknown=self.t('Unknown model','Модель неизвестна')
@@ -486,7 +540,7 @@ class Pulse:
                 transition=transitions.get(s['transition'],s['transition']) if self.language=='ru' else s['transition']
                 lines.append(f"{model_name(s['model'])} · {s['calls']}\n  {model_time(s['firstObservedAt'])} → {model_time(s['lastObservedAt'])} · {transition}")
             if history['truncated']:lines.append(self.t('Last 100 segments; export for more.','Последние 100 участков; продолжение — в экспорте.'))
-            lines += ['',self.t('Observed calls; wall times may overlap.','Наблюдаемые вызовы; времена могут пересекаться.'),'']+[f"{c['category']} · {c['tool']} · {c['outcome']}\n  {model_name(c.get('model'))} · {c.get('modelSource','not-reported')}\n  {c['template']}\n  {c['durationMs']} ms · {c['durationSource']}" for c in calls]
+            lines += ['',self.t('Observed calls; wall times may overlap.','Наблюдаемые вызовы; времена могут пересекаться.'),'']+[f"{n+1}. {c['category']} · {c['tool']} · {c['outcome']}\n  {model_name(c.get('model'))} · {c.get('modelSource','not-reported')}\n  {c['template']}\n  {c['durationMs']} ms · {c['durationSource']}" for n,c in enumerate(calls)]
             detail.configure(state='normal');detail.delete('1.0','end');detail.insert('1.0','\n'.join(lines));detail.configure(state='disabled')
         tree.bind('<<TreeviewSelect>>',selected)
         def navigate(delta):
@@ -507,11 +561,19 @@ class Pulse:
         tk.Label(comparison,text=f"{labelled} "+self.t('labelled sessions in this view. Empty groups mean insufficient evidence.','размеченных сессий в этом разделе. Пустые группы означают недостаток данных.'),bg=BG,fg=QUIET,wraplength=670).pack(pady=4)
         row=tk.Frame(comparison,bg=BG);row.pack(fill='x',padx=8);task=tk.StringVar();before=tk.StringVar(value='before');after=tk.StringVar(value='after')
         for var in [task,before,after]:ttk.Entry(row,textvariable=var,width=18).pack(side='left',padx=3)
+        compare_tasks=tk.BooleanVar(value=True);compare_provider=tk.StringVar(value='codex')
+        mode=tk.Frame(comparison,bg=BG);mode.pack(fill='x',padx=8)
+        ttk.Checkbutton(mode,text=self.t('Compare reviewed tasks','Сравнивать отдельные задачи'),variable=compare_tasks).pack(side='left')
+        ttk.Combobox(mode,textvariable=compare_provider,values=sorted(PROVIDERS),width=12,state='readonly').pack(side='left')
+        tk.Label(mode,text=str(report.get('efficiency',{}).get('totalTasks',0))+self.t(' task selections',' выбранных задач'),bg=BG,fg=QUIET).pack(side='left',padx=8)
         result=textview(comparison,[self.t('Observational comparison only. No promised token saving or causal claim.','Сравнение наблюдений. Без обещаний экономии токенов и утверждений о причинности.')])
         def compare():
             if self.fixture:return
             j=Journal(self.state)
-            try:value=analytics.compare(j,task.get(),before.get(),after.get());result.configure(state='normal');result.delete('1.0','end');result.insert('1.0',json.dumps(value,ensure_ascii=False,indent=2));result.configure(state='disabled')
+            try:
+                from efficiency import compare_tasks as reviewed_comparison
+                value=reviewed_comparison(j,task.get(),before.get(),after.get(),compare_provider.get()) if compare_tasks.get() else analytics.compare(j,task.get(),before.get(),after.get())
+                result.configure(state='normal');result.delete('1.0','end');result.insert('1.0',json.dumps(value,ensure_ascii=False,indent=2));result.configure(state='disabled')
             except ValueError:messagebox.showerror('Agent Pulse',self.t('Invalid labels','Проверьте метки'))
             finally:j.close()
         ttk.Button(row,text=self.t('Compare','Сравнить'),command=compare).pack(side='left')

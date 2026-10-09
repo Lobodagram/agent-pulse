@@ -26,7 +26,7 @@ with tempfile.TemporaryDirectory() as tmp:
     assert responses[0]['result']['serverInfo']['version']==__version__
     assert json.loads(responses[1]['result']['content'][0]['text'])['calls']==1
     assert 'пакет проверки' in json.loads(responses[2]['result']['content'][0]['text'])['markdown']
-    assert len(responses[3]['result']['tools'])==6
+    assert len(responses[3]['result']['tools'])==8
     # Exercise the actual packaged control path with a different process holding
     # its lock. No test events/settings enter a real user's state.
     busy={'jsonrpc':'2.0','id':5,'method':'tools/call','params':{'name':'pulse_configure','arguments':{'changes':{'metricMode':'today'}}}}
@@ -60,6 +60,18 @@ with tempfile.TemporaryDirectory() as tmp:
     assert sorted(c['outcome'] for c in report['recentCalls'])==['success','unknown','unknown']
     assert {c['outcomeSource'] for c in report['recentCalls']}=={'structured-exit','conflicting-or-invalid-exit','result-limit-exceeded'}
     assert 'PRIVATE_RESULT_CANARY' not in r.stdout.decode()
+    efficiency_requests=[
+        ('pulse_register_asset',{'provider':'codex','assetId':'demo-release-helper','version':'1.0.0','kind':'skill'}),
+        ('pulse_record_usage',{'provider':'codex','sessionId':'frozen-demo','turnId':'demo-turn','input':100,'cached_input':50,'output':20,'modelRequests':1,'complete':True}),
+        ('pulse_record_task',{'provider':'codex','taskId':'fixture-task','label':'release-check','variant':'after','criterion':'checks-v1','outcome':'accepted','callIds':[c['id'] for c in report['recentCalls']],'assetId':'demo-release-helper','version':'1.0.0','applied':True}),
+        ('pulse_efficiency',{})]
+    requests=[{'jsonrpc':'2.0','id':i,'method':'tools/call','params':{'name':name,'arguments':args}} for i,(name,args) in enumerate(efficiency_requests)]
+    result=subprocess.run(base+['mcp','--allow-control'],input=('\n'.join(json.dumps(x) for x in requests)+'\n').encode(),capture_output=True,timeout=20,check=True)
+    replies=[json.loads(x) for x in result.stdout.splitlines()]
+    assert len(replies)==4 and all('result' in x and not x['result']['isError'] for x in replies)
+    card=json.loads(replies[-1]['result']['content'][0]['text'])['assets'][0]
+    assert card['tokensPerAccepted']==120 and card['cacheHitRate']==.5 and card['modelRequests']==1
+    assert card['subscriptionSavings'] is None and not card['causalClaim']
     parallel=[str(exe),'--state',str(Path(tmp)/'parallel-first-start')]
     def first_pair(index):
         for event in ('PreToolUse','PostToolUse'):
@@ -75,7 +87,7 @@ with tempfile.TemporaryDirectory() as tmp:
     concurrent_report=json.loads(result.stdout)
     assert concurrent_report['calls']==4 and all(c['paired'] and c['outcome']=='success' for c in concurrent_report['recentCalls'])
     assert (Path(tmp)/'parallel-first-start'/'.journal-key.lock').read_bytes()==b''
-print(json.dumps({'frozenHookJournalMcp':'passed','mcpConfigBusyRetry':'passed','conservativeResultMetadata':'passed','concurrentFirstHooks':'passed','modelsCalled':0,'syntheticDataOnly':True}))
+print(json.dumps({'frozenHookJournalMcp':'passed','versionTaskUsageRoundtrip':'passed','mcpConfigBusyRetry':'passed','conservativeResultMetadata':'passed','concurrentFirstHooks':'passed','modelsCalled':0,'syntheticDataOnly':True}))
 
 # Kimi Code native hook schema and inverse removal in throwaway native home only.
 with tempfile.TemporaryDirectory() as tmp:
