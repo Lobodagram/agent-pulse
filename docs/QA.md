@@ -1,3 +1,19 @@
+## 0.11.0 delivered efficiency acceptance · 2026-10-09
+
+[Release v0.11.0](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.11.0) is fixed at98dcf68fc25602252fc15d7c3d9b7cbe5b8adf38. [Source CI37889212979](https://github.com/Lobodagram/agent-pulse/actions/runs/37889212979) passed Linux, Windows, Mac ARM64 and Intel. [Package CI37889600352](https://github.com/Lobodagram/agent-pulse/actions/runs/37889600352) passed all three packages and publication. The154-file reviewed public tree matched exact blob hashes and modes; the expected-head lease passed and no private Git history was published. Local251tests/privacy/export/syntax/146links passed.
+
+All three downloaded archives matched SHA256SUMS and release API digests. Version/build35, efficiency/journal/analytics/result-metadata modules, runtime/notices, safe archive paths and approved brand hashes passed. Two approved own credential stores had zero exact raw/base64/hex matches across archive entries and four decoded Python surfaces; this is a scoped comparison. Downloaded Mac ARM64 passed strict/deep ad-hoc signature, frozen journal/task/asset/usage/MCP and two-second/concurrent-hook gates,23widget modes/12window-control assertions,2model-language renders,5chart scenarios and18efficiency renders. Eight representative downloaded images were visually inspected; all synthetic state stayed temporary. Acceptance bundles were removed.
+
+The downloaded0.11.0/build35 is installed atomically at canonical /Applications and the existing real dist observer path. Four configuration/secret files and modes were preserved, including Secrets0600, with compressed rollback ZIPs. Installed Settings version, enabled startup before/after update, actual Codex/GLM sources, Settings close and two real version cards passed; one canonical GUI remains running. Production reviewed tasks and per-turn receipts remain zero at this snapshot; unknown savings remain unknown. A native UI lookup timeout still launched the process; a verified exact-path reopen restored its widget. This does not establish a runtime launch failure.
+
+Actual enabled-state reboot, physical Windows/DPI and Intel-device acceptance, Mac Spaces/multiple displays, actual application-search popup counting, live Kimi and notarization remain open. No model calls, peer launch, fabricated production reviews or causal/subscription-savings claim.
+
+Downloaded SHA256:
+
+- agent-pulse-macos-arm64.zip: cbde1581f8d7b3517b1c16130357e267eb160c32e06245511645995e548ede33
+- agent-pulse-macos-x64.zip: 6d903a413f7d9e970dbf825d505de5732f8c165afb68be443df33aa4a5f88298
+- agent-pulse-windows-x64.zip: 2d15e64a422eb92f4de8b178ee8f9e2441b7cd13a944a62df9ae29bce8acc2a0
+
 ## 0.11.0 efficiency preparation · 2026-10-09
 
 Local source gates passed 251 tests, privacy/export, syntax and 146 document links. An isolated wheel and a fresh frozen collector passed end-to-end journal/task/asset/usage/MCP checks and strict hook deadlines, including concurrent first hooks. Native Mac signing, 23 widget modes and 12 window-control assertions passed. Eighteen synthetic efficiency renders across EN/RU and two window sizes, four final form renders and two model renders completed; representative images were visually inspected. Synthetic data stayed in temporary fixture journals. A 1,000-task/call fixture measured a 1.7255-second median full report on the development Mac; this measures report throughput, not productivity.
