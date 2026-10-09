@@ -1,3 +1,23 @@
+## 0.10.4 delivered brand acceptance · 2026-10-09
+
+[Release v0.10.4](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.10.4) points to the unchanged commit `9480c5a6d1e64f5d1e2d7380a48897d5117311f2`. [Source CI 37871731152](https://github.com/Lobodagram/agent-pulse/actions/runs/37871731152) passed all four platforms; [package CI 37872237412](https://github.com/Lobodagram/agent-pulse/actions/runs/37872237412) passed all three packages and publication. Local source gates passed 232 tests, privacy/export, syntax and 138 document links. All 149 public file hashes/modes matched the reviewed tree; private Git history was not published.
+
+The first source CI failed only the new Windows test's POSIX path expectation; the receipt uses native path separators. The assertion now uses str(Path(...)); all four jobs passed on the new exact commit. Earlier format-guard and native focus-attempt results are retained below. No production runtime change was inferred from the test failure.
+
+The supplied original transparent PNG is unchanged. Mac ICNS and logo resources, and all seven reviewed Windows frozen brand assets, matched approved source hashes in downloaded packages. The menu-bar ECG and compact quota text remain original. GitHub EN/RU README, uploaded social preview and release logo were verified in the browser; nineteen public app screenshots are reviewed synthetic fixtures only.
+
+All three downloaded archives matched release API digests and SHA256SUMS, version/build/runtime/notices/path checks. Two approved own credential stores had zero exact raw/base64/hex matches across archive entries and four decoded Python surfaces; this is scoped comparison. Downloaded Mac ARM64 passed strict/deep ad-hoc signature, frozen hook/journal/MCP checks, 23 widget modes, two model-language renders and five chart scenarios. The seven model/chart renders were inspected visually.
+
+The downloaded Mac package is installed at canonical /Applications and the existing observer-compatible dist path, both real directories. Atomic replacement retained four existing configuration/secret files and modes, including Secrets 0600; rollback files are compressed ZIPs. Installed Settings shows 0.10.4, received Codex/GLM quotas are available, and the startup checkbox reports enabled. Registration stayed enabled across local update, downloaded update and ordinary app relaunch. It is left enabled at the owner's request. The earlier reported reboot nonlaunch occurred while the checkbox was unchecked after previous acceptance intentionally restored disabled; an enabled-state reboot defect is not established. A real subsequent reboot was not performed.
+
+Physical Windows/DPI, Mac Spaces/multi-display, live Kimi, notarization and the older actual application-search popup count retain their documented open coverage. No new causal productivity or subscription-savings claim is made.
+
+Downloaded archive SHA256:
+
+- `agent-pulse-macos-arm64.zip`: `b0c891b15cbd838607fda23a83d863c5525564f7c64774960a89167048a4257e`
+- `agent-pulse-macos-x64.zip`: `514207686474a20d2c14118850aed1812742b53c99bb0a35d3f84d0a966937b9`
+- `agent-pulse-windows-x64.zip`: `60c970e4707a788bf9b46bebb871972ef0e6d9c4eb10c5e4dc319b43a4d3de75`
+
 ## 0.10.4 brand acceptance preparation · 2026-10-09
 
 The owner supplied and approved the orange logo. The original transparent PNG is retained unchanged; native icon derivatives, headers, Windows frozen paths, GitHub README and identity card use it. At the owner's follow-up request the macOS menu-bar ECG symbol and compact quota text remain unchanged. Two regression tests cover reviewed binary-format privacy gates and source/frozen Windows resource resolution;232 tests passed during preparation.
