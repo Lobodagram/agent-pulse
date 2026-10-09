@@ -1,8 +1,24 @@
 # QA evidence
 
+## 0.11.1 verified delivery · 2026-10-09
+
+Immutable tag v0.11.1 points to4b93a74a4d28ffe876f12218d0adc8e68fc13afe. [Source CI](https://github.com/Lobodagram/agent-pulse/actions/runs/37897387154) passed all four platforms; [package CI](https://github.com/Lobodagram/agent-pulse/actions/runs/37897937966) passed Mac ARM64/Intel, Windows and publication. The release export matched155 public blob hashes/modes. Source gates passed261 tests, privacy/export, syntax and147 document links.
+
+All three downloaded archives matched SHA256SUMS and release API digests. Runtime/notices, embedded0.11.1 versions/build36, efficiency modules and brand assets passed; a scoped comparison against two approved own credential stores found zero raw/base64/hex matches, including four decoded Python archives. Downloaded ARM64 passed strict signature, frozen hooks/MCP and deadlines,23 widget modes/window controls and a new frozen local-profile MCP fixture. Four EN/RU profile renders passed; partial RU and empty EN were visually inspected. Synthetic state and bundles were removed.
+
+The downloaded version is installed atomically at canonical /Applications and the existing real dist observer path, with compressed rollback. Four configuration/secret files and modes were preserved, including Secrets0600. Actual Settings0.11.1 and close, enabled startup before/after, enabled token-only collection, live Codex/GLM, Overview profile and installed frozen MCP passed. One canonical GUI remains running. The initial native UI lookup timed out after launching the hidden menu-only app; a verified exact-path reopen restored the widget. No runtime launch failure is established by that lookup timeout.
+
+Cache share uses only validated observed breakdowns, with explicit partial device-day coverage. No model-request count, production task acceptance, asset savings or subscription savings was invented. Actual enabled-state reboot, physical Windows/Intel, Mac Spaces/displays, application-search popup counting, live Kimi and notarization remain separate acceptance cases.
+
+Downloaded SHA256:
+
+- agent-pulse-macos-arm64.zip:43311a4f2e535070a049e5455a482f6f63366b0f952ee8ae977fc2fb47a4a9a3
+- agent-pulse-macos-x64.zip:bda6d7a6aad6f7f76c4cd92eeadc7877b447024299b7066e8e7f6d2e076bc905
+- agent-pulse-windows-x64.zip:969e53664d36fc699bc989165a00f64bbcfbe2d07177ea42f2a3e495192f8359
+
 ## 0.11.1 local token-profile preparation · 2026-10-09
 
-261 source tests, privacy/export, Python syntax and 146 documentation links passed. New isolated counter tests cover duplicate events, restart, missing/malformed schemas, inconsistent deltas, counter resets, UTC boundaries, backlog skips, legacy coverage, explicit opt-in and separation from account totals. A bounded metadata-only check on the current development task accepted the installed Codex 0.160.0 token schema; no raw bodies, IDs or production state were retained.
+261 source tests, privacy/export, Python syntax and 147 documentation links passed. New isolated counter tests cover duplicate events, restart, missing/malformed schemas, inconsistent deltas, counter resets, UTC boundaries, backlog skips, legacy coverage, explicit opt-in and separation from account totals. A bounded metadata-only check on the current development task accepted the installed Codex 0.160.0 token schema; no raw bodies, IDs or production state were retained.
 
 A fresh frozen helper passed the native hook/MCP smoke and deadlines. The Mac source build/signature, 23 widget modes and native window controls passed. Four EN/RU small-window token-profile renders cover partial and unknown counters; representative captures were inspected. Synthetic journals and bundles stayed temporary. Final publication/platform package and downloaded/installed acceptance are pending for this version. The installed 0.11.0 remains running during preparation. No models, native hook/config changes, peers or fabricated task acceptance.
 
