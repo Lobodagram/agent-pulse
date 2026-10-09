@@ -1,3 +1,11 @@
+# QA evidence
+
+## 0.11.1 local token-profile preparation · 2026-10-09
+
+261 source tests, privacy/export, Python syntax and 146 documentation links passed. New isolated counter tests cover duplicate events, restart, missing/malformed schemas, inconsistent deltas, counter resets, UTC boundaries, backlog skips, legacy coverage, explicit opt-in and separation from account totals. A bounded metadata-only check on the current development task accepted the installed Codex 0.160.0 token schema; no raw bodies, IDs or production state were retained.
+
+A fresh frozen helper passed the native hook/MCP smoke and deadlines. The Mac source build/signature, 23 widget modes and native window controls passed. Four EN/RU small-window token-profile renders cover partial and unknown counters; representative captures were inspected. Synthetic journals and bundles stayed temporary. Final publication/platform package and downloaded/installed acceptance are pending for this version. The installed 0.11.0 remains running during preparation. No models, native hook/config changes, peers or fabricated task acceptance.
+
 ## 0.11.0 delivered efficiency acceptance · 2026-10-09
 
 [Release v0.11.0](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.11.0) is fixed at98dcf68fc25602252fc15d7c3d9b7cbe5b8adf38. [Source CI37889212979](https://github.com/Lobodagram/agent-pulse/actions/runs/37889212979) passed Linux, Windows, Mac ARM64 and Intel. [Package CI37889600352](https://github.com/Lobodagram/agent-pulse/actions/runs/37889600352) passed all three packages and publication. The154-file reviewed public tree matched exact blob hashes and modes; the expected-head lease passed and no private Git history was published. Local251tests/privacy/export/syntax/146links passed.

@@ -94,6 +94,14 @@ def dispatch(request,state,allow_control=False):
             from efficiency import efficiency_report
             data=efficiency_report(j);data['tasksTruncated'] |= len(data['tasks'])>20;data['tasks']=data['tasks'][:20]
             data['assetsTruncated']=len(data['assets'])>20;data['assets']=data['assets'][:20]
+            from providers import load_config
+            config=load_config(state);data['localTokenProfile']=None
+            if 'codex' in config['enabledProviders'] and (config.get('localTokens') or config.get('localPatterns')):
+                from collector import Store
+                from datetime import datetime,timezone
+                saved=Store(state)
+                try:data['localTokenProfile']=saved.local_token_profile(datetime.now(timezone.utc).strftime('%Y-%m-%d'))
+                finally:saved.db.close()
         elif name=='pulse_compare_tasks' and {'label','before','after'}<=set(args)<={'label','before','after','provider'}:
             from efficiency import compare_tasks
             data=compare_tasks(j,args['label'],args['before'],args['after'],args.get('provider'))

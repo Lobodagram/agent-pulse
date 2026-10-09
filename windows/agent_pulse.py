@@ -384,6 +384,15 @@ class Pulse:
         report=self.data.get('analytics',{});lines=[self.t('Tokens, quotas and billing dates are separate. Missing is unknown.','Токены, лимиты и даты оплаты различаются. Пропуск неизвестен.'),'']
         for p in self.data.get('providers',[]):
             lines += [p['name']+' · '+p['status'],self.t('Tokens today: ','Токены сегодня: ')+(str(p['todayTokens']) if p.get('todayTokens') is not None else '—'),p.get('tokenCoverage',''),'']
+            profile=p.get('localTokenProfile')
+            if profile:
+                count=lambda key:'—' if profile.get(key) is None else f"{profile[key]:,.0f}"
+                rate=lambda key:'—' if profile.get(key) is None else f"{profile[key]*100:.1f}%"
+                lines += [self.t('Local device · UTC ','На этом устройстве · UTC ')+profile['date'],
+                    self.t('Input / output: ','Вход / выход: ')+count('inputTokens')+' / '+count('outputTokens'),
+                    self.t('Cached input: ','Вход из кэша: ')+count('cachedInputTokens')+' · '+rate('cacheHitRate'),
+                    self.t('Breakdown coverage: ','Охват детализации: ')+rate('counterCoverageRate')+self.t(' of observed tokens · partial',' наблюдаемых токенов · частично'),
+                    self.t('Cache share does not measure subscription or skill savings.','Доля кэша не измеряет экономию подписки или пользу навыка.'),'']
             if 'local_tokens_backlog_skipped' in p.get('sourceStatus',[]):lines.append(self.t('Local backlog skipped; recent counters are partial, missing history is not reconstructed.','Локальное отставание пропущено; свежие счётчики частичны, пропущенная история не восстановлена.'))
         for d in self.data.get('history',[]):lines.append(f"{d['date']}  {d['provider']:10}  {d['tokens']:>12,.0f}")
         lines+=['',self.t('OBSERVED COVERAGE','НАБЛЮДАЕМЫЙ ОХВАТ')]

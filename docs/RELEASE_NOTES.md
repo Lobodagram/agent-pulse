@@ -1,3 +1,15 @@
+# Agent Pulse 0.11.1 — local cache metrics / локальная аналитика кэша
+
+The existing opt-in Codex token collector now reports local device-day input, output and cached input. Overview on macOS and Windows shows cache share and breakdown coverage; read-only `pulse_efficiency` returns saved counters without starting native collection. Account totals, task/version metrics and subscription allowance remain separate.
+
+Validated vector deltas handle duplicate observations, UTC boundaries, missing schemas, resets and skipped backlogs conservatively. Older counts remain unprofiled; missing counters remain unknown. No model-request count, skill savings or subscription savings is inferred. Compact widget/menu-bar behavior is unchanged.
+
+В «Обзоре» появились входные, выходные и кэшированные токены, доля кэша и охват детализации. Используется прежний добровольный локальный сбор. Эти данные показывают работу кэша на устройстве; экономия конкретного навыка требует полных счётчиков сопоставимых принятых задач. Проценты подписки не переводятся в токены.
+
+Preview scope and actual checks are recorded in [QA](QA.md). The Codex transcript format may change; unsupported breakdowns stay unknown. Real reboot, physical Windows/Intel, multiple displays, live Kimi and notarization remain separate acceptance cases. No model calls or private telemetry publication.
+
+---
+
 # Agent Pulse 0.11.0 — reviewed-task efficiency / эффективность задач
 
 Agent Pulse now links reviewed tasks to a specific skill, MCP server or tool version. Capabilities shows applied versions, observed identity-level invocations and task acceptance. Compare reports before/after differences only for sufficiently covered, comparable groups without a decline in acceptance.

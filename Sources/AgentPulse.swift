@@ -39,11 +39,17 @@ func compactQuotaLine(_ p: Provider) -> String {
     return (p.status == "stale" ? "~" : "") + p.id.uppercased() + " " + (values.isEmpty ? "—" : values.joined(separator: " · "))
 }
 struct Subscription: Codable { var date: String?; var kind: String; var source: String }
+struct LocalTokenProfile: Codable {
+    var date: String; var inputTokens: Double?; var outputTokens: Double?; var cachedInputTokens: Double?
+    var cacheHitRate: Double?; var counterCoverageRate: Double?
+}
+func percentText(_ value: Double?) -> String { value.map { String(format: "%.1f%%", $0 * 100) } ?? "—" }
 struct Provider: Codable, Identifiable {
     var id: String; var name: String; var status: String; var quotas: [Quota]
     var todayTokens: Double?; var lifetimeTokens: Double?; var periodTokens: Double?; var contextTokens: Double?
     var sessions: Double?; var resetCredits: Double?; var sourceStatus: [String]; var quotaError: String?
     var accountScope: String?; var quotaObservedAt: Double?; var observedAt: Double?; var lastSuccessfulAt: Double?; var tokenSource: String?; var tokenCoverage: String?; var todayTokenCoverage: String?; var todayTokenStatus: String?; var subscription: Subscription
+    var localTokenProfile: LocalTokenProfile?
 }
 struct ProviderSpec: Codable, Identifiable { var id: String; var name: String; var mode: String; var support: String }
 struct DayUsage: Codable, Identifiable {
@@ -764,7 +770,7 @@ struct AnalysisView: View {
     func overview(_ snapshot: Snapshot) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(tr("Quota windows, reported tokens and billing dates remain separate.", "Окна лимитов, переданные токены и даты оплаты учитываются отдельно.")).font(.system(size: 12)).foregroundStyle(quiet)
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 16) {
+            LazyVGrid(columns: [GridItem(.flexible(), alignment: .topLeading), GridItem(.flexible(), alignment: .topLeading)], alignment: .leading, spacing: 16) {
                 ForEach(snapshot.providers) { p in
                     VStack(alignment: .leading, spacing: 5) {
                         Text(p.name).font(.system(size: 16, weight: .semibold))
@@ -773,6 +779,13 @@ struct AnalysisView: View {
                         Text(subscriptionText(p.subscription)).font(.system(size: 11)).foregroundStyle(quiet)
                         Text(p.tokenSource ?? tr("Source unavailable", "Источник недоступен")).font(.system(size: 10)).foregroundStyle(quiet)
                         Text((p.todayTokenCoverage == "partial-local" ? tr("Today: partial local counters", "Сегодня: частичные локальные счётчики") : nil) ?? p.tokenCoverage ?? "").font(.system(size: 10)).foregroundStyle(quiet)
+                        if let profile = p.localTokenProfile {
+                            Text(tr("Local device · UTC ", "На этом устройстве · UTC ") + profile.date).font(.system(size: 10)).foregroundStyle(quiet)
+                            Text(tr("Input / output: ", "Вход / выход: ") + fullNumber(profile.inputTokens) + " / " + fullNumber(profile.outputTokens)).font(.system(size: 11))
+                            Text(tr("Cached input: ", "Вход из кэша: ") + fullNumber(profile.cachedInputTokens) + " · " + percentText(profile.cacheHitRate)).font(.system(size: 11)).foregroundStyle(mint)
+                            Text(tr("Breakdown coverage: ", "Охват детализации: ") + percentText(profile.counterCoverageRate) + tr(" of observed tokens · partial", " наблюдаемых токенов · частично")).font(.system(size: 10)).foregroundStyle(quiet)
+                            Text(tr("Cache share does not measure subscription or skill savings.", "Доля кэша не измеряет экономию подписки или пользу навыка.")).font(.system(size: 10)).foregroundStyle(quiet)
+                        }
                         if p.sourceStatus.contains("local_tokens_backlog_skipped") {
                             Text(tr("Local backlog skipped: recent counters only; missing history is not reconstructed.", "Локальное отставание пропущено: учтены свежие счётчики; пропущенная история не восстановлена.")).font(.system(size: 10)).foregroundStyle(amber)
                         }

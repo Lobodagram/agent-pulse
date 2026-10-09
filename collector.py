@@ -288,6 +288,8 @@ class Store:
         CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY,provider TEXT,at INTEGER,name TEXT,failed INTEGER);
         CREATE TABLE IF NOT EXISTS token_events(id TEXT PRIMARY KEY,date TEXT,tokens INTEGER);
         CREATE TABLE IF NOT EXISTS token_totals(id TEXT PRIMARY KEY,total INTEGER);
+        CREATE TABLE IF NOT EXISTS token_profiles(id TEXT PRIMARY KEY,input INTEGER,output INTEGER,cached INTEGER);
+        CREATE TABLE IF NOT EXISTS token_profile_totals(id TEXT PRIMARY KEY,date TEXT,input INTEGER,output INTEGER,cached INTEGER,total INTEGER);
         CREATE TABLE IF NOT EXISTS cursors(id TEXT PRIMARY KEY,offset INTEGER);
         CREATE TABLE IF NOT EXISTS rollout_gaps(id TEXT PRIMARY KEY,at INTEGER);
         CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT);
@@ -340,6 +342,8 @@ class Store:
         self.db.execute('DELETE FROM events WHERE at<?',(stamp-30*86400,))
         self.db.execute('DELETE FROM rollout_gaps WHERE at<?',(stamp-30*86400,))
         self.db.execute('DELETE FROM token_events WHERE date<?',((datetime.now()-timedelta(days=30)).strftime('%Y-%m-%d'),))
+        self.db.execute('DELETE FROM token_profiles WHERE NOT EXISTS (SELECT 1 FROM token_events e WHERE e.id=token_profiles.id)')
+        self.db.execute('DELETE FROM token_profile_totals WHERE date<?',((datetime.now(timezone.utc)-timedelta(days=30)).strftime('%Y-%m-%d'),))
         self.db.execute('DELETE FROM account_daily WHERE date<?',((datetime.now()-timedelta(days=180)).strftime('%Y-%m-%d'),))
         self.db.execute('DELETE FROM daily WHERE date<?',((datetime.now()-timedelta(days=180)).strftime('%Y-%m-%d'),))
         self.db.commit()
@@ -367,6 +371,7 @@ class Store:
             # Bounded recent coverage rather than an indefinitely delayed backlog.
             # A cumulative delta across skipped bytes would misattribute older days.
             self.db.execute('DELETE FROM token_totals WHERE id=?',(ident,))
+            self.db.execute('DELETE FROM token_profile_totals WHERE id=?',(ident,))
             self.db.execute('INSERT OR REPLACE INTO rollout_gaps VALUES (?,?)',(ident,int(time.time())))
         added=0
         with path.open('rb') as f:
@@ -399,6 +404,19 @@ class Store:
                     amount=max(0,cumulative_total-prev[0]) if prev else min(last,cumulative_total)
                     eid=hashlib.sha256(f'{ident}:{offset}:tokens'.encode()).hexdigest()
                     self.db.execute('INSERT OR IGNORE INTO token_events VALUES (?,?,?)',(eid,date,amount))
+                    breakdown=project_token_breakdown(event)
+                    baseline=self.db.execute('SELECT date,input,output,cached,total FROM token_profile_totals WHERE id=?',(ident,)).fetchone()
+                    if breakdown:
+                        current,latest=breakdown
+                        # A vector delta is usable only with the same validated total baseline and UTC day.
+                        if baseline and baseline[0]==date and prev and baseline[4]==prev[0] and cumulative_total>=prev[0]:
+                            observed=tuple(a-b for a,b in zip(current,baseline[1:4]))
+                        elif not prev or cumulative_total>prev[0]:observed=latest
+                        else:observed=None
+                        if observed is not None and min(observed)>=0 and observed[2]<=observed[0] and sum(observed[:2])<=amount:
+                            self.db.execute('INSERT OR IGNORE INTO token_profiles VALUES (?,?,?,?)',(eid,*observed))
+                        self.db.execute('INSERT OR REPLACE INTO token_profile_totals VALUES (?,?,?,?,?,?)',(ident,date,*current,cumulative_total))
+                    else:self.db.execute('DELETE FROM token_profile_totals WHERE id=?',(ident,))
                     self.db.execute('INSERT OR REPLACE INTO token_totals VALUES (?,?)',(ident,cumulative_total))
                 for at,name,failed in (project_event(event) if include_tools else []):
                     eid=hashlib.sha256(f'{ident}:{offset}:{name}'.encode()).hexdigest()
@@ -412,6 +430,20 @@ class Store:
     def local_tokens(self,day):
         row=self.db.execute('SELECT sum(tokens) FROM token_events WHERE date=?',(day,)).fetchone()
         return row[0] if row else None
+
+    def local_token_profile(self,day):
+        """Observed device-day counters; never account, task, request or saving attribution."""
+        row=self.db.execute('''SELECT sum(p.input),sum(p.output),sum(p.cached),sum(e.tokens),
+          sum(CASE WHEN e.tokens>0 AND p.id IS NULL THEN 1 ELSE 0 END)
+          FROM token_events e LEFT JOIN token_profiles p ON p.id=e.id WHERE e.date=?''',(day,)).fetchone()
+        inputs,outputs,cached,observed,gaps=row
+        profiled=inputs+outputs if inputs is not None and outputs is not None else None
+        return {'provider':'codex','date':day,'scope':'device-local','coverage':'partial-local',
+                'inputTokens':inputs,'outputTokens':outputs,'cachedInputTokens':cached,'profiledTokens':profiled,
+                'observedTokens':observed,'cacheHitRate':cached/inputs if inputs else None,
+                'counterCoverageRate':profiled/observed if profiled is not None and observed else None,
+                'unprofiledEvents':gaps or 0,'modelRequests':None,'subscriptionSavings':None,
+                'attribution':'observed device day only; no task or asset attribution'}
 
     def persist_local_tokens(self):
         for day,tokens in self.db.execute('SELECT date,sum(tokens) FROM token_events GROUP BY date').fetchall():
@@ -440,13 +472,16 @@ class Store:
 
 
 def project_token_event(event):
+    if not isinstance(event,dict):return None
     if event.get('type')!='event_msg':return None
     p=event.get('payload')
     if not isinstance(p,dict) or p.get('type')!='token_count':return None
     info=p.get('info')
     if not isinstance(info,dict):return None
-    total=number((info.get('total_token_usage') or {}).get('total_tokens'))
-    last=number((info.get('last_token_usage') or {}).get('total_tokens'))
+    cumulative=info.get('total_token_usage');latest=info.get('last_token_usage')
+    if not isinstance(cumulative,dict) or not isinstance(latest,dict):return None
+    total=number(cumulative.get('total_tokens'))
+    last=number(latest.get('total_tokens'))
     if total is None or last is None:return None
     try:
         at=datetime.fromisoformat(event['timestamp'].replace('Z','+00:00'))
@@ -454,6 +489,20 @@ def project_token_event(event):
         day=at.astimezone(timezone.utc).strftime('%Y-%m-%d')
     except (KeyError,ValueError,TypeError):return None
     return day,int(total),int(last)
+
+
+def project_token_breakdown(event):
+    """Strict current Codex token schema, fail closed on unknown/malformed counters."""
+    if not project_token_event(event):return None
+    info=event['payload']['info'];vectors=[]
+    for key in ('total_token_usage','last_token_usage'):
+        usage=info[key];values=[usage.get(k) for k in ('input_tokens','output_tokens','cached_input_tokens','total_tokens')]
+        if any(type(v)!=int or not 0<=v<=10**15 for v in values):return None
+        inputs,outputs,cached,total=values
+        if cached>inputs or inputs+outputs!=total:return None
+        vectors.append((inputs,outputs,cached))
+    if any(a>b for a,b in zip(vectors[1],vectors[0])):return None
+    return tuple(vectors)
 
 
 def project_event(event):
@@ -534,6 +583,7 @@ def snapshot(directory, collect_patterns=None):
         codex['localTokenGaps']=gaps
         if gaps:codex.setdefault('sourceStatus',[]).append('local_tokens_backlog_skipped')
         store.persist_local_tokens()
+        codex['localTokenProfile']=store.local_token_profile(day)
         if codex.get('todayTokens') is None:
             codex['todayTokens']=store.local_tokens(day);codex['todayTokenCoverage']='partial-local'
             codex['todayTokenStatus']='partial-local' if codex['todayTokens'] is not None else 'local-day-pending'

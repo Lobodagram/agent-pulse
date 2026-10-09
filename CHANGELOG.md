@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.1 · 2026-10-09
+
+- Existing opt-in Codex token collection now records a local device-day input/output/cache breakdown. Overview on macOS/Windows and the read-only efficiency MCP show cache share and breakdown coverage separately from account totals and reviewed-task metrics.
+- Duplicate records, counter resets, schema gaps, skipped backlogs and UTC boundaries preserve partial coverage. Old counts are not replayed or marked complete. Malformed token payload shapes no longer interrupt collection.
+- No inferred model requests, per-skill token attribution or subscription savings. The original compact menu bar remains unchanged.
+
 ## 0.11.0 · 2026-10-09
 
 - Local immutable skill/MCP/tool versions link findings to bounded, non-overlapping reviewed tasks. Acceptance, declared application and observed name invocations remain separate.
