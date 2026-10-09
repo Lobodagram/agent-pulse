@@ -1,3 +1,13 @@
+## 0.10.4 brand acceptance preparation · 2026-10-09
+
+The owner supplied and approved the orange logo. The original transparent PNG is retained unchanged; native icon derivatives, headers, Windows frozen paths, GitHub README and identity card use it. At the owner's follow-up request the macOS menu-bar ECG symbol and compact quota text remain unchanged. Two regression tests cover reviewed binary-format privacy gates and source/frozen Windows resource resolution;232 tests passed during preparation.
+
+The first social screenshot arrived as JPEG bytes despite a .png filename; the export format guard correctly rejected it. PNG container conversion and its reviewed hash fixed that artifact. The first native fixture attempt had utilityFocusPassed false while toggle/restore/placement and all recorded readiness checks were true; its cause is not established. After the final menu-source adjustment and closing the live app, rebuilt Swift/frozen checks and all23 widget modes passed. Temporary app bundles were removed. These results do not replace final platform CI/download checks.
+
+The installed0.10.3 startup checkbox was visibly unchecked after the previous acceptance had intentionally restored it off. The owner's new request enabled SMAppService successfully and the UI reported enabled. Registration will be verified after installing the branded release, with the setting left enabled. A real subsequent reboot is separate; the reported nonlaunch with startup disabled is not treated as proof of an enabled-state defect.
+
+Nineteen updated public app screenshots use invented fixtures only. Public source, package and installed results will be recorded after completion. Physical Windows/DPI, Mac Spaces/multi-display, live Kimi and notarization retain their earlier limitations.
+
 ## 0.10.3 delivered acceptance · 2026-10-08
 
 [Release v0.10.3](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.10.3) is the immutable commit `7650a7ee4b7f14e683c2a5b9e2f4a52feb9b03d6`. [Source CI 37821097285](https://github.com/Lobodagram/agent-pulse/actions/runs/37821097285) passed all four platforms; [package CI 37821687242](https://github.com/Lobodagram/agent-pulse/actions/runs/37821687242) passed all three packages and publication. 230 local tests passed. The 137 allowlisted public files matched hashes and modes; private Git history was not published.

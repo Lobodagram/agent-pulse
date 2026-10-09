@@ -11,6 +11,7 @@ import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import ttk, messagebox, filedialog
 from pulse_tray import Tray, Instance
+from pulse_brand import asset
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from compact_summary import provider_line,quota_pages,tray_tooltip,window_label
 import collector
@@ -30,9 +31,12 @@ class Pulse:
         self.utility_windows={};self.utility_press=None
         self.collapsed=False;self.compact_page=0;self.full_position=(100,100);self.refresh_failed=False
         root.title('Agent Pulse');root.geometry('400x310+100+100');root.configure(bg=BG);root.overrideredirect(True);root.attributes('-topmost',True)
+        self.brand_image=tk.PhotoImage(file=str(asset('logo-32.png')))
+        self.header_image=self.brand_image.subsample(2,2)
+        root.iconphoto(True,self.brand_image)
         header=tk.Frame(root,bg=BG);header.pack(fill='x',padx=14,pady=(8,4))
         self.header=header;self.header_buttons=[]
-        title=tk.Label(header,text='● AGENT PULSE'+(' · DEMO' if fixture else ''),bg=BG,fg=MINT,font=('Segoe UI',10,'bold'));title.pack(side='left')
+        title=tk.Label(header,text='AGENT PULSE'+(' · DEMO' if fixture else ''),image=self.header_image,compound='left',padx=3,bg=BG,fg=MINT,font=('Segoe UI',10,'bold'));title.pack(side='left')
         self.header_title=title
         title.bind('<Button-1>',self.begin_drag);title.bind('<B1-Motion>',self.drag)
         for text,command in [('×',self.quit),('⌄',self.collapse),('⚙',self.settings),('▥',self.analysis),('↻',self.refresh)]:
@@ -217,6 +221,7 @@ class Pulse:
             if self.smoke:
                 try:
                     assert not self.tray_initialization_error,self.tray_initialization_error
+                    if sys.platform=='win32':assert self.tray.owned_icon, 'Approved tray icon must load in source and packaged modes'
                     name='Local\\AgentPulseSmoke'+str(os.getpid())
                     first=Instance(name);second=Instance(name)
                     try:assert first.owns and (not second.owns or sys.platform!='win32')
@@ -294,7 +299,7 @@ class Pulse:
         for c in self.content.winfo_children():c.destroy()
         if self.collapsed:
             self.render_compact();return
-        self.header_title.config(text='● AGENT PULSE'+(' · DEMO' if self.fixture else ''))
+        self.header_title.config(text='AGENT PULSE'+(' · DEMO' if self.fixture else ''))
         for button in self.header_buttons:button.pack(side='right')
         self.collapse_button.config(text='⌄');self.footer.pack(fill='x',padx=16,pady=6)
         allp=self.data.get('providers',[]);pages=max(1,(len(allp)+1)//2);self.page%=pages;self.page_label.config(text=f'{self.page+1}/{pages}')
@@ -322,7 +327,9 @@ class Pulse:
         self.set_scale(self.scale,save=False)
         self.update_tray()
     def window(self,title):
-        w=tk.Toplevel(self.root);w.title(title);w.geometry('760x600');w.configure(bg=BG);w.attributes('-topmost',False);w.after_idle(w.focus_force);return w
+        w=tk.Toplevel(self.root);w.title(title);w.geometry('760x600');w.configure(bg=BG);w.attributes('-topmost',False)
+        tk.Label(w,text=title,image=self.brand_image,compound='left',padx=8,bg=BG,fg=FG,font=('Segoe UI',14,'bold')).pack(anchor='w',padx=12,pady=(12,0))
+        w.after_idle(w.focus_force);return w
     def capture_utility_focus(self,event):
         focused=self.root.focus_displayof()
         self.utility_press=(focused.winfo_toplevel() if focused else None,)

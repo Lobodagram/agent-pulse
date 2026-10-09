@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.4 · 2026-10-09
+
+- Supplied Agent Pulse logo in macOS app icon/widget/utility headers, Windows executable/tray/window/header and GitHub identity.
+- Exact approved artwork and native icon derivatives have a reviewed hash/format export gate; Windows source and packaged paths share resource discovery.
+- Startup remains opt-in; the development account is enabled at the owner’s request after the previous acceptance restored it off. Reboot behavior is not claimed from app relaunch alone.
+
 ## 0.10.3 · 2026-10-08
 
 - On macOS the widget has one close button that hides it while observation continues. Quit stays in the menu-bar context menu and Command-Q. Closing the widget preserves its placement preference. Header controls use their full rectangular hit area.

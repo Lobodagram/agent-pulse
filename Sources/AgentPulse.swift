@@ -438,7 +438,7 @@ struct WidgetView: View {
     var surface: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 4) {
-                HStack(spacing: 4) { Circle().fill(store.loading ? amber : mint).frame(width: 6, height: 6); Text("AGENT PULSE").font(.system(size: 11, weight: .semibold)).tracking(1); if store.isFixture { Text("DEMO").font(.system(size: 9)).foregroundStyle(amber) } }.frame(height: 26).overlay(DragHandle()).help(tr("Drag by this title", "Перетащить за заголовок"))
+                HStack(spacing: 4) { PulseBrandMark(size: 20); Text("AGENT PULSE").font(.system(size: 11, weight: .semibold)).tracking(1); if store.isFixture { Text("DEMO").font(.system(size: 9)).foregroundStyle(amber) } }.frame(height: 26).overlay(DragHandle()).help(tr("Drag by this title", "Перетащить за заголовок"))
                 Spacer()
                 ActionButton(symbol: "arrow.clockwise", help: tr("Refresh", "Обновить"), action: store.refresh)
                 ActionButton(symbol: "chart.bar.xaxis", help: tr("Analytics", "Аналитика"), action: actions.showAnalysis)
@@ -665,7 +665,7 @@ struct AnalysisView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack { Text(tr("Agent activity", "Работа агентов")).font(.system(size: 26, weight: .medium)); if store.isFixture { Text("DEMO").font(.system(size: 10)).foregroundStyle(amber) }; Spacer(); Button(tr("Refresh", "Обновить"), action: store.refresh).disabled(store.loading || store.isFixture) }
+            HStack { PulseBrandMark(size: 32); Text(tr("Agent activity", "Работа агентов")).font(.system(size: 26, weight: .medium)); if store.isFixture { Text("DEMO").font(.system(size: 10)).foregroundStyle(amber) }; Spacer(); Button(tr("Refresh", "Обновить"), action: store.refresh).disabled(store.loading || store.isFixture) }
             HStack { Button(tr("Export Markdown", "Экспорт Markdown"), action: exportReview).disabled(store.isFixture); Text(reviewMessage).font(.system(size: 11)).foregroundStyle(quiet).fixedSize(horizontal: false, vertical: true) }
             Picker("View", selection: $tab) {
                 Text(tr("Overview", "Обзор")).tag("overview"); Text(tr("Workflows", "Сценарии")).tag("workflows")
@@ -965,6 +965,7 @@ struct SettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
+                PulseBrandMark(size: 30)
                 Text(tr("Agent Pulse settings", "Настройки Agent Pulse")).font(.system(size: 23, weight: .medium))
                 Spacer()
                 ActionButton(symbol: "minus", help: tr("Minimize settings", "Свернуть настройки"), action: actions.minimizeSettings)

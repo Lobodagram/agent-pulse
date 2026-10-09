@@ -1,5 +1,7 @@
 # Agent Pulse
 
+<p><img src="brand/agent-pulse.png" alt="Agent Pulse" width="112" height="112"></p>
+
 Widget: **Limits ⇄ / Today ⇄**, persisted per device; opt-in personal GLM Coding Plan quotas via a masked Settings field. [Setup and coverage](docs/PROVIDERS.md).
 
 [Reading empty values and continuing long sessions](docs/READING_ANALYTICS.md). Compact names are CODEX, CLAUDE, KIMI, GLM, etc.; the Mac menu has no page counter.
@@ -12,7 +14,7 @@ A local tool for improving coding-agent workspaces: collect sanitized tool event
 
 [Architecture and module ownership](docs/ARCHITECTURE.md) · [Linux/headless runtime](docs/HEADLESS.md) · Runtime wheel: Python 3.11+
 
-**0.10.3 public preview.** Kimi account limits and live native delivery remain unverified; settings and fixtures are tested. Downloadable packages and their verification are linked below and recorded in [QA](docs/QA.md). macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
+**0.10.4 public preview.** Kimi account limits and live native delivery remain unverified; settings and fixtures are tested. Downloadable packages and their verification are linked below and recorded in [QA](docs/QA.md). macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
 
 **Confirm collection first:** configured observers are not proof of observation. After setup, start a new native session, review hook trust when required, perform an ordinary task, and check Workflows for actual paired calls. See the [readiness audit](docs/AUDIT.md). Capabilities separates exact registered skill-file loads, explicit invocations and manual declarations. No observed use is not proof of non-use; command families are bounded static classifications, not semantic understanding of arbitrary code.
 

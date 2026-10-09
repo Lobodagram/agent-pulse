@@ -9,7 +9,7 @@ import hashlib
 ROOT=Path(__file__).resolve().parents[1]
 FILES=['model_evidence.py','command_profile.py','result_metadata.py','capability_report.py','evidence_pack.py','compact_summary.py','journal.py','analytics.py','journal_cli.py','instrumentation.py','mcp_server.py','collector.py','providers.py','platform_support.py','build.sh','requirements-build.txt','LICENSE','LICENSE-MIT.txt','README.md','README.ru.md','PRIVACY.md','SECURITY.md','CONTRIBUTING.md','CHANGELOG.md','NOTICE','COMMERCIAL_LICENSE.md','.gitignore']
 FILES += ['agent_control.py','provider_secrets.py','glm_quota.py','sanitizers.py','pulse_version.py','hook_bridge.py','pyproject.toml','session_view.py','capability_detection.py','finding_review.py','review_pack.py']
-DIRS=['agent-skills','script','Sources','windows','tests','scripts','docs','examples','.github','third_party']
+DIRS=['agent-skills','script','Sources','windows','tests','scripts','docs','examples','.github','third_party','brand']
 def export(destination):
     destination=Path(destination).resolve()
     if destination.exists():raise ValueError('destination_exists')
@@ -18,11 +18,16 @@ def export(destination):
     for name in DIRS:
         selected += [p for p in (ROOT/name).rglob('*') if p.is_file() and not p.is_symlink() and '__pycache__' not in p.parts and p.suffix not in ('.pyc',) and not p.name.endswith('.png.json')]
     reviewed=json.loads((ROOT/'docs/screenshots/manifest.json').read_text())
+    brand=json.loads((ROOT/'brand/manifest.json').read_text())
     for source in selected:
         if source.is_symlink():raise ValueError('symlink_source')
         data=source.read_bytes();rel=source.relative_to(ROOT)
         if source.name.lower() in {'secrets.json','config.json','auth.json','credentials.json'} or source.suffix.lower() in {'.db','.sqlite','.sqlite3','.log','.zip','.exe','.dmg'}:raise ValueError('runtime_file_in_'+str(rel))
-        if source.suffix=='.png':
+        if rel.parts[0]=='brand' and source.suffix.lower() in ('.png','.ico','.icns'):
+            if brand.get(rel.as_posix())!=hashlib.sha256(data).hexdigest():raise ValueError('unreviewed_brand_'+rel.as_posix())
+            signature={'.png':b'\x89PNG\r\n\x1a\n','.ico':b'\x00\x00\x01\x00','.icns':b'icns'}[source.suffix.lower()]
+            if not data.startswith(signature):raise ValueError('invalid_brand_format_'+rel.as_posix())
+        elif source.suffix=='.png':
             if rel.as_posix() not in reviewed or reviewed[rel.as_posix()]!=hashlib.sha256(data).hexdigest():raise ValueError('unreviewed_image_'+rel.as_posix())
         else:
             text=data.decode('utf-8')

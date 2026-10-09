@@ -3,6 +3,7 @@ import ctypes as c
 from ctypes import wintypes as w
 import os
 import sys
+from pulse_brand import asset
 
 
 class Instance:
@@ -31,6 +32,7 @@ class Tray:
         self.available = False
         self.closed = False
         self.hwnd = None
+        self.owned_icon = None
         if sys.platform != 'win32':
             return
         self.user = c.WinDLL('user32', use_last_error=True)
@@ -64,6 +66,8 @@ class Tray:
         signature(self.user, 'DefWindowProcW', c.c_ssize_t, w.HWND, w.UINT, w.WPARAM, w.LPARAM)
         signature(self.user, 'DestroyWindow', w.BOOL, w.HWND)
         signature(self.user, 'LoadIconW', w.HICON, w.HINSTANCE, c.c_void_p)
+        signature(self.user, 'LoadImageW', w.HANDLE, w.HINSTANCE, w.LPCWSTR, w.UINT, c.c_int, c.c_int, w.UINT)
+        signature(self.user, 'DestroyIcon', w.BOOL, w.HICON)
         signature(self.user, 'RegisterWindowMessageW', w.UINT, w.LPCWSTR)
         signature(self.user, 'PeekMessageW', w.BOOL, c.POINTER(w.MSG), w.HWND, w.UINT, w.UINT, w.UINT)
         signature(self.user, 'DispatchMessageW', c.c_ssize_t, c.POINTER(w.MSG))
@@ -95,7 +99,9 @@ class Tray:
             self.close(); raise OSError(c.get_last_error(), 'Cannot create own tray window')
         self.data = IconData(); self.data.size = c.sizeof(IconData)
         self.data.hwnd = self.hwnd; self.data.id = 1; self.data.flags = 1 | 2 | 4
-        self.data.message = self.MESSAGE; self.data.icon = self.user.LoadIconW(None, c.c_void_p(32512))
+        self.data.message = self.MESSAGE
+        self.owned_icon = self.user.LoadImageW(None, str(asset('AgentPulse.ico')), 1, 0, 0, 0x10 | 0x40)
+        self.data.icon = self.owned_icon or self.user.LoadIconW(None, c.c_void_p(32512))
         self.data.tip = 'Agent Pulse'
         self.restore(); self.pump()
 
@@ -137,4 +143,6 @@ class Tray:
             if hasattr(self, 'data'): self.shell.Shell_NotifyIconW(2, c.byref(self.data))
             self.user.DestroyWindow(self.hwnd); self.hwnd = None
         if hasattr(self, 'class_name'): self.user.UnregisterClassW(self.class_name, self.instance)
+        if self.owned_icon:
+            self.user.DestroyIcon(self.owned_icon); self.owned_icon = None
         self.available = False

@@ -43,7 +43,7 @@ python -m venv .build/venv
 .build/venv/Scripts/python -m PyInstaller --clean --noconfirm --onedir --contents-directory pulse-runtime --console --name pulse-collector --distpath .build collector.py
 New-Item -ItemType Directory -Path dist -Force | Out-Null
 Copy-Item .build/pulse-collector/* dist/ -Recurse -Force
-.build/venv/Scripts/python -m PyInstaller --clean --noconfirm --onefile --windowed --name AgentPulse --paths . windows/agent_pulse.py
+.build/venv/Scripts/python -m PyInstaller --clean --noconfirm --onefile --windowed --name AgentPulse --icon brand/AgentPulse.ico --add-data "brand:brand" --paths . windows/agent_pulse.py
 python windows/agent_pulse.py --fixture examples/demo.json --smoke
 $demo = (Resolve-Path examples/demo.json).Path
 $smoke = Start-Process -FilePath dist/AgentPulse.exe -ArgumentList '--fixture',"`"$demo`"",'--smoke' -Wait -PassThru
