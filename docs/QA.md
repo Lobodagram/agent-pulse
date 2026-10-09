@@ -1,5 +1,13 @@
 # QA evidence
 
+## 0.11.2 local preparation · 2026-10-09
+
+280 source tests, privacy/export, Python syntax and151 internal document links passed. New tests cover receipt dedup/conflicts, missing starts/stale runs, provider filtering, invalid/raw fields, atomic writes, opt-in MCP control, exclusive/racing backup destinations, credential exclusion and independent operational comparison gates. A regression fixture with over20,000 events retains earlier evidence and full session counts; the analysis bound now matches100,000 retained events.
+
+The final fresh frozen Mac helper/build passed strict signature, packaged hooks/MCP/deadlines, receipt/health/exclusive-backup checks and existing23 widget modes/window controls. Runtime/Swift/build input hashes stayed unchanged during acceptance. Fourteen synthetic EN/RU overview/comparison renders at620×520 and900×700 passed; representative empty/partial/error/known/comparison captures inspected. Existing native direction retained; coherence, hierarchy, typography, density and product fit each4/5. Temporary fixture bundles/states were removed. No synthetic acceptance or savings entered production.
+
+Two genuine source checks emitted explicit successful gates into the own journal without rewriting native outcomes or task acceptance. A private journal snapshot passed quick integrity/exclusive publication and zero exact own-key matches. Existing native configuration, Secrets and app settings remain unchanged. Installed0.11.1 remains running. Public0.11.2/platform/download/install acceptance is pending; real reboot, application-search count and physical Windows retain existing limits.
+
 ## 0.11.1 verified delivery · 2026-10-09
 
 Immutable tag v0.11.1 points to4b93a74a4d28ffe876f12218d0adc8e68fc13afe. [Source CI](https://github.com/Lobodagram/agent-pulse/actions/runs/37897387154) passed all four platforms; [package CI](https://github.com/Lobodagram/agent-pulse/actions/runs/37897937966) passed Mac ARM64/Intel, Windows and publication. The release export matched155 public blob hashes/modes. Source gates passed261 tests, privacy/export, syntax and147 document links.

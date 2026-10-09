@@ -33,7 +33,7 @@ agent-pulse journal --action session --session HASHED_SESSION_ID --limit 100 --c
 
 Use `cursor` to revisit and `nextCursor` to continue. The file contains one page, not a complete automatic export. Without installation use `python3 collector.py` or the packaged helper. MCP pulse_session accepts sessionId, optional cursor and limit.
 
-New events after the first read are excluded. If old evidence changes (late completion, model conflict/reconciliation, retention), continuation is rejected; reopen for a fresh snapshot. Limits: 30 days and 20,000 received events, with an event-limit flag. Never-collected events cannot be recovered. General report/export recentCalls is a 100-call preview, not full history.
+New events after the first read are excluded. If old evidence changes (late completion, model conflict/reconciliation, retention), continuation is rejected; reopen for a fresh snapshot. Limits: 30 days and 100,000 retained received events, with an event-limit flag. Never-collected events cannot be recovered. General report/export recentCalls is a 100-call preview, not full history.
 
 Compact Mac menu cycles full uppercase client names without a page counter. Windows summaries use the same names; native tray tooltip length remains bounded.
 

@@ -135,7 +135,8 @@ def task_rows(j,calls):
     for c in calls:all_turns[(c['provider'],c['session'],c['turn'])].add(c['id'])
     memberships=defaultdict(list)
     for r in j.db.execute('SELECT * FROM task_call'):memberships[r['task']].append(r['call'])
-    limited=j.db.execute('SELECT count(*) FROM observation WHERE received>=?',(time.time()-30*86400,)).fetchone()[0]>20000
+    from journal import MAX_EVENTS
+    limited=j.db.execute('SELECT count(*) FROM observation WHERE received>=?',(time.time()-30*86400,)).fetchone()[0]>MAX_EVENTS
     result=[]
     for row in j.db.execute('SELECT * FROM reviewed_task WHERE at>=? ORDER BY at DESC',(time.time()-30*86400,)):
         r=dict(row);ids=memberships[r['id']];selected=[indexed[c] for c in ids if c in indexed]
@@ -175,6 +176,9 @@ def summarize(rows):
       'reportedTokens':all_tokens,'modelRequests':requests,'cacheHitRate':cache/inputs if cache is not None and inputs else None,
       'medianElapsedMs':statistics.median(durations) if durations else None,'elapsedTasks':len(durations),
       'nativeUses':0,'nativeIdentityUses':sum(r['nativeIdentityObserved'] for r in rows),'declaredUses':sum(r['useEvidence']=='declared' for r in rows),
+      'observedCallsPerAccepted':sum(r['calls'] for r in rows)/accepted if accepted and all(r['selectionComplete'] for r in rows) else None,
+      'elapsedMsPerAccepted':sum(durations)/accepted if accepted and len(durations)==len(rows) else None,
+      'modelRequestsPerAccepted':requests/accepted if requests is not None and accepted else None,
       'knownResults':known,'observedCalls':sum(r['calls'] for r in rows),'technicalSuccessRate':success/known if known else None,
       'eligibleTasks':None,'adoptionRate':None,'subscriptionSavings':None,'causalClaim':False}
 
@@ -209,9 +213,17 @@ def compare_tasks(j,label,before,after,provider=None):
     summaries={v:summarize(g) for v,g in groups.items()};sa,sb=summaries[before],summaries[after]
     if not all(r['outcome']!='unknown' for r in a+b):reasons.append('unreviewed-tasks')
     if sa['acceptanceRate'] is None or sb['acceptanceRate'] is None or sb['acceptanceRate']<sa['acceptanceRate']:reasons.append('quality-not-established')
+    common=list(reasons)
+    metrics={}
+    for metric,missing in [('observedCallsPerAccepted','incomplete-selection'),('elapsedMsPerAccepted','incomplete-time'),('modelRequestsPerAccepted','incomplete-requests'),('tokensPerAccepted','incomplete-usage')]:
+        x,y=sa[metric],sb[metric];blocked=list(common)
+        if x is None or y is None:blocked.append(missing)
+        elif x==0:blocked.append('zero-baseline')
+        metrics[metric]={'before':x,'after':y,'reduction':1-y/x if not blocked else None,'reasons':blocked,
+                         'confidence':'observational' if not blocked else 'insufficient'}
     if sa['tokensPerAccepted'] in (None,0) or sb['tokensPerAccepted'] is None:reasons.append('incomplete-usage')
     reduction=1-sb['tokensPerAccepted']/sa['tokensPerAccepted'] if not reasons else None
-    return {'label':label,'before':before,'after':after,'groups':summaries,'tokenReduction':reduction,
+    return {'label':label,'before':before,'after':after,'groups':summaries,'tokenReduction':reduction,'metrics':metrics,
       'reasons':reasons,'confidence':'observational' if not reasons else 'insufficient','causalClaim':False,'subscriptionSavings':None,
       'limitations':['Equal labels and observed cohort mix do not establish equal difficulty, reasoning settings or causation.',
                     'Usage includes all selected attempts; task visibility and manual acceptance remain partial.']}

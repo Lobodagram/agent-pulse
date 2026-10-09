@@ -133,6 +133,8 @@ class Journal:
         ''')
         from efficiency import initialize
         initialize(self.db)
+        from check_receipts import initialize as initialize_checks
+        initialize_checks(self.db)
         self.db.commit()
     def close(self):self.db.close()
     def digest(self,label,value):
@@ -311,7 +313,7 @@ class Journal:
         args=[ceiling-days*86400,ceiling];where='received>=? AND received<=?'
         if through_rowid is not None:where+=' AND observation.rowid<=?';args.append(through_rowid)
         if session:where+=' AND session=?';args.append(session)
-        rows=self.db.execute('SELECT observation.*,call_metadata.signature,call_metadata.outcome_source,EXISTS(SELECT 1 FROM model_conflict WHERE event=observation.id) AS model_conflicted FROM observation LEFT JOIN call_metadata ON observation.id=call_metadata.event WHERE '+where+' ORDER BY received DESC LIMIT 20000',args).fetchall()
+        rows=self.db.execute('SELECT observation.*,call_metadata.signature,call_metadata.outcome_source,EXISTS(SELECT 1 FROM model_conflict WHERE event=observation.id) AS model_conflicted FROM observation LEFT JOIN call_metadata ON observation.id=call_metadata.event WHERE '+where+' ORDER BY received DESC LIMIT ?',args+[MAX_EVENTS]).fetchall()
         boundaries={}
         for r in rows:
             if r['phase'] in {'Stop','Interrupt','SessionEnd'}:
@@ -341,14 +343,18 @@ class Journal:
         return sorted(result,key=lambda x:x['startedAt'] or x['endedAt'] or 0)
     def prune(self):
         cutoff=time.time()-30*86400
-        self.db.execute('DELETE FROM observation WHERE received<?',(cutoff,))
+        expired=self.db.execute('DELETE FROM observation WHERE received<?',(cutoff,)).rowcount
+        self.db.execute('UPDATE collection_counter SET value=value+? WHERE key=?',(expired,'expired-events'))
+        expired_checks=self.db.execute('DELETE FROM check_run WHERE started<?',(cutoff,)).rowcount
+        self.db.execute('UPDATE collection_counter SET value=value+? WHERE key=?',(expired_checks,'expired-checks'))
         self.db.execute('DELETE FROM turn_usage WHERE at<?',(cutoff,))
         self.db.execute('DELETE FROM turn_usage_status WHERE NOT EXISTS (SELECT 1 FROM turn_usage u WHERE u.provider=turn_usage_status.provider AND u.session=turn_usage_status.session AND u.turn=turn_usage_status.turn AND u.source=turn_usage_status.source)')
         self.db.execute('DELETE FROM reviewed_task WHERE at<?',(cutoff,))
         self.db.execute('DELETE FROM task_call WHERE task NOT IN (SELECT id FROM reviewed_task)')
         self.db.execute('DELETE FROM annotation WHERE session NOT IN (SELECT session FROM observation)')
         self.db.execute('DELETE FROM live_turn WHERE turn NOT IN (SELECT DISTINCT turn FROM observation)')
-        self.db.execute('DELETE FROM observation WHERE id IN (SELECT id FROM observation ORDER BY received DESC LIMIT -1 OFFSET ?)',(MAX_EVENTS,))
+        capped=self.db.execute('DELETE FROM observation WHERE id IN (SELECT id FROM observation ORDER BY received DESC LIMIT -1 OFFSET ?)',(MAX_EVENTS,)).rowcount
+        self.db.execute('UPDATE collection_counter SET value=value+? WHERE key=?',(capped,'capped-events'))
         self.db.execute('DELETE FROM call_metadata WHERE event NOT IN (SELECT id FROM observation)')
         self.db.execute('DELETE FROM model_conflict WHERE event NOT IN (SELECT id FROM observation)')
         self.db.execute('DELETE FROM capability_evidence WHERE at<? OR session NOT IN (SELECT session FROM observation)',(cutoff,))

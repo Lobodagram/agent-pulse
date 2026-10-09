@@ -56,6 +56,12 @@ def control(name,args,directory):
     from journal import Journal
     j=Journal(directory)
     try:
+        if name=='pulse_record_check':
+            from check_receipts import receipt
+            return receipt(j,args)
+        if name=='pulse_backup_journal' and set(args)=={'destination'}:
+            from collection_health import backup
+            return backup(j,args['destination'])
         if name in {'pulse_register_asset','pulse_record_task','pulse_record_usage'}:
             from efficiency import register_asset,record_task,ingest_usage
             return {'pulse_register_asset':register_asset,'pulse_record_task':record_task,'pulse_record_usage':ingest_usage}[name](j,args)

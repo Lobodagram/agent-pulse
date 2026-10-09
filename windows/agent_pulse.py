@@ -396,6 +396,14 @@ class Pulse:
             if 'local_tokens_backlog_skipped' in p.get('sourceStatus',[]):lines.append(self.t('Local backlog skipped; recent counters are partial, missing history is not reconstructed.','Локальное отставание пропущено; свежие счётчики частичны, пропущенная история не восстановлена.'))
         for d in self.data.get('history',[]):lines.append(f"{d['date']}  {d['provider']:10}  {d['tokens']:>12,.0f}")
         lines+=['',self.t('OBSERVED COVERAGE','НАБЛЮДАЕМЫЙ ОХВАТ')]
+        checks=report.get('checkRuns')
+        if checks:
+            lines += [self.t('Helper results: ','Результаты помощников: ')+f"{checks['knownResults']} / {checks['runs']}",
+                      self.t('Separate from native outcomes and human acceptance.','Отдельно от штатных исходов и приёмки человеком.')]
+        health=report.get('storageHealth')
+        if health:
+            lines += [self.t('Journal quick integrity check: ','Быстрая проверка целостности журнала: ')+health['integrity'],
+                      self.t('Analysis truncated: ','Анализ усечён: ')+str(health['analysisLimitReached'])]
         for c in report.get('coverage',[]):
             lines.append(f"{c['provider']}: {c['state']} · {c['pairedCalls']}/{c['calls']} · rejected {c['rejected']}")
             lines.append(self.t('Known results / unknown / collection gaps: ','Результат известен / неизвестен / пропуски: ')+f"{c.get('knownOutcomes','—')} / {c.get('unknownOutcomes','—')} / {c.get('collectionGaps','—')}")

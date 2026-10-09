@@ -5,6 +5,7 @@ import json
 import re
 import time
 from sanitizers import number
+from journal import MAX_EVENTS
 from model_evidence import model_history
 
 def session_page(j,session,cursor=None,limit=500):
@@ -19,7 +20,7 @@ def session_page(j,session,cursor=None,limit=500):
             if not isinstance(raw,list) or len(raw)!=5:raise ValueError('invalid_cursor')
             at,offset,watermark,snapshot,signature=raw
             if number(at) is None or not time.time()-30*86400<=at<=time.time()+1:raise ValueError('expired_cursor')
-            if not isinstance(offset,int) or isinstance(offset,bool) or not 0<=offset<=20000:raise ValueError('invalid_cursor')
+            if not isinstance(offset,int) or isinstance(offset,bool) or not 0<=offset<=MAX_EVENTS:raise ValueError('invalid_cursor')
             if not isinstance(watermark,int) or isinstance(watermark,bool) or not 0<=watermark<=2**63-1:raise ValueError('invalid_cursor')
             if not isinstance(snapshot,str) or not re.fullmatch('[a-f0-9]{32}',snapshot):raise ValueError('invalid_cursor')
             expected=j.digest('session-page',[session,at,offset,watermark,snapshot])
@@ -34,7 +35,7 @@ def session_page(j,session,cursor=None,limit=500):
     page=rows[offset:offset+limit];end=offset+len(page);more=end<len(rows)
     def token(position):return base64.urlsafe_b64encode(json.dumps([at,position,watermark,snapshot,j.digest('session-page',[session,at,position,watermark,snapshot])],separators=(',',':')).encode()).decode()
     next_cursor=token(end) if more else None
-    limited=j.db.execute('SELECT count(*) FROM observation WHERE session=? AND received>=? AND received<=? AND rowid<=?',(session,at-30*86400,at,watermark)).fetchone()[0]>20000
+    limited=j.db.execute('SELECT count(*) FROM observation WHERE session=? AND received>=? AND received<=? AND rowid<=?',(session,at-30*86400,at,watermark)).fetchone()[0]>MAX_EVENTS
     current=token(offset)
     return {'sessionId':session,'calls':page,'truncated':more,'cursor':current,'nextCursor':next_cursor,
             'snapshotAt':at,'pageOffset':offset,'callCount':len(rows),'eventLimitReached':limited,

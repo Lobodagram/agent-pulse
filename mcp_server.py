@@ -26,6 +26,8 @@ CONTROL_TOOLS=[
  {'name':'pulse_annotate_session','description':'Save a genuinely reviewed task label and outcome; never fabricate accepted work to test analytics.','inputSchema':{'type':'object','properties':{'sessionId':{'type':'string'},'label':{'type':'string'},'variant':{'type':'string'},'outcome':{'type':'string','enum':['accepted','failed','rework','unknown']}},'required':['sessionId','label','variant','outcome'],'additionalProperties':False}}]
 TOOLS.append({'name':'pulse_settings','description':'Read allowlisted local settings and manual billing dates. Never returns keys, locators or native client files.','inputSchema':{'type':'object','properties':{},'additionalProperties':False}})
 TOOLS += [
+ {'name':'pulse_collection_health','description':'Integrity, retention and truncation of Pulse own journal. Native and historical full coverage remain unknown.','inputSchema':{'type':'object','properties':{},'additionalProperties':False}},
+ {'name':'pulse_check_receipts','description':'Explicit helper-reported results, separate from native tool outcomes and human acceptance.','inputSchema':{'type':'object','properties':{},'additionalProperties':False}},
  {'name':'pulse_efficiency','description':'Versioned asset and reviewed-task metrics; unknown usage is not zero or subscription savings.','inputSchema':{'type':'object','properties':{},'additionalProperties':False}},
  {'name':'pulse_compare_tasks','description':'Compare reviewed task cohorts; model/project/criterion and usage coverage gate observational token changes.','inputSchema':{'type':'object','properties':{'label':{'type':'string'},'before':{'type':'string'},'after':{'type':'string'},'provider':{'type':'string','enum':sorted(PROVIDER_IDS)}},'required':['label','before','after'],'additionalProperties':False}}]
 _str={'type':'string','minLength':1,'maxLength':1000}
@@ -37,6 +39,15 @@ for _name,_description,_props,_required in [
  ('pulse_record_task','Record an actually reviewed contiguous task selection; declared application is not native invocation.',_task_props,['provider','taskId','label','variant','criterion','outcome','callIds']),
  ('pulse_record_usage','Import actual native per-turn counters with explicit completeness; never estimate or fabricate receipts.',_usage_props,['provider','sessionId','turnId'])]:
     CONTROL_TOOLS.append({'name':_name,'description':_description,'inputSchema':{'type':'object','properties':_props,'required':_required,'additionalProperties':False}})
+
+from check_receipts import OPERATIONS,GATES
+CONTROL_TOOLS.extend([
+ {'name':'pulse_record_check','description':'Record only an actually reported helper result; separate from native outcomes and human acceptance. Requires --allow-control.','inputSchema':{'type':'object','properties':{
+ 'runId':{'type':'string','pattern':'^[a-f0-9]{32}$'},'provider':_asset_props['provider'],'operation':{'type':'string','enum':sorted(OPERATIONS)},'version':_str,
+ 'startedAt':{'type':'number'},'endedAt':{'type':'number'},'status':{'type':'string','enum':['started','success','failed','unknown','interrupted']},
+ 'sourceDigest':{'type':'string','pattern':'^([a-f0-9]{64})?$'},'gates':{'type':'object','additionalProperties':False,'properties':{k:{'type':'string','enum':['passed','failed','unknown']} for k in sorted(GATES)}}},
+ 'required':['runId','provider','operation','version','startedAt','status'],'additionalProperties':False}},
+ {'name':'pulse_backup_journal','description':'Create exclusive verified private snapshot of Pulse sanitized journal. No credentials or native databases; no restore. Requires --allow-control.','inputSchema':{'type':'object','properties':{'destination':_str},'required':['destination'],'additionalProperties':False}}])
 
 CONTROL_TOOLS[0]['inputSchema']['properties']['changes']={'type':'object','minProperties':1,'additionalProperties':False,'properties':{
  'enabledProviders':{'type':'array','items':{'type':'string','enum':sorted(PROVIDER_IDS)}},
@@ -68,7 +79,7 @@ def dispatch(request,state,allow_control=False):
     j=Journal(state)
     try:
         if name=='pulse_report' and not args:
-            data=report(j);data.pop('recentCalls',None);data['sessions']=data['sessions'][:20];data['findings']=data['findings'][:10]
+            data=report(j);data['checkRuns']['truncated'] |= len(data['checkRuns']['recent'])>5;data['checkRuns']['recent']=data['checkRuns']['recent'][:5];data.pop('recentCalls',None);data['sessions']=data['sessions'][:20];data['findings']=data['findings'][:10]
             data['efficiency']['tasksTruncated'] |= bool(data['efficiency']['tasks']);data['efficiency']['tasks']=[]
             data['efficiency']['assetsTruncated']=len(data['efficiency']['assets'])>10;data['efficiency']['assets']=data['efficiency']['assets'][:10]
             data['capabilitiesTruncated']=len(data['capabilities'])>20
@@ -90,6 +101,12 @@ def dispatch(request,state,allow_control=False):
             data=session_page(j,args['sessionId'],args.get('cursor'),limit)
             data['modelHistory']['truncated'] |= len(data['modelHistory']['segments'])>20
             data['modelHistory']['segments']=data['modelHistory']['segments'][-20:]
+        elif name=='pulse_collection_health' and not args:
+            from collection_health import health
+            data=health(j)
+        elif name=='pulse_check_receipts' and not args:
+            from check_receipts import check_report
+            data=check_report(j)
         elif name=='pulse_efficiency' and not args:
             from efficiency import efficiency_report
             data=efficiency_report(j);data['tasksTruncated'] |= len(data['tasks'])>20;data['tasks']=data['tasks'][:20]

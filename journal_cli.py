@@ -11,7 +11,17 @@ from session_view import session_page
 def run(args):
     j=Journal(args.state)
     try:
-        if args.action in {'asset','task','usage'}:
+        if args.action=='health':
+            from collection_health import health
+            return health(j)
+        if args.action=='backup':
+            from collection_health import backup
+            if not args.file:raise ValueError('backup_file_required')
+            return backup(j,args.file)
+        if args.action=='checks':
+            from check_receipts import check_report
+            return check_report(j)
+        if args.action in {'asset','task','usage','check'}:
             metadata=getattr(args,'metadata',None)
             if metadata is not None:
                 if args.file or len(metadata.encode())>65536:raise ValueError('invalid_metadata')
@@ -19,6 +29,9 @@ def run(args):
             else:
                 if not args.file or args.file.is_symlink() or args.file.stat().st_size>65536:raise ValueError('invalid_metadata_file')
                 spec=json.loads(args.file.read_text())
+            if args.action=='check':
+                from check_receipts import receipt
+                return receipt(j,spec)
             from efficiency import register_asset,record_task,ingest_usage
             if args.action=='asset':return register_asset(j,spec)
             if args.action=='task':return record_task(j,spec)

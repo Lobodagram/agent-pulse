@@ -28,3 +28,6 @@ python collector.py journal --action compare-tasks --provider codex --label rele
 Default MCP adds read-only `pulse_efficiency` and `pulse_compare_tasks`. Explicit `--allow-control` also exposes `pulse_register_asset`, `pulse_record_task`, `pulse_record_usage`. These affect only Pulse metadata, never native hooks, permissions or models. MCP previews mark truncation; use local CLI report for the full bounded report.
 
 Task/usage evidence follows the existing 30-day window, up to 1000 tasks. The public version catalog persists until own-state cleanup, capped at 200 versions. One primary asset per task avoids independently crediting savings to several assets. Synthetic tests verify accounting, not production benefit. First genuine pilots: release checks and 3D export QA with stable acceptance criteria and both successful and failed attempts retained.
+
+
+0.11.2: [collection/storage and independent operational comparison](COLLECTION_HEALTH.md).

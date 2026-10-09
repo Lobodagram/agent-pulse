@@ -1,23 +1,15 @@
-# Agent Pulse 0.11.1 — local cache metrics / локальная аналитика кэша
+# Agent Pulse 0.11.2 — explicit results and storage health / результаты и хранение
 
-The existing opt-in Codex token collector now reports local device-day input, output and cached input. Overview on macOS and Windows shows cache share and breakdown coverage; read-only `pulse_efficiency` returns saved counters without starting native collection. Account totals, task/version metrics and subscription allowance remain separate.
+Existing helper calls can complete without a native exit code, leaving outcomes unknown. Opt-in check receipts now retain explicit starts/results, public helper version, elapsed interval, source-tree digest and fixed check gates. Reporter evidence remains separate from native tool outcomes and human task acceptance; conflicting deliveries stay unknown. Missing starts and stale/incomplete runs are visible. No raw command, tool result, conversation, path or credential is retained in these receipts.
 
-Validated vector deltas handle duplicate observations, UTC boundaries, missing schemas, resets and skipped backlogs conservatively. Older counts remain unprofiled; missing counters remain unknown. No model-request count, skill savings or subscription savings is inferred. Compact widget/menu-bar behavior is unchanged.
+Analysis now includes the whole retained window up to 100,000 events, removing the earlier 20,000-event analysis cutoff. Own-journal diagnostics expose a quick integrity check, retention policy, stored-event count, analysis truncation and discard counters with a tracking-start date. A verified private SQLite snapshot can be saved without replacing an existing file; it excludes credentials and native databases. No automatic restore or repair. Manual snapshots do not expire with active journal retention.
 
-В «Обзоре» появились входные, выходные и кэшированные токены, доля кэша и охват детализации. Используется прежний добровольный локальный сбор. Эти данные показывают работу кэша на устройстве; экономия конкретного навыка требует полных счётчиков сопоставимых принятых задач. Проценты подписки не переводятся в токены.
+Reviewed-task comparisons use separate coverage gates for observed calls, summed task intervals, reported model requests and tokens per accepted result. Missing tokens no longer block otherwise available operational comparisons; quality/cohort gates remain. Time includes waiting and overlapping intervals, and is not active model time.
 
-Preview scope and actual checks are recorded in [QA](QA.md). The Codex transcript format may change; unsupported breakdowns stay unknown. Real reboot, physical Windows/Intel, multiple displays, live Kimi and notarization remain separate acceptance cases. No model calls or private telemetry publication.
+Read-only MCP health/receipt tools and the EN/RU native/Windows overview show the scope. Receipt imports and backups require explicitly enabled control tools. Existing collection opt-ins, observer paths, settings and compact monochrome menu bar remain unchanged. No causal benefit, whole-agent visibility or subscription savings is inferred.
 
 ---
 
-# Agent Pulse 0.11.0 — reviewed-task efficiency / эффективность задач
+Добавлены явные квитанции помощников: начало, результат, версия, длительность и разрешённые статусы проверок. Они отдельно от нативных исходов и приёмки человеком. Повторы не суммируются, противоречия остаются неизвестными; команды, вывод, разговоры и ключи не сохраняются.
 
-Agent Pulse now links reviewed tasks to a specific skill, MCP server or tool version. Capabilities shows applied versions, observed identity-level invocations and task acceptance. Compare reports before/after differences only for sufficiently covered, comparable groups without a decline in acceptance.
-
-Explicit native per-turn receipts can report input/output tokens, cached input and model requests. Tokens per accepted result include failed and rework attempts. Missing counters remain unknown; cache share, model requests, account allowance and subscription savings are separate measurements. Observed invocation names do not prove which version ran, and an observational difference does not prove causation.
-
-The macOS and Windows analytics interfaces include asset registration and task-review forms. Local MCP adds bounded efficiency/comparison reads; writes require explicit --allow-control. Structured result metadata is interpreted conservatively. Reopening a hidden Mac widget restores it without changing placement. The original menu-bar ECG and compact quota text are retained.
-
-Теперь Pulse связывает принятые задачи с версиями скиллов, MCP-серверов и инструментов. Можно оценить применение, качество результата, время, вызовы модели, токены и кэш — когда источник действительно сообщает эти данные. Сравнение «до/после» учитывает неудачные попытки и переделки; недостаточный охват и неизвестная экономия показываются явно.
-
-Сборки остаются публичной предварительной версией. Результаты проверок записываются в [QA](QA.md). Реальные сопоставимые задачи нужны для оценки пользы; тестовые сценарии её не доказывают. Перезагрузка с включённым автозапуском, физическая Windows/DPI, Mac Spaces/разные экраны, живой Kimi и нотариализация остаются отдельными проверками. Модели не вызывались, приватная активность не публикуется.
+Диагностика собственного журнала показывает целостность, срок хранения, усечение анализа и удаления с датой начала счётчика. Проверенная резервная копия не перезаписывает существующий файл и не содержит ключей/нативных баз. Доступные операционные метрики сравниваются независимо от токенов, с сохранением критериев качества. Полный охват агентов и экономия подписки не заявляются.

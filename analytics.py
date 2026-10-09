@@ -1,4 +1,7 @@
 """Deterministic workflow discovery. Suggestions are hypotheses with local evidence."""
+from check_receipts import check_report
+from collection_health import health as storage_health
+from journal import MAX_EVENTS
 from collections import Counter, defaultdict
 import statistics
 import time
@@ -238,12 +241,14 @@ def report(j,providers=None,session_limit=100):
     efficiency=efficiency_report(j,calls,providers)
     return {'schemaVersion':5,'generatedAt':time.time(),'coverage':coverage,'sessions':sorted(summaries,key=lambda x:x['startedAt'] or 0,reverse=True)[:session_limit] if session_limit is not None else sorted(summaries,key=lambda x:x['startedAt'] or 0,reverse=True),
       'sessionsTruncated':session_limit is not None and len(summaries)>session_limit,'efficiency':efficiency,
-      'findings':findings(j,calls),'recentCalls':calls[-100:],'calls':len(calls),'eventLimitReached':total>20000,
+      'findings':findings(j,calls),'recentCalls':calls[-100:],'calls':len(calls),'eventLimitReached':total>MAX_EVENTS,
       'capabilities':capabilities(j,providers),'toolUsage':sorted(tool_usage,key=lambda x:-x['calls'])[:100],
       'crossClientPatterns':sorted(cross,key=lambda x:-x['calls'])[:30],
       'modelHistory':model_history(calls),
       'mcpNamespaces':sorted(mcp_usage,key=lambda x:-x['calls'])[:100],'findingReviews':reviews,
       'findingReviewsTruncated':j.db.execute('SELECT count(*) FROM finding_review').fetchone()[0]>30,
+      'checkRuns':check_report(j,providers),
+      'storageHealth':storage_health(j),
       'quality':{'pairedCalls':sum(c['paired'] for c in calls),'knownOutcomes':sum(c['paired'] and c['outcome'] in {'success','failed'} for c in calls),
                  'outcomeSources':dict(Counter(c['outcomeSource'] for c in calls)),
                  'unpairedCalls':sum(not c['paired'] for c in calls),'windowDays':30,'completeCoverage':False},

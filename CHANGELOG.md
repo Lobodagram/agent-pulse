@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.2 · 2026-10-09
+
+- Explicit opt-in helper receipts record starts, results, versions, elapsed intervals and fixed check gates. They remain separate from native outcomes and human acceptance; conflicts and missing starts are visible.
+- Analysis, task coverage and session continuation now use the complete retained window up to 100,000 events, removing the earlier 20,000-event analysis cutoff.
+- Own journal health exposes quick integrity, retention, discarded-event counters and analysis truncation. Exclusive private verified backups omit credentials and native databases; no automatic restore.
+- Task comparisons can show observed calls, elapsed intervals and explicit model requests independently of token availability, while retaining cohort and quality gates. Native/Windows overview and bounded MCP/review packs explain scope.
+- Добавлены явные квитанции проверок, диагностика хранения и резервная копия собственного журнала без ключей. Неполные токены не блокируют доступные операционные метрики.
+
 ## 0.11.1 · 2026-10-09
 
 - Existing opt-in Codex token collection now records a local device-day input/output/cache breakdown. Overview on macOS/Windows and the read-only efficiency MCP show cache share and breakdown coverage separately from account totals and reviewed-task metrics.

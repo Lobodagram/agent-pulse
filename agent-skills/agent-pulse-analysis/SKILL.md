@@ -14,3 +14,10 @@ Agree a comparable task label, baseline, acceptance criterion, model/coverage ca
 Return decisive evidence, the proposed or implemented improvement, verification, and the next meaningful observation. Keep personal counters/reports local; any public example must be synthetic.
 
 Начинайте с здоровья сбора. Паттерн — гипотеза; отсутствие событий не доказывает отсутствие навыка. Решения и принятые результаты должны соответствовать реально проверенной работе.
+
+
+For 0.11.2+, inspect `pulse_collection_health` and `pulse_check_receipts` when coverage/storage affects the decision. Analysis includes the whole retained window up to100,000 events; retention loss and UI preview truncation are separate. Counters are unknown before their tracking-start date. Helper provider/status is reporter-declared: keep it separate from native tool outcomes, native skill invocation and human acceptance. A100% helper result rate covers only recorded helper runs.
+
+When the owner has authorized helper instrumentation, run a genuine source check with `--pulse-state <private Pulse state> --pulse-provider <actual client>` and inspect `receiptSaved`. Do not manufacture a receipt from command completion, guessed output or a test fixture. For other helpers, explicitly controlled `pulse_record_check` may import an actual bounded receipt; it does not independently verify the producer. Verified journal backup is local/exclusive and excludes credentials/native databases; do not perform restoration automatically.
+
+Use `pulse_compare_tasks` for actual reviewed task selections. Operational metrics have separate completeness gates: unavailable tokens do not block available observed-call/time metrics, but unknown review/cohort or decreased quality still blocks the comparison. Summed task intervals include waiting and can overlap; never call them active model time. See `docs/COLLECTION_HEALTH.md` in the product source for limits.

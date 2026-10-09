@@ -19,6 +19,8 @@ sys.path.insert(0,str(ROOT))
 from scripts.public_export import export
 from journal import atomic_json
 from pulse_version import __version__
+from check_receipts import Reporter
+from journal import PROVIDERS
 
 def archives(directory,version):
     names=['agent-pulse-macos-arm64.zip','agent-pulse-macos-x64.zip','agent-pulse-windows-x64.zip']
@@ -92,7 +94,11 @@ def handoff(result):
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('mode',choices=['check','handoff']);parser.add_argument('--output',type=Path,required=True);parser.add_argument('--input',type=Path);parser.add_argument('--archives',type=Path)
+    parser.add_argument('--pulse-state',type=Path,help='Explicit opt-in receipt destination; no native observer changes')
+    parser.add_argument('--pulse-provider',choices=sorted(PROVIDERS),help='Reporter-declared client; not native invocation evidence')
     args=parser.parse_args()
+    if args.pulse_state and (not args.pulse_provider or args.mode!='check'):parser.error('receipt collection requires check and --pulse-provider')
+    reporter=Reporter(args.pulse_state,args.pulse_provider,'workflow-check',__version__)
     try:
         if args.mode=='handoff':
             if not args.input or args.input.is_symlink() or args.input.stat().st_size>32768:raise ValueError('invalid_check_file')
@@ -105,9 +111,17 @@ def main():
             result={'schemaVersion':1,'version':version,'sourceCommit':commit,'sourceDirty':bool(dirty.stdout),'checks':checks,'modelsCalled':0,'peerStarted':False}
             if args.archives:result['archives']=archives(args.archives,version)
         atomic_json(args.output,result)
-        print(json.dumps({'saved':True,'version':result.get('version'),'checks':result.get('checks'),'modelsCalled':0}))
+        gates={g:result['checks'].get(k,'unknown') for g,k in [('unit-tests','unitTests'),('syntax','pythonSyntax'),('privacy-export','privacyExport')]} if args.mode=='check' else {}
+        if args.mode=='check':
+            gates['links']='passed'
+            if args.archives:gates['archives']='passed'
+        receipt_saved=reporter.finish('failed' if 'failed' in gates.values() else 'success',gates,result.get('checks',{}).get('sourceTreeSha256',''))
+        print(json.dumps({'saved':True,'version':result.get('version'),'checks':result.get('checks'),'modelsCalled':0,'receiptSaved':receipt_saved}))
         return 1 if result.get('checks',{}).get('unitTests')=='failed' else 0
+    except KeyboardInterrupt:
+        reporter.finish('interrupted');raise
     except Exception as e:
+        reporter.finish('failed',{'execution':'failed'})
         print(json.dumps({'error':type(e).__name__,'saved':False}));return 1
 
 if __name__=='__main__':raise SystemExit(main())

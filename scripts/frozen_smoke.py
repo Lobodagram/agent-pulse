@@ -7,10 +7,28 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from pulse_version import __version__
 exe=Path(sys.argv[1]).resolve()
+with tempfile.TemporaryDirectory() as tmp:
+    base=[str(exe),'--state',tmp]
+    start=time.time()-2
+    spec={'runId':'a'*32,'provider':'codex','operation':'workflow-check','version':__version__,'startedAt':start,'status':'started'}
+    for value in [spec,dict(spec,status='success',endedAt=start+1,gates={'unit-tests':'passed'})]:
+        r=subprocess.run(base+['journal','--action','check','--metadata',json.dumps(value)],capture_output=True,timeout=5,check=True)
+        assert json.loads(r.stdout)['saved'] and not r.stderr
+    r=subprocess.run(base+['journal','--action','checks'],capture_output=True,timeout=5,check=True)
+    checks=json.loads(r.stdout);assert checks['runs']==checks['knownResults']==checks['startsObserved']==1 and checks['nativeOutcomesChanged']==0
+    r=subprocess.run(base+['journal','--action','health'],capture_output=True,timeout=5,check=True)
+    health=json.loads(r.stdout);assert health['integrity']=='ok' and health['analysisEventLimit']==100000
+    target=Path(tmp)/'backup'/'journal.sqlite'
+    r=subprocess.run(base+['journal','--action','backup','--file',str(target)],capture_output=True,timeout=10,check=True)
+    assert json.loads(r.stdout)['includesCredentials'] is False and target.exists()
+    r=subprocess.run(base+['journal','--action','backup','--file',str(target)],capture_output=True,timeout=5)
+    assert r.returncode==1
+print(json.dumps({'explicitReceiptsStorageAndExclusiveBackup':'passed'}))
 with tempfile.TemporaryDirectory() as tmp:
     base=[str(exe),'--state',tmp]
     for event in ['PreToolUse','PostToolUse']:
@@ -26,7 +44,7 @@ with tempfile.TemporaryDirectory() as tmp:
     assert responses[0]['result']['serverInfo']['version']==__version__
     assert json.loads(responses[1]['result']['content'][0]['text'])['calls']==1
     assert 'пакет проверки' in json.loads(responses[2]['result']['content'][0]['text'])['markdown']
-    assert len(responses[3]['result']['tools'])==8
+    assert {t['name'] for t in responses[3]['result']['tools']}=={'pulse_report','pulse_session','pulse_evidence','pulse_compare','pulse_review_pack','pulse_settings','pulse_efficiency','pulse_compare_tasks','pulse_collection_health','pulse_check_receipts'}
     # Exercise the actual packaged control path with a different process holding
     # its lock. No test events/settings enter a real user's state.
     busy={'jsonrpc':'2.0','id':5,'method':'tools/call','params':{'name':'pulse_configure','arguments':{'changes':{'metricMode':'today'}}}}

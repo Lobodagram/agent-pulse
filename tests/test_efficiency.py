@@ -94,6 +94,38 @@ class EfficiencyTests(unittest.TestCase):
         self.assertIsNone(result['tokenReduction']);self.assertFalse(result['causalClaim'])
         self.assertIn('different-cohorts',result['reasons'])
 
+    def test_operational_comparison_does_not_need_token_counters(self):
+        from efficiency import compare_tasks,record_task
+        for variant,count in [('before',2),('after',1)]:
+            for i in range(3):
+                key=variant+str(i);calls=[self.pair(key+str(n),turn=key) for n in range(count)]
+                record_task(self.j,{'provider':'codex','taskId':key,'label':'release-check','variant':variant,'criterion':'v1','outcome':'accepted','callIds':calls})
+        value=compare_tasks(self.j,'release-check','before','after')
+        self.assertIsNone(value['tokenReduction']);self.assertIn('incomplete-usage',value['reasons'])
+        self.assertEqual(value['metrics']['observedCallsPerAccepted']['reduction'],.5)
+        self.assertAlmostEqual(value['metrics']['elapsedMsPerAccepted']['reduction'],2/3)
+        self.assertIsNone(value['metrics']['modelRequestsPerAccepted']['reduction'])
+
+    def test_operational_comparison_still_blocks_quality_decline(self):
+        from efficiency import compare_tasks,record_task
+        for variant in ['before','after']:
+            for i in range(3):
+                key=variant+str(i);call=self.pair(key)
+                record_task(self.j,{'provider':'codex','taskId':key,'label':'release-check','variant':variant,'criterion':'v1','outcome':'failed' if variant=='after' and i==0 else 'accepted','callIds':[call]})
+        value=compare_tasks(self.j,'release-check','before','after')
+        for metric in value['metrics'].values():
+            self.assertIsNone(metric['reduction']);self.assertIn('quality-not-established',metric['reasons'])
+
+    def test_request_comparison_with_zero_baseline_is_not_infinite_saving(self):
+        from efficiency import compare_tasks,record_task
+        for variant in ['before','after']:
+            for i in range(3):
+                key=variant+str(i);call=self.pair(key)
+                self.j.usage('codex','demo-session',key,{},complete=True,model_requests=0 if variant=='before' else 1)
+                record_task(self.j,{'provider':'codex','taskId':key,'label':'release-check','variant':variant,'criterion':'v1','outcome':'accepted','callIds':[call]})
+        metric=compare_tasks(self.j,'release-check','before','after')['metrics']['modelRequestsPerAccepted']
+        self.assertIsNone(metric['reduction']);self.assertIn('zero-baseline',metric['reasons'])
+
     def test_comparable_observations_allow_difference_without_causal_claim(self):
         from efficiency import compare_tasks,record_task
         for variant,tokens in [('before',200),('after',100)]:

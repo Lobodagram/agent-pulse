@@ -21,6 +21,13 @@ def markdown_pack(report,language='en'):
                 tr('; bookkeeping excluded from pattern candidates: ','; служебных вызовов исключено из кандидатов: ')+str(analysis['bookkeepingCalls'])+'.',
                 tr('Exact repeats precede broad sequence hypotheses. Historical unknown shell calls remain unknown.',
                    'Точные повторы показаны раньше общих цепочек. Старые неизвестные shell-вызовы остаются неизвестными.')]
+    checks=report.get('checkRuns',{})
+    if checks:
+        lines+=['',tr('Helper receipts: ','Квитанции помощников: ')+f"{checks['knownResults']} / {checks['runs']}"+tr(' results known; conflicts: ',' результатов известно; противоречий: ')+str(checks['conflicts'])+'.',
+                tr('Separate from native tool outcomes and human acceptance.','Отдельно от штатных исходов инструментов и приёмки человеком.')]
+    storage=report.get('storageHealth',{})
+    if storage:
+        lines+=[tr('Journal quick integrity check: ','Быстрая проверка целостности журнала: ')+str(storage['integrity'])+tr('; analysis limit reached: ','; предел выборки достигнут: ')+str(storage['analysisLimitReached'])+'.']
     lines+=['','## '+tr('Tools (top 20)','Инструменты (первые 20)'),'', '| '+tr('Client | Tool | Calls | Failed | Unknown | Pending','Клиент | Инструмент | Вызовы | Ошибки | Неизвестно | Не завершено')+' |','| --- | --- | ---: | ---: | ---: | ---: |']
     for r in report.get('toolUsage',[])[:20]:lines.append('| '+' | '.join(value(r.get(k)) for k in ['provider','tool','calls','failed','unknown','pending'])+' |')
     lines+=['','## '+tr('Findings (top 10)','Находки (первые 10)'),'']

@@ -7,7 +7,7 @@ import re
 import shutil
 import hashlib
 ROOT=Path(__file__).resolve().parents[1]
-FILES=['model_evidence.py','command_profile.py','result_metadata.py','capability_report.py','evidence_pack.py','compact_summary.py','journal.py','analytics.py','journal_cli.py','instrumentation.py','mcp_server.py','collector.py','providers.py','platform_support.py','build.sh','requirements-build.txt','LICENSE','LICENSE-MIT.txt','README.md','README.ru.md','PRIVACY.md','SECURITY.md','CONTRIBUTING.md','CHANGELOG.md','NOTICE','COMMERCIAL_LICENSE.md','.gitignore']
+FILES=['check_receipts.py','collection_health.py','model_evidence.py','command_profile.py','result_metadata.py','capability_report.py','evidence_pack.py','compact_summary.py','journal.py','analytics.py','journal_cli.py','instrumentation.py','mcp_server.py','collector.py','providers.py','platform_support.py','build.sh','requirements-build.txt','LICENSE','LICENSE-MIT.txt','README.md','README.ru.md','PRIVACY.md','SECURITY.md','CONTRIBUTING.md','CHANGELOG.md','NOTICE','COMMERCIAL_LICENSE.md','.gitignore']
 FILES += ['agent_control.py','provider_secrets.py','glm_quota.py','sanitizers.py','pulse_version.py','hook_bridge.py','pyproject.toml','session_view.py','capability_detection.py','finding_review.py','review_pack.py','efficiency.py']
 DIRS=['agent-skills','script','Sources','windows','tests','scripts','docs','examples','.github','third_party','brand']
 def export(destination):

@@ -6,7 +6,7 @@ PULSE_VERSION="$(python3 -c 'from pulse_version import __version__; print(__vers
 mkdir -p .build "$PULSE_OUTPUT/Agent Pulse.app/Contents/MacOS" "$PULSE_OUTPUT/Agent Pulse.app/Contents/Resources"
 xcrun swiftc -parse-as-library Sources/AgentPulse.swift Sources/LaunchAtLogin.swift Sources/PulseBrand.swift -O -o "$PULSE_OUTPUT/Agent Pulse.app/Contents/MacOS/AgentPulse" -framework AppKit -framework SwiftUI -framework ServiceManagement -target "$(uname -m)-apple-macosx14.0"
 cp brand/AgentPulse.icns brand/logo-128.png "$PULSE_OUTPUT/Agent Pulse.app/Contents/Resources/"
-cp efficiency.py agent_control.py provider_secrets.py glm_quota.py sanitizers.py pulse_version.py hook_bridge.py capability_detection.py finding_review.py review_pack.py session_view.py model_evidence.py command_profile.py result_metadata.py capability_report.py evidence_pack.py compact_summary.py collector.py providers.py platform_support.py journal.py analytics.py journal_cli.py instrumentation.py mcp_server.py "$PULSE_OUTPUT/Agent Pulse.app/Contents/Resources/"
+cp check_receipts.py collection_health.py efficiency.py agent_control.py provider_secrets.py glm_quota.py sanitizers.py pulse_version.py hook_bridge.py capability_detection.py finding_review.py review_pack.py session_view.py model_evidence.py command_profile.py result_metadata.py capability_report.py evidence_pack.py compact_summary.py collector.py providers.py platform_support.py journal.py analytics.py journal_cli.py instrumentation.py mcp_server.py "$PULSE_OUTPUT/Agent Pulse.app/Contents/Resources/"
 mkdir -p "$PULSE_OUTPUT/Agent Pulse.app/Contents/Resources/scripts"
 cp scripts/hook_bridge.py "$PULSE_OUTPUT/Agent Pulse.app/Contents/Resources/scripts/"
 rm -rf "$PULSE_OUTPUT/Agent Pulse.app/Contents/Resources/pulse-runtime"
@@ -26,7 +26,7 @@ cat > "$PULSE_OUTPUT/Agent Pulse.app/Contents/Info.plist" <<PLIST
 <key>CFBundleIdentifier</key><string>app.agentpulse.desktop</string>
 <key>CFBundleName</key><string>Agent Pulse</string>
 <key>CFBundleDisplayName</key><string>Agent Pulse</string>
-<key>CFBundleVersion</key><string>36</string>
+<key>CFBundleVersion</key><string>37</string>
 <key>CFBundleIconFile</key><string>AgentPulse.icns</string>
 <key>CFBundleShortVersionString</key><string>${PULSE_VERSION}</string>
 <key>CFBundlePackageType</key><string>APPL</string>

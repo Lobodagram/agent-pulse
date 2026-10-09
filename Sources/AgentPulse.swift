@@ -109,8 +109,11 @@ struct AnalyticsReport: Codable {
     var capabilities: [CapabilityStat]?; var toolUsage: [ToolStat]?
     var findingReviews: [FindingReview]?; var mcpNamespaces: [McpNamespace]?
     var efficiency: EfficiencyReport?
+    var checkRuns: CheckRunSummary?; var storageHealth: StorageSummary?
     var quality: OutcomeQuality?
 }
+struct CheckRunSummary: Codable { var runs: Int; var knownResults: Int; var knownResultRate: Double?; var pendingRuns: Int; var conflicts: Int; var finishWithoutStart: Int }
+struct StorageSummary: Codable { var integrity: String; var retentionDays: Int; var analysisLimitReached: Bool; var storedEvents: Int }
 struct OutcomeQuality: Codable { var outcomeSources: [String: Int]? }
 struct EfficiencyReport: Codable { var assets: [AssetMetric]; var totalTasks: Int; var tasksTruncated: Bool }
 struct AssetMetric: Codable, Identifiable {
@@ -627,8 +630,15 @@ func resultSourceText(_ source: String) -> String {
 }
 func taskComparisonText(_ obj: [String: Any]) -> String {
     let reasons = obj["reasons"] as? [String] ?? []
-    let names = ["insufficient-tasks": tr("At least 3 tasks per variant", "Нужно хотя бы 3 задачи на вариант"), "different-cohorts": tr("Different model, project or acceptance criterion", "Разные модели, проекты или критерии приёмки"), "unknown-model-or-selection": tr("Unknown model or incomplete selection", "Неизвестная модель или неполная выборка"), "unreviewed-tasks": tr("Some tasks await review", "Не все задачи проверены"), "quality-not-established": tr("Quality is unverified or decreased", "Качество не подтверждено или снизилось"), "incomplete-usage": tr("Incomplete reported token usage", "Неполные переданные счётчики токенов")]
+    let names = ["insufficient-tasks": tr("At least 3 tasks per variant", "Нужно хотя бы 3 задачи на вариант"), "different-cohorts": tr("Different model, project or acceptance criterion", "Разные модели, проекты или критерии приёмки"), "unknown-model-or-selection": tr("Unknown model or incomplete selection", "Неизвестная модель или неполная выборка"), "unreviewed-tasks": tr("Some tasks await review", "Не все задачи проверены"), "quality-not-established": tr("Quality is unverified or decreased", "Качество не подтверждено или снизилось"), "incomplete-usage": tr("Incomplete reported token usage", "Неполные переданные счётчики токенов"), "incomplete-selection": tr("Incomplete task selection", "Неполная выборка задач"), "incomplete-time": tr("Incomplete elapsed intervals", "Неполные интервалы времени"), "incomplete-requests": tr("Model request counters unavailable", "Счётчики запросов модели недоступны"), "zero-baseline": tr("Zero baseline; percentage unavailable", "Нулевая база; процент недоступен")]
     var lines = [tr("Token reduction per accepted result: ", "Снижение токенов на принятый результат: ") + ((obj["tokenReduction"] as? Double).map { String(format: "%.1f%%", $0 * 100) } ?? "—")]
+    if let metrics = obj["metrics"] as? [String: [String: Any]] {
+        let labels = [("observedCallsPerAccepted", tr("Observed call reduction / accepted result", "Снижение вызовов / принятый результат")), ("elapsedMsPerAccepted", tr("Task interval sum reduction / accepted result", "Снижение суммы интервалов / принятый результат")), ("modelRequestsPerAccepted", tr("Model request reduction / accepted result", "Снижение запросов модели / принятый результат"))]
+        for (key, label) in labels { if let metric = metrics[key] {
+            lines.append(label + ": " + ((metric["reduction"] as? Double).map { String(format: "%.1f%%", $0 * 100) } ?? "—"))
+            if let blocked = metric["reasons"] as? [String], !blocked.isEmpty { lines.append(blocked.map { names[$0] ?? $0 }.joined(separator: " · ")) }
+        } }
+    }
     for reason in reasons { lines.append("• " + (names[reason] ?? reason)) }
     if let groups = obj["groups"] as? [String: [String: Any]] {
         for variant in groups.keys.sorted() { let g = groups[variant]!
@@ -749,6 +759,14 @@ struct AnalysisView: View {
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8)
             }
             .onAppear {
+                if store.isFixture && CommandLine.arguments.contains("--collection-demo") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        if tab == "overview" { proxy.scrollTo("collection-health", anchor: .top) }
+                        if tab == "compare" {
+                            comparisonMessage = taskComparisonText(["reasons": ["incomplete-usage"], "metrics": ["observedCallsPerAccepted": ["reduction": 0.5, "reasons": []], "elapsedMsPerAccepted": ["reduction": 0.2, "reasons": []], "modelRequestsPerAccepted": ["reasons": ["incomplete-requests"]]], "groups": ["before": ["accepted": 3, "reviewed": 3, "tasks": 3, "usageCompleteTasks": 0], "after": ["accepted": 3, "reviewed": 3, "tasks": 3, "usageCompleteTasks": 0]]])
+                        }
+                    }
+                }
                 if store.isFixture && CommandLine.arguments.contains("--efficiency-demo") {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                         if tab == "sessions" { proxy.scrollTo("task-review", anchor: .top) }
@@ -797,7 +815,7 @@ struct AnalysisView: View {
             if let report = snapshot.analytics {
                 Text(tr("Observed work", "Наблюдаемая работа")).font(.system(size: 16, weight: .semibold))
                 Text("\(report.calls) " + tr("calls · ", "вызовов · ") + "\(report.findings.count) " + tr("workflow findings", "наблюдений по сценариям")).foregroundStyle(mint)
-                coverage(report)
+                coverage(report).id("collection-health")
             }
             Text(tr("Missing days are unknown, not zero. Imported counters do not provide a command timeline.", "Пропущенные дни неизвестны, а не равны нулю. Импорт счётчиков не даёт хронологию команд.")).font(.system(size: 11)).foregroundStyle(quiet)
         }
@@ -811,6 +829,15 @@ struct AnalysisView: View {
                     Text("\(known) " + tr("known results · ", "известных результатов · ") + "\(c.unknownOutcomes ?? 0) " + tr("unknown · ", "неизвестных · ") + "\(c.collectionGaps ?? 0) " + tr("collection gaps", "пропусков сбора")).font(.system(size: 10)).foregroundStyle(quiet)
                 }
                 if let at = c.lastToolEventAt { Text(tr("Last received call: ", "Последний полученный вызов: ") + stamp(at, compact: true)).font(.system(size: 10)).foregroundStyle(quiet) }
+            }
+            if let checks = report.checkRuns {
+                Text(tr("Helper results: ", "Результаты помощников: ") + "\(checks.knownResults)/\(checks.runs) · " + percentText(checks.knownResultRate)).font(.system(size: 11))
+                Text("\(checks.pendingRuns) " + tr("pending · ", "без завершения · ") + "\(checks.conflicts) " + tr("conflicts · ", "противоречий · ") + "\(checks.finishWithoutStart) " + tr("missing starts", "пропусков начала")).font(.system(size: 10)).foregroundStyle(quiet)
+            }
+            if report.checkRuns != nil { Text(tr("Helper evidence is separate from native outcomes and human acceptance", "Квитанции отдельно от штатных исходов и приёмки человеком")).font(.system(size: 10)).foregroundStyle(quiet) }
+            if let health = report.storageHealth {
+                Text(tr("Journal integrity: ", "Целостность журнала: ") + (health.integrity == "ok" ? tr("quick check passed", "быстрая проверка пройдена") : tr("check failed", "проверка не пройдена")) + " · \(health.retentionDays) " + tr("days retained", "дней хранения")).font(.system(size: 10)).foregroundStyle(quiet)
+                if health.analysisLimitReached { Text(tr("Analysis selection is truncated", "Выборка анализа усечена")).font(.system(size: 10)).foregroundStyle(amber) }
             }
             Text(tr("Silence may mean an idle client. Paired calls count only received events; total coverage is unknown.", "Тишина может означать простой клиента. Пары считаются среди полученных событий; полный охват неизвестен.")).font(.system(size: 10)).foregroundStyle(quiet)
             if let sources = report.quality?.outcomeSources {
