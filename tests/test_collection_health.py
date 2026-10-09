@@ -1,6 +1,7 @@
 """Explicit helper/store boundaries; all events use temporary invented state."""
 import json
 import os
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -54,7 +55,7 @@ class CollectionTests(unittest.TestCase):
         self.assertEqual(r['integrity'],'ok');self.assertFalse(r['includesCredentials'])
         self.assertNotIn(key.encode(),dest.read_bytes())
         if os.name!='nt':self.assertEqual(dest.stat().st_mode&0o777,0o600)
-        with sqlite3.connect(dest) as db:
+        with closing(sqlite3.connect(dest)) as db:
             self.assertEqual(db.execute('SELECT count(*) FROM check_run').fetchone()[0],1)
             self.assertEqual(db.execute('SELECT fingerprint FROM backup_identity').fetchone()[0],self.j.digest('backup-key',['journal']))
         with self.assertRaises(ValueError):backup(self.j,dest)
