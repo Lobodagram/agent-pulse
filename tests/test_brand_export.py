@@ -21,7 +21,7 @@ class BrandExportTests(unittest.TestCase):
                 icon.write_bytes(b'\x00\x00\x01\x00TEST_FIXTURE')
                 manifest.write_text(json.dumps({'brand/logo.ico':hashlib.sha256(icon.read_bytes()).hexdigest()}))
                 receipt=public_export.export(root/'allowed')
-                self.assertIn('brand/logo.ico',receipt['files'])
+                self.assertIn(str(Path('brand/logo.ico')),receipt['files'])
 
     def test_source_and_frozen_assets_use_the_same_relative_resource(self):
         import importlib.util,sys
