@@ -3340,6 +3340,30 @@
         "tokenSavings": null,
         "completeCoverage": false
       }
-    ]
+    ],
+    "checkRuns": {
+      "runs": 8,
+      "knownResults": 4,
+      "knownResultRate": 0.5,
+      "pendingRuns": 2,
+      "conflicts": 1,
+      "finishWithoutStart": 1,
+      "coverage": "invented demonstration helper receipts only",
+      "humanAcceptance": null
+    },
+    "storageHealth": {
+      "integrity": "ok",
+      "retentionDays": 30,
+      "eventCap": 100000,
+      "analysisEventLimit": 100000,
+      "storedEvents": 12000,
+      "analysisLimitReached": false,
+      "historicalDiscardCounts": "unknown before tracking began"
+    },
+    "efficiency": {
+      "assets": [],
+      "totalTasks": 6,
+      "tasksTruncated": false
+    }
   }
 }

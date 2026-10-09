@@ -13,3 +13,12 @@ Read-only MCP health/receipt tools and the EN/RU native/Windows overview show th
 Добавлены явные квитанции помощников: начало, результат, версия, длительность и разрешённые статусы проверок. Они отдельно от нативных исходов и приёмки человеком. Повторы не суммируются, противоречия остаются неизвестными; команды, вывод, разговоры и ключи не сохраняются.
 
 Диагностика собственного журнала показывает целостность, срок хранения, усечение анализа и удаления с датой начала счётчика. Проверенная резервная копия не перезаписывает существующий файл и не содержит ключей/нативных баз. Доступные операционные метрики сравниваются независимо от токенов, с сохранением критериев качества. Полный охват агентов и экономия подписки не заявляются.
+
+
+## Delivery verification · 2026-10-09 / проверка поставки
+
+Mac ARM64/Intel and Windows x64 packages passed CI and downloaded checksum/runtime/version checks. On the development Mac, 0.11.2 retained its enabled startup setting and launched automatically after a real user-performed reboot; journal integrity, retained data, fresh Codex events and refreshed Codex/GLM quotas passed. Native helper receipt integration was verified separately. [Full QA and remaining platform limits](QA.md).
+
+EN/RU README and the public demo gallery show the 0.11.2 collection and comparison screens. Screenshots use invented data and are marked DEMO; they do not establish actual productivity or subscription savings.
+
+Сборки трёх платформ и скачанные архивы проверены. На рабочем Mac автозапуск после реальной перезагрузки, сохранность аналитики и поступление новых событий подтверждены. Новые экраны опубликованы с вымышленными данными; подробные границы проверки указаны в QA.

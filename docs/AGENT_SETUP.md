@@ -16,7 +16,7 @@ Check the OS, OS version and processor architecture using native system informat
 | Linux | No packaged desktop GUI | Source collector/local MCP only: Python 3.11+ in a dedicated venv; [headless instructions](HEADLESS.md). Provider adapters vary by client. |
 | Windows ARM64 or other platforms/architectures | No separately verified package | Do not promise native support or tested emulation. Establish compatibility first rather than choosing a mismatched download. |
 
-Download the matching architecture from [releases](https://github.com/Lobodagram/agent-pulse/releases/latest), verify SHA256 against `SHA256SUMS.txt`, and read that version's limits. Checksums verify agreement with the manifest, not code signing. Do not reuse Mac shell commands in PowerShell.
+Download the matching architecture from [releases](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.11.2), verify SHA256 against `SHA256SUMS.txt`, and read that version's limits. Checksums verify agreement with the manifest, not code signing. Do not reuse Mac shell commands in PowerShell.
 
 Packaged MCP needs no external Python: on Mac, command is the absolute path to `Agent Pulse.app/Contents/Resources/pulse-collector`; on Windows, the extracted `pulse-collector.exe`; arguments are `["mcp"]`. Set the path as a distinct command field in the native client configuration, preserving spaces. Do not use GUI `AgentPulse.exe` for stdio. Additional controls require the owner's separate request.
 
