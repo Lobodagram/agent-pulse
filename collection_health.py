@@ -39,7 +39,9 @@ def backup(j,destination):
         count=target.execute('SELECT count(*) FROM observation').fetchone()[0]
         target.close();target=None
         os.chmod(tmp,0o600)
-        with tmp.open('rb') as stream:os.fsync(stream.fileno())
+        # Windows _commit requires a writable descriptor; the verified bytes
+        # are unchanged, and publication still follows successful fsync.
+        with tmp.open('r+b') as stream:os.fsync(stream.fileno())
         # Exclusive atomic publication: never replace an existing file, even
         # if it appeared after the validation above. Temporary file is same FS.
         os.link(tmp,path)
