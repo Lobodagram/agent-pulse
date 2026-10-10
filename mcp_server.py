@@ -11,6 +11,7 @@ from evidence_pack import evidence_pack
 from pathlib import Path
 from providers import IDS as PROVIDER_IDS, ConfigBusy
 from session_view import session_page
+from finding_review import REASONS
 TOOLS=[
  {'name':'pulse_report','description':'Local observed workflow findings and coverage; not exact tool token costs.','inputSchema':{'type':'object','properties':{},'additionalProperties':False}},
  {'name':'pulse_session','description':'Read a bounded page of sanitized calls. Pass nextCursor back as cursor to continue one fixed snapshot.','inputSchema':{'type':'object','properties':{'sessionId':{'type':'string'},'cursor':{'type':'string'},'limit':{'type':'integer','minimum':1,'maximum':100}},'required':['sessionId'],'additionalProperties':False}},
@@ -22,7 +23,7 @@ TOOLS=[
 CONTROL_TOOLS=[
  {'name':'pulse_configure','description':'Change only allowlisted local Agent Pulse settings. Requires user instruction; no credentials or native hook changes.','inputSchema':{'type':'object','properties':{'changes':{'type':'object'}},'required':['changes'],'additionalProperties':False}},
  {'name':'pulse_subscription','description':'Record an owner-provided billing date; never infer it from quota reset dates.','inputSchema':{'type':'object','properties':{'provider':{'type':'string'},'date':{'type':'string'},'kind':{'type':'string','enum':['renewal','expiry','none']}},'required':['provider','date','kind'],'additionalProperties':False}},
- {'name':'pulse_review_finding','description':'Record a human-reviewed finding decision. Actioned requires an implemented change; recheck is observational.','inputSchema':{'type':'object','properties':{'findingId':{'type':'string'},'status':{'type':'string','enum':['open','actioned','dismissed']},'reason':{'type':'string','enum':['unspecified','script','skill','mcp','routing','retrieval','fix','not-applicable','duplicate']},'days':{'type':'integer','enum':[1,3,7]}},'required':['findingId','status','reason','days'],'additionalProperties':False}},
+ {'name':'pulse_review_finding','description':'Record a human-reviewed finding decision. Actioned requires an implemented change; recheck is observational.','inputSchema':{'type':'object','properties':{'findingId':{'type':'string'},'status':{'type':'string','enum':['open','actioned','dismissed']},'reason':{'type':'string','enum':sorted(REASONS)},'days':{'type':'integer','enum':[1,3,7]}},'required':['findingId','status','reason','days'],'additionalProperties':False}},
  {'name':'pulse_annotate_session','description':'Save a genuinely reviewed task label and outcome; never fabricate accepted work to test analytics.','inputSchema':{'type':'object','properties':{'sessionId':{'type':'string'},'label':{'type':'string'},'variant':{'type':'string'},'outcome':{'type':'string','enum':['accepted','failed','rework','unknown']}},'required':['sessionId','label','variant','outcome'],'additionalProperties':False}}]
 TOOLS.append({'name':'pulse_settings','description':'Read allowlisted local settings and manual billing dates. Never returns keys, locators or native client files.','inputSchema':{'type':'object','properties':{},'additionalProperties':False}})
 TOOLS += [
@@ -33,6 +34,7 @@ TOOLS += [
 _str={'type':'string','minLength':1,'maxLength':1000}
 _asset_props={'provider':{'type':'string','enum':sorted(PROVIDER_IDS)},'assetId':_str,'version':_str,'kind':{'type':'string','enum':['skill','mcp','tool']},'findingId':_str,'operations':{'type':'array','maxItems':10,'items':_str}}
 _task_props={'provider':_asset_props['provider'],'taskId':_str,'label':_str,'variant':_str,'criterion':_str,'outcome':{'type':'string','enum':['accepted','failed','rework','unknown']},'callIds':{'type':'array','minItems':1,'maxItems':500,'items':{'type':'string','pattern':'^[a-f0-9]{32}$'}},'assetId':_str,'version':_str,'applied':{'type':'boolean'}}
+_task_props.update({'eligibility':{'type':'string','enum':['yes','no','unknown']},'nonUseReason':{'type':'string','enum':['','unknown','unavailable','not-selected','workflow-mismatch','preferred-alternative']}})
 _usage_props={'provider':_asset_props['provider'],'sessionId':_str,'turnId':_str,**{k:{'type':'integer','minimum':0} for k in ['input','cached_input','output','modelRequests']},'complete':{'type':'boolean'}}
 for _name,_description,_props,_required in [
  ('pulse_register_asset','Register an immutable public asset version, optionally linked to an observed finding.',_asset_props,['provider','assetId','version','kind']),
@@ -79,7 +81,10 @@ def dispatch(request,state,allow_control=False):
     j=Journal(state)
     try:
         if name=='pulse_report' and not args:
-            data=report(j);data['checkRuns']['truncated'] |= len(data['checkRuns']['recent'])>5;data['checkRuns']['recent']=data['checkRuns']['recent'][:5];data.pop('recentCalls',None);data['sessions']=data['sessions'][:20];data['findings']=data['findings'][:10]
+            data=report(j);data['checkRuns']['truncated'] |= len(data['checkRuns']['recent'])>5;data['checkRuns']['recent']=data['checkRuns']['recent'][:5]
+            data['checkRuns']['operationVersionsTruncated'] |= len(data['checkRuns']['byOperationVersion'])>5
+            data['checkRuns']['byOperationVersion']=data['checkRuns']['byOperationVersion'][:5]
+            data.pop('recentCalls',None);data['sessions']=data['sessions'][:20];data['findings']=data['findings'][:10]
             data['efficiency']['tasksTruncated'] |= bool(data['efficiency']['tasks']);data['efficiency']['tasks']=[]
             data['efficiency']['assetsTruncated']=len(data['efficiency']['assets'])>10;data['efficiency']['assets']=data['efficiency']['assets'][:10]
             data['capabilitiesTruncated']=len(data['capabilities'])>20

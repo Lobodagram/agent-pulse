@@ -18,6 +18,7 @@ def initialize(db):
     CREATE TABLE IF NOT EXISTS task_call(task TEXT,provider TEXT,call TEXT,
       PRIMARY KEY(provider,call));
     CREATE INDEX IF NOT EXISTS task_call_task ON task_call(task);
+    CREATE TABLE IF NOT EXISTS task_eligibility(task TEXT PRIMARY KEY,eligibility TEXT,non_use_reason TEXT);
     CREATE TABLE IF NOT EXISTS turn_usage_status(provider TEXT,session TEXT,turn TEXT,source TEXT,
       complete INTEGER,requests REAL,PRIMARY KEY(provider,session,turn,source));
     ''')
@@ -61,7 +62,7 @@ def register_asset(j,spec):
 def record_task(j,spec):
     from journal import PROVIDERS
     required={'provider','taskId','label','variant','criterion','outcome','callIds'}
-    if not isinstance(spec,dict) or not required<=set(spec) or set(spec)-required-{'assetId','version','applied'}:raise ValueError('invalid_task')
+    if not isinstance(spec,dict) or not required<=set(spec) or set(spec)-required-{'assetId','version','applied','eligibility','nonUseReason'}:raise ValueError('invalid_task')
     provider=spec['provider'];label=slug(spec['label']);variant=slug(spec['variant']);criterion=slug(spec['criterion'])
     if not isinstance(spec['taskId'],str) or not 1<=len(spec['taskId'])<=1000:raise ValueError('invalid_task_identity')
     ids=spec['callIds'];outcome=spec['outcome'];applied=spec.get('applied',False)
@@ -74,6 +75,10 @@ def record_task(j,spec):
     indexes=[i for i,c in enumerate(lane) if c['id'] in ids]
     if max(indexes)-min(indexes)+1!=len(ids):raise ValueError('selection_not_contiguous')
     asset=spec.get('assetId','');version=spec.get('version','')
+    eligibility=spec.get('eligibility','unknown');non_use=spec.get('nonUseReason','')
+    if not isinstance(eligibility,str) or not isinstance(non_use,str) or eligibility not in {'yes','no','unknown'} or non_use not in {'','unknown','unavailable','not-selected','workflow-mismatch','preferred-alternative'}:raise ValueError('invalid_eligibility')
+    if (eligibility!='unknown' or non_use) and not asset:raise ValueError('asset_version_required')
+    if applied and (eligibility=='no' or non_use):raise ValueError('contradictory_application')
     if bool(asset)!=bool(version) or applied and not asset:raise ValueError('asset_version_required')
     if asset:
         slug(asset);version_name(version)
@@ -89,6 +94,11 @@ def record_task(j,spec):
         if any(j.db.execute('SELECT 1 FROM task_call WHERE provider=? AND call=? AND task!=?',(provider,c,task)).fetchone() for c in ids):raise ValueError('overlapping_task')
         j.db.execute('INSERT OR REPLACE INTO reviewed_task VALUES (?,?,?,?,?,?,?,?,?,?,?)',(task,provider,session,label,variant,criterion,outcome,asset,version,int(applied),time.time()))
         j.db.executemany('INSERT OR IGNORE INTO task_call VALUES (?,?,?)',[(task,provider,c) for c in ids])
+        assessment=j.db.execute('SELECT eligibility,non_use_reason FROM task_eligibility WHERE task=?',(task,)).fetchone()
+        if assessment:
+            eligibility=spec.get('eligibility',assessment['eligibility']);non_use=spec.get('nonUseReason',assessment['non_use_reason'])
+        if applied and (eligibility=='no' or non_use):raise ValueError('contradictory_application')
+        j.db.execute('INSERT OR REPLACE INTO task_eligibility VALUES (?,?,?)',(task,eligibility,non_use))
     return {'saved':True,'localOnly':True,'taskId':task}
 
 
@@ -151,7 +161,12 @@ def task_rows(j,calls):
         elapsed=(max(ends)-min(starts))*1000 if full and len(starts)==len(ids) and len(ends)==len(ids) and all(c['endedAt']>=c['startedAt'] for c in selected) else None
         models=sorted({c['model'] for c in selected});actors=sorted({c['actor'] for c in selected});projects=sorted({c['project'] for c in selected})
         asset=r.pop('asset')
+        assessment=j.db.execute('SELECT eligibility,non_use_reason FROM task_eligibility WHERE task=?',(r['id'],)).fetchone()
+        eligibility=assessment['eligibility'] if assessment else 'unknown'
+        non_use=assessment['non_use_reason'] if assessment else ''
         result.append({**r,'taskId':r['id'],'assetId':asset,'callIds':ids,'calls':len(selected),'selectionComplete':full,
+          'eligibility':eligibility,'nonUseReason':non_use,
+          'application':'used' if r['applied'] else 'not-used' if non_use else 'unknown',
           'knownResults':sum(c['paired'] and c['outcome'] in {'success','failed'} for c in selected),
           'successes':sum(c['paired'] and c['outcome']=='success' for c in selected),'elapsedMs':elapsed,
           'models':models,'actors':actors,'projects':projects,'usage':usage,
@@ -190,8 +205,19 @@ def efficiency_report(j,calls=None,providers=None):
     for r in j.db.execute('SELECT * FROM asset_version ORDER BY at DESC'):
         if providers is not None and r['provider'] not in providers:continue
         group=[t for t in rows if (t['provider'],t['assetId'],t['version'])==(r['provider'],r['id'],r['version'])]
+        eligible=[t for t in group if t['eligibility']=='yes'];known=[t for t in eligible if t['application']!='unknown']
+        used=sum(t['application']=='used' for t in eligible)
+        lifecycle='registered-awaiting-use'
+        applied=[t for t in group if t['application']=='used']
+        if applied:lifecycle='accepted-awaiting-comparison' if any(t['outcome']=='accepted' for t in applied) else 'awaiting-acceptance'
         assets.append({'provider':r['provider'],'assetId':r['id'],'version':r['version'],'kind':r['kind'],'findingId':r['finding'],
-                       **summarize(group),'state':'observed' if group else 'insufficient'})
+                       **summarize(group),'state':'observed' if group else 'insufficient',
+                       'eligibleTasks':len(eligible) if any(t['eligibility']!='unknown' for t in group) else None,'eligibilityKnownTasks':sum(t['eligibility']!='unknown' for t in group),
+                       'eligibilityUnknownTasks':sum(t['eligibility']=='unknown' for t in group),'usedEligibleTasks':used,
+                       'adoptionKnownTasks':len(known),'adoptionRate':used/len(eligible) if eligible and len(known)==len(eligible) else None,
+                       'adoptionBasis':'explicit assessments of selected tasks only; not all possible work',
+                       'nonUseReasons':dict(Counter(t['nonUseReason'] for t in eligible if t['application']=='not-used')),
+                       'lifecycle':lifecycle})
     public_rows=[{**r,'callIds':r['callIds'][:20],'callIdsTruncated':len(r['callIds'])>20} for r in rows[:100]]
     return {'assets':assets,'tasks':public_rows,'totalTasks':len(rows),'tasksTruncated':len(rows)>100,
       'coverage':'explicit reviewed selections; native usage only; no quota or per-tool token attribution',

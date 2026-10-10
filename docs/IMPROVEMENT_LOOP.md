@@ -1,5 +1,35 @@
 # Review → implement → observe
 
+## Task eligibility and version lifecycle (0.12.0 source candidate)
+
+In Workflows, confirm a repeat or dismiss it with a reason: waiting for a process,
+required check, different task, false positive, duplicate or not applicable.
+Dismissed candidates are hidden by default but remain available via the toggle,
+review list, Markdown and MCP. Reasons are human annotations; they do not train a
+model or prove semantic precision on unreviewed work.
+
+Register the immutable asset version with the finding ID. In Sessions, select one
+contiguous actual task and the asset version. Assess `eligibility: yes|no|unknown`,
+attest application if it occurred, and review acceptance separately. For an
+unapplied version, record `nonUseReason`: `unknown`, `unavailable`, `not-selected`,
+`workflow-mismatch` or `preferred-alternative`. An empty reason leaves application
+unassessed. A non-empty reason explicitly attests non-use. Contradictory use claims
+are rejected atomically; omitted fields preserve an existing assessment.
+
+Adoption = declared uses / explicitly eligible selected tasks, only if application
+is known for every task in that denominator. The card also shows eligibility and
+application coverage. This is a reviewed sample, not all opportunities in a
+client. Old journals migrate with unknown eligibility; no historical backfill.
+Task assessments expire with the existing 30-day task retention.
+
+Stages are reviewed, implemented without linked version, version awaiting use,
+used awaiting acceptance, accepted awaiting comparison, or dismissed. They are
+evidence stages, not causal effectiveness claims. The card retains failed/rework
+attempts and independent usage/time coverage. Compare equivalent accepted tasks
+in Compare before judging improvement; a cache ratio is not subscription savings.
+CLI metadata and opt-in MCP `pulse_record_task` use the same optional fields;
+default MCP remains read-only. Synthetic fixtures never populate live reviews.
+
 Agent Pulse 0.7.0 records manual finding decisions (`open`, `actioned`, `dismissed`) in its own local journal. Mark an implemented script/skill/MCP in Workflows or use:
 
 ```sh

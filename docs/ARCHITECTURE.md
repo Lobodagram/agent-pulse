@@ -14,7 +14,7 @@ Agent Pulse — локальный наблюдатель. Он не запус�
 | Deterministic patterns, evidence, sessions and reviews / Паттерны, свидетельства, сессии и решения | `analytics.py`, `command_profile.py`, `session_view.py`, `finding_review.py` |
 | Model/capability attribution / Модели и подтверждённые навыки | `model_evidence.py`, `capability_detection.py`, `capability_report.py` |
 | Read-only MCP and optional bounded controls / MCP и ограниченное управление по выбору | `mcp_server.py`, `agent_control.py` |
-| macOS UI / Интерфейс macOS | `Sources/AgentPulse.swift` |
+| macOS UI / Интерфейс macOS | `Sources/PulseModels.swift`, `PulseStore.swift`, `WidgetViews.swift`, `TokenHistory.swift`, `AnalysisView.swift`, `HelperMetricView.swift`, `SettingsView.swift`, `AppDelegate.swift`; `AgentPulse.swift` is the entrypoint |
 | Windows UI / Интерфейс Windows | `windows/agent_pulse.py` |
 | Portable setup/review skills / Навыки установки и анализа | `agent-skills/`; explicit never-overwrite installer |
 | Version / Версия | `pulse_version.py`; packaging reads this value |

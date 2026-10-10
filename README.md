@@ -6,7 +6,7 @@ Widget: **Limits ⇄ / Today ⇄**, persisted per device; opt-in personal GLM Co
 
 [Reading empty values and continuing long sessions](docs/READING_ANALYTICS.md). Compact names are CODEX, CLAUDE, KIMI, GLM, etc.; the Mac menu has no page counter.
 
-[Русский](README.ru.md) · [Downloads](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.11.2) · [Provider setup](docs/PROVIDERS.md) · [Workflow analytics](docs/ANALYTICS.md)
+[Русский](README.ru.md) · [Downloads](https://github.com/Lobodagram/agent-pulse/releases) · [Provider setup](docs/PROVIDERS.md) · [Workflow analytics](docs/ANALYTICS.md)
 
 A local tool for improving coding-agent workspaces: collect sanitized tool events, inspect repeated workflows and failures, and review evidence before automating a task or adding a skill/MCP. The desktop widget also shows reported tokens and subscription quotas.
 
@@ -14,12 +14,12 @@ A local tool for improving coding-agent workspaces: collect sanitized tool event
 
 [Architecture and module ownership](docs/ARCHITECTURE.md) · [Linux/headless runtime](docs/HEADLESS.md) · Runtime wheel: Python 3.11+
 
-**[0.11.2 public preview](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.11.2).** Kimi account limits and live native delivery remain unverified; settings and fixtures are tested. Downloadable packages and their verification are linked below and recorded in [QA](docs/QA.md). macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
+**0.13.0 public preview source.** Kimi account limits and live native delivery remain unverified; settings and fixtures are tested. Downloadable packages and their verification are linked below and recorded in [QA](docs/QA.md). macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
 
-Version 0.11.2 adds explicit helper results, journal health and verified private backups, plus separate coverage gates for calls, task intervals, model requests and tokens. macOS launch at login passed a real reboot check on the development device; physical Windows acceptance and actual Kimi account use remain separate. [Release notes](docs/RELEASE_NOTES.md) · [Delivery checks](docs/QA.md).
+Version 0.13.0 adds human review reasons, finding-to-version stages, explicit task eligibility and adoption coverage, plus direct helper metrics by client, operation and version. macOS source is split into focused modules. Published packages are listed in Releases; check the tag before downloading. macOS launch at login passed a real reboot check on the development device; physical Windows acceptance and actual Kimi account use remain separate. [Release notes](docs/RELEASE_NOTES.md) · [Delivery checks](docs/QA.md).
 
-![Helper results and journal health in 0.11.2 — invented demo data](docs/screenshots/collection-en.png)
-![Reviewed-task comparison in 0.11.2 — invented results, not measured savings](docs/screenshots/comparison-en.png)
+![Direct helper results by version in 0.13.0 — invented demo data](docs/screenshots/collection-en.png)
+![Reviewed-task comparison — unchanged screen from 0.11.2 — invented results, not measured savings](docs/screenshots/comparison-en.png)
 
 **Confirm collection first:** configured observers are not proof of observation. After setup, start a new native session, review hook trust when required, perform an ordinary task, and check Workflows for actual paired calls. See the [readiness audit](docs/AUDIT.md). Capabilities separates exact registered skill-file loads, explicit invocations and manual declarations. No observed use is not proof of non-use; command families are bounded static classifications, not semantic understanding of arbitrary code.
 
@@ -69,7 +69,7 @@ Open Analytics → Tokens: readable token units, hover preview, click a day or u
 
 ## Install
 
-Download the matching zip from [Releases](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.11.2): `macos-arm64` for Apple Silicon, `macos-x64` for Intel, or `windows-x64`.
+Download the matching zip from [Releases](https://github.com/Lobodagram/agent-pulse/releases): `macos-arm64` for Apple Silicon, `macos-x64` for Intel, or `windows-x64`.
 
 **macOS 14+:** unzip, move `Agent Pulse.app` to Applications, open it. This preview is ad-hoc signed, **not Apple notarized**. If macOS blocks it, inspect the source/checksum and use Apple's documented approval flow only if you trust the download; the project does not disable Gatekeeper. Release packages contain their own collector runtime; native clients still need to be installed and authenticated by you.
 
@@ -127,3 +127,7 @@ Give your agent this repository URL and ask it to follow [Agent setup](docs/AGEN
 
 
 [Collection and storage health](docs/COLLECTION_HEALTH.md): explicit helper results, whole retained-window analysis, verified credential-free journal snapshots and operational comparison coverage.
+
+Task review records suitability, declared application and non-use reasons without filling unknown history. Helper success is separate from human acceptance and subscription savings.
+
+![Task review in 0.13.0 — invented demo data](docs/screenshots/task-review-en.png)

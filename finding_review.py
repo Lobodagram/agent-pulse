@@ -4,7 +4,8 @@ import time
 from analytics import findings
 
 STATUSES={'open','actioned','dismissed'}
-REASONS={'unspecified','script','skill','mcp','routing','retrieval','fix','not-applicable','duplicate'}
+REASONS={'unspecified','script','skill','mcp','routing','retrieval','fix','not-applicable','duplicate',
+         'waiting-process','required-check','different-task','false-positive','confirmed-pattern'}
 
 def window_summary(j,calls,finding_id):
     candidate=next((f for f in findings(j,calls,summary_only=True) if f['id']==finding_id),None)
@@ -37,11 +38,13 @@ def review_finding(j,finding_id,status,reason='unspecified',days=1):
     j.db.execute('DELETE FROM finding_review WHERE rowid IN (SELECT rowid FROM finding_review ORDER BY at DESC LIMIT -1 OFFSET 200)')
     j.db.commit();return {'saved':True,'localOnly':True}
 
-def reviewed_findings(j,calls,providers=None):
+def reviewed_findings(j,calls,providers=None,assets=None):
     import json
     result=[];now=time.time()
     rows=j.db.execute('SELECT * FROM finding_review ORDER BY at DESC,id').fetchall()
     rows=[r for r in rows if providers is None or r['provider'] in providers]
+    from efficiency import efficiency_report
+    if assets is None:assets=efficiency_report(j,calls,providers)['assets'] if rows else []
     for r in rows[:30]:
         baseline=json.loads(r['baseline']);end=r['at']+r['seconds'];after=None
         state='not-requested' if r['status']!='actioned' else 'awaiting-window'
@@ -52,7 +55,12 @@ def reviewed_findings(j,calls,providers=None):
             elif baseline['knownTurns']<3 or after['knownTurns']<3:state='insufficient-evidence'
             elif not after['qualifies']:state='not-qualifying-in-observed-window'
             else:state='observational-lower' if after['occurrences']<baseline['occurrences'] else 'observational-higher' if after['occurrences']>baseline['occurrences'] else 'observational-same'
+        linked=[a for a in assets if a['provider']==r['provider'] and a['findingId']==r['id']]
+        lifecycle='dismissed' if r['status']=='dismissed' else 'implemented-unlinked' if r['status']=='actioned' else 'reviewed'
+        if linked and r['status']!='dismissed':
+            lifecycle='accepted-awaiting-comparison' if any(a['lifecycle']=='accepted-awaiting-comparison' for a in linked) else 'awaiting-acceptance' if any(a['lifecycle']=='awaiting-acceptance' for a in linked) else 'registered-awaiting-use'
         result.append({'findingId':r['id'],'provider':r['provider'],'kind':r['kind'],'title':r['title'],'titleRu':r['title_ru'],
+                       'lifecycle':lifecycle,'linkedVersions':[{'assetId':a['assetId'],'version':a['version'],'tasks':a['tasks'],'accepted':a['accepted'],'declaredUses':a['declaredUses']} for a in linked],
                        'status':r['status'],'reason':r['reason'],'reviewedAt':r['at'],'windowHours':r['seconds']//3600,
                        'afterWindowEndsAt':end,'baseline':baseline,'after':after,'recheckState':state,
                        'causalClaim':False,'tokenSavings':None,'completeCoverage':False,

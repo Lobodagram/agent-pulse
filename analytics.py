@@ -68,9 +68,11 @@ def recommendation(j,key,kind,calls,sequence=None,*,summary_only=False):
     elif not relevant and categories <= {'read','search'}:action='retrieval'
     elif not relevant and 'remote' in categories:action='typed_tool_or_mcp'
     title,ru,suggest,suggest_ru=TEXT[kind]
+    review=j.db.execute('SELECT status,reason FROM finding_review WHERE id=?',(summary['id'],)).fetchone()
     # Frequency is evidence, not a promised token saving. Tool duration sums can overlap.
     return {**summary,'title':title,'titleRu':ru,
       'suggestion':suggest,'suggestionRu':suggest_ru,'action':action,'confidence':'medium' if kind!='template' else 'low',
+      'reviewStatus':review['status'] if review else 'unreviewed','reviewReason':review['reason'] if review else '',
       'sequence':sequence or [],'evidenceSessions':list(dict.fromkeys(c['session'] for c in selected)),
       'medianDurationMs':statistics.median(durations) if durations else None,'failedCalls':sum(c['outcome']=='failed' for c in calls),
       'unknownOutcomes':sum(c['outcome']=='unknown' for c in calls),'sampledCapabilityInvocations':observed_candidates,
@@ -236,9 +238,9 @@ def report(j,providers=None,session_limit=100):
                'registered':bool(j.db.execute('SELECT 1 FROM inventory WHERE provider=? AND id=? AND kind=?',(p,n,'mcp')).fetchone()),
                'coverage':'native namespace only; plugin identity and live availability are not inferred'} for (p,n),items in namespaces.items()]
     from finding_review import reviewed_findings
-    reviews=reviewed_findings(j,calls,providers)
     from efficiency import efficiency_report
     efficiency=efficiency_report(j,calls,providers)
+    reviews=reviewed_findings(j,calls,providers,efficiency['assets'])
     return {'schemaVersion':5,'generatedAt':time.time(),'coverage':coverage,'sessions':sorted(summaries,key=lambda x:x['startedAt'] or 0,reverse=True)[:session_limit] if session_limit is not None else sorted(summaries,key=lambda x:x['startedAt'] or 0,reverse=True),
       'sessionsTruncated':session_limit is not None and len(summaries)>session_limit,'efficiency':efficiency,
       'findings':findings(j,calls),'recentCalls':calls[-100:],'calls':len(calls),'eventLimitReached':total>MAX_EVENTS,

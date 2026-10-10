@@ -1,5 +1,13 @@
 # QA evidence
 
+## 0.13.0 local acceptance · 2026-10-10
+
+The local ARM64 candidate (build39) passed 293 tests, Python syntax, allowlisted public export, 160 document links, Swift compilation, strict signature and frozen CLI/MCP/hooks/receipt/backup checks. All 23 widget/window scenarios and 24 EN/RU analytics/form/helper renders passed. Representative forms and new helper metrics were visually inspected; the synthetic task-assessment setup now fills values from its asset-change callback instead of racing delayed resets. These source counts refer to the checked local candidate before the final release documentation/gallery update.
+
+After explicit installation approval, atomic canonical and observer-compatible updates preserved four config/secret/hook files and their modes. Actual Settings showed 0.13.0 with startup enabled and unchanged language, placement, scale and collection opt-ins. Actual Overview expanded seven real helper receipts by operation/version; journal quick integrity passed and new events continued arriving. Existing app paths are preserved; rollback consists of the prior two 0.12.0 bundles in ZIPs plus a private journal snapshot. Temporary app bundles were removed. No fake production task reviews, model calls or peer launch.
+
+The new collection and task-review screenshots are synthetic 0.13.0 captures with DEMO labels and reviewed image hashes. Existing unchanged screens keep their earlier dated provenance. Real task benefit and subscription savings remain unknown. New 0.13.0 reboot, physical Windows/Intel interaction and notarization remain unrun. Public CI and downloaded-release acceptance are recorded separately when available.
+
 ## 0.11.2 verified delivery and real reboot · 2026-10-09
 
 Release tag `v0.11.2` points to `caed3e05a56b3374251c19dfd5ba65fe58b99da0`. [Source CI 37919591643](https://github.com/Lobodagram/agent-pulse/actions/runs/37919591643) passed all four jobs; [package CI 37920067753](https://github.com/Lobodagram/agent-pulse/actions/runs/37920067753) passed ARM64, Intel, Windows and publication. All 160 exported public blob hashes/modes matched. Fresh source/privacy/syntax/151 links and 280 tests passed. Windows backup fsync uses a writable descriptor, and the verification test explicitly closes SQLite before fixture cleanup; both issues were caught before the tag.

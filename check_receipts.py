@@ -2,12 +2,43 @@
 import json
 import math
 import re
+import statistics
 import time
 
 OPERATIONS = {'workflow-check', 'release-preflight', 'ci-summary', 'mesh-topology', 'mesh-compare', 'slicer-project'}
 GATES = {'unit-tests', 'syntax', 'privacy-export', 'links', 'archives', 'source-stable', 'geometry', 'units', 'execution'}
 STATUSES = {'started', 'success', 'failed', 'unknown', 'interrupted'}
 LIMIT = 5000
+GROUP_LIMIT = 50
+
+def operation_metrics(rows, now):
+    """Reported helper cohorts, independent of native outcomes or task acceptance."""
+    grouped={}
+    for row in rows:
+        grouped.setdefault((row['provider'],row['operation'],row['version']),[]).append(row)
+    groups=[]
+    for (provider,operation,version), cohort in grouped.items():
+        known=[r for r in cohort if r['status'] in {'success','failed'} and not r['conflict']]
+        timed=[(r['ended']-r['started'])*1000 for r in known if r['begun'] and r['ended'] is not None]
+        successes=sum(r['status']=='success' for r in known)
+        failed_gates={}
+        for r in cohort:
+            if r['ended'] is not None and not r['conflict']:
+                for gate,status in json.loads(r['gates']).items():
+                    if status=='failed':failed_gates[gate]=failed_gates.get(gate,0)+1
+        groups.append({'provider':provider,'operation':operation,'version':version,'runs':len(cohort),
+            'knownResults':len(known),'successes':successes,'failures':len(known)-successes,
+            'knownResultRate':len(known)/len(cohort),'successRate':successes/len(known) if known else None,
+            'pendingRuns':sum(r['status']=='started' for r in cohort),
+            'staleRuns':sum(r['status']=='started' and now-r['started']>600 for r in cohort),
+            'interruptedRuns':sum(r['status']=='interrupted' and not r['conflict'] for r in cohort),
+            'unknownRuns':sum(r['status']=='unknown' for r in cohort),
+            'conflicts':sum(r['conflict'] for r in cohort),
+            'finishWithoutStart':sum(r['ended'] is not None and not r['begun'] for r in cohort),
+            'timedRuns':len(timed),'medianElapsedMs':statistics.median(timed) if timed else None,
+            'failedGates':failed_gates,'lastStartedAt':max(r['started'] for r in cohort)})
+    groups.sort(key=lambda r:(-r['lastStartedAt'],r['provider'],r['operation'],r['version']))
+    return groups[:GROUP_LIMIT],len(groups)
 
 def initialize(db):
     db.executescript('''
@@ -57,8 +88,10 @@ def receipt(j,spec):
     return {'saved':True,'localOnly':True,'runId':rid,'provenance':'helper-reported; not native outcome or human acceptance'}
 
 def check_report(j,providers=None):
-    rows=[dict(r) for r in j.db.execute('SELECT * FROM check_run WHERE started>=? ORDER BY started DESC',(time.time()-30*86400,))
+    now=time.time()
+    rows=[dict(r) for r in j.db.execute('SELECT * FROM check_run WHERE started>=? ORDER BY started DESC',(now-30*86400,))
           if providers is None or r['provider'] in providers]
+    operations,group_count=operation_metrics(rows,now)
     known=sum(r['status'] in {'success','failed'} and not r['conflict'] for r in rows)
     ended=sum(r['ended'] is not None for r in rows)
     public=[]
@@ -67,11 +100,13 @@ def check_report(j,providers=None):
         public.append(r)
     providers_seen=sorted({r['provider'] for r in rows})
     by_provider=[{'provider':p,'runs':sum(r['provider']==p for r in rows),'knownResults':sum(r['provider']==p and r['status'] in {'success','failed'} and not r['conflict'] for r in rows)} for p in providers_seen]
-    return {'byProvider':by_provider,'runs':len(rows),'knownResults':known,'finishedRuns':ended,'knownResultRate':known/len(rows) if rows else None,
+    return {'byProvider':by_provider,'byOperationVersion':operations,'operationVersionCount':group_count,
+            'operationVersionsTruncated':group_count>GROUP_LIMIT,
+            'runs':len(rows),'knownResults':known,'finishedRuns':ended,'knownResultRate':known/len(rows) if rows else None,
             'startsObserved':sum(r['begun'] for r in rows),
             'finishWithoutStart':sum(r['ended'] is not None and not r['begun'] for r in rows),
             'pendingRuns':sum(r['status']=='started' for r in rows),
-            'staleRuns':sum(r['status']=='started' and time.time()-r['started']>600 for r in rows),
+            'staleRuns':sum(r['status']=='started' and now-r['started']>600 for r in rows),
             'conflicts':sum(r['conflict'] for r in rows),'recent':public,'truncated':len(rows)>20,
             'coverage':'explicit helper receipts only; reporter-supplied, not independent verification',
             'nativeOutcomesChanged':0,'humanAcceptance':None}
@@ -82,6 +117,7 @@ class Reporter:
         import uuid
         self.state=state;self.spec={'runId':uuid.uuid4().hex,'provider':provider,'operation':operation,
                                   'version':version,'startedAt':time.time(),'status':'started'}
+        self.terminal=None
         self.saved=self._write(self.spec) if state is not None else None
     def _write(self,spec):
         from journal import Journal
@@ -95,5 +131,8 @@ class Reporter:
                 except Exception:pass
     def finish(self,status,gates=None,digest=''):
         if self.state is not None:
-            self.saved=self._write(dict(self.spec,status=status,endedAt=time.time(),gates=gates or {},sourceDigest=digest))
+            fields={'status':status,'gates':gates.copy() if isinstance(gates,dict) else (gates or {}),'sourceDigest':digest}
+            if self.terminal is None or any(self.terminal[k]!=v for k,v in fields.items()):
+                self.terminal=dict(self.spec,**fields,endedAt=time.time())
+            self.saved=self._write(self.terminal)
         return self.saved

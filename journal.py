@@ -351,6 +351,7 @@ class Journal:
         self.db.execute('DELETE FROM turn_usage_status WHERE NOT EXISTS (SELECT 1 FROM turn_usage u WHERE u.provider=turn_usage_status.provider AND u.session=turn_usage_status.session AND u.turn=turn_usage_status.turn AND u.source=turn_usage_status.source)')
         self.db.execute('DELETE FROM reviewed_task WHERE at<?',(cutoff,))
         self.db.execute('DELETE FROM task_call WHERE task NOT IN (SELECT id FROM reviewed_task)')
+        self.db.execute('DELETE FROM task_eligibility WHERE task NOT IN (SELECT id FROM reviewed_task)')
         self.db.execute('DELETE FROM annotation WHERE session NOT IN (SELECT session FROM observation)')
         self.db.execute('DELETE FROM live_turn WHERE turn NOT IN (SELECT DISTINCT turn FROM observation)')
         capped=self.db.execute('DELETE FROM observation WHERE id IN (SELECT id FROM observation ORDER BY received DESC LIMIT -1 OFFSET ?)',(MAX_EVENTS,)).rowcount

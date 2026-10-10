@@ -41,6 +41,71 @@ class CollectionTests(unittest.TestCase):
         self.assertIsNone(check_report(self.j,{'glm'})['knownResultRate'])
     def test_missing_start_is_reported_not_hidden(self):
         receipt(self.j,self.end());r=check_report(self.j);self.assertEqual(r['finishWithoutStart'],1);self.assertEqual(r['startsObserved'],0)
+
+    def test_operation_versions_use_complete_selection_and_isolate_clients(self):
+        for i in range(25):
+            spec=dict(self.spec,runId=f'{i:032x}')
+            receipt(self.j,spec);receipt(self.j,dict(spec,status='success',endedAt=self.start+1))
+        for provider,version in [('codex','2.0.0'),('glm','1.0.0')]:
+            spec=dict(self.spec,provider=provider,version=version)
+            receipt(self.j,spec);receipt(self.j,dict(spec,status='failed',endedAt=self.start+2,gates={'execution':'failed'}))
+        report=check_report(self.j)
+        rows={(r['provider'],r['version']):r for r in report['byOperationVersion']}
+        self.assertEqual(len(report['recent']),20)
+        self.assertEqual(rows['codex','1.0.0']['runs'],25)
+        self.assertEqual(rows['codex','1.0.0']['medianElapsedMs'],1000)
+        self.assertEqual(rows['codex','2.0.0']['failedGates'],{'execution':1})
+        self.assertEqual({r['provider'] for r in check_report(self.j,{'glm'})['byOperationVersion']},{'glm'})
+        self.assertEqual(self.j.calls(),[])
+
+    def test_success_denominator_unknowns_and_unpaired_time_are_separate(self):
+        receipt(self.j,self.end())  # known finish, missing start: no paired timing
+        spec=dict(self.spec,runId='b'*32);receipt(self.j,spec)
+        spec=dict(self.spec,runId='c'*32);receipt(self.j,spec)
+        receipt(self.j,dict(spec,status='interrupted',endedAt=self.start+2))
+        row=check_report(self.j)['byOperationVersion'][0]
+        self.assertEqual((row['runs'],row['knownResults'],row['successes']),(3,1,1))
+        self.assertEqual(row['successRate'],1);self.assertAlmostEqual(row['knownResultRate'],1/3)
+        self.assertEqual((row['pendingRuns'],row['interruptedRuns'],row['finishWithoutStart']),(1,1,1))
+        self.assertIsNone(row['medianElapsedMs']);self.assertEqual(row['timedRuns'],0)
+
+    def test_conflicts_exclude_gates_and_timing_from_version_metrics(self):
+        receipt(self.j,self.spec);receipt(self.j,self.end())
+        failed=self.end();failed.update(status='failed',gates={'execution':'failed'})
+        receipt(self.j,failed)
+        row=check_report(self.j)['byOperationVersion'][0]
+        self.assertEqual((row['knownResults'],row['conflicts'],row['unknownRuns']),(0,1,1))
+        self.assertIsNone(row['successRate']);self.assertIsNone(row['medianElapsedMs'])
+        self.assertEqual(row['failedGates'],{})
+
+    def test_operation_group_cap_keeps_full_totals(self):
+        for i in range(55):receipt(self.j,dict(self.spec,runId=f'{i:032x}',version=f'1.0.{i}',startedAt=self.start+i/100))
+        report=check_report(self.j)
+        self.assertEqual((report['runs'],report['operationVersionCount'],len(report['byOperationVersion'])),(55,55,50))
+        self.assertTrue(report['operationVersionsTruncated'])
+        self.assertEqual(report['byOperationVersion'][0]['version'],'1.0.54')
+        from mcp_server import dispatch
+        compact=json.loads(dispatch({'method':'tools/call','params':{'name':'pulse_report','arguments':{}}},self.j.state)['content'][0]['text'])['checkRuns']
+        self.assertEqual(len(compact['byOperationVersion']),5)
+        self.assertEqual(compact['operationVersionCount'],55);self.assertTrue(compact['operationVersionsTruncated'])
+        from analytics import report as analytics_report
+        from review_pack import markdown_pack
+        text=markdown_pack(analytics_report(self.j))
+        self.assertIn('Helper table truncated',text)
+        self.assertIn('1.0.54',text);self.assertNotIn('1.0.0 |',text)
+
+    def test_reporter_retry_preserves_terminal_identity_after_failed_delivery(self):
+        reporter=Reporter(self.j.state,'codex','workflow-check','1.0.0')
+        with patch('check_receipts.receipt',side_effect=OSError('fixture')):
+            self.assertFalse(reporter.finish('success',{'execution':'passed'}))
+        ended=reporter.terminal['endedAt']
+        self.assertTrue(reporter.finish('success',{'execution':'passed'}))
+        self.assertTrue(reporter.finish('success',{'execution':'passed'}))
+        report=check_report(self.j)
+        self.assertEqual(report['conflicts'],0);self.assertEqual(report['runs'],1)
+        self.assertEqual(report['recent'][0]['ended'],ended)
+        reporter.finish('failed',{'execution':'failed'})
+        self.assertEqual(check_report(self.j)['conflicts'],1)
     def test_prune_counters_start_now_and_dont_double_count(self):
         receipt(self.j,self.spec);self.j.db.execute('UPDATE check_run SET started=?',(time.time()-31*86400,));self.j.db.commit()
         self.j.prune();self.j.prune();r=health(self.j)

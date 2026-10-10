@@ -21,6 +21,13 @@ with tempfile.TemporaryDirectory() as tmp:
         assert json.loads(r.stdout)['saved'] and not r.stderr
     r=subprocess.run(base+['journal','--action','checks'],capture_output=True,timeout=5,check=True)
     checks=json.loads(r.stdout);assert checks['runs']==checks['knownResults']==checks['startsObserved']==1 and checks['nativeOutcomesChanged']==0
+    row=checks['byOperationVersion'][0]
+    assert row['provider']=='codex' and row['version']==__version__ and row['operation']=='workflow-check'
+    assert row['successes']==row['timedRuns']==1 and row['medianElapsedMs']==1000
+    req={'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'pulse_check_receipts','arguments':{}}}
+    r=subprocess.run(base+['mcp'],input=(json.dumps(req)+'\n').encode(),capture_output=True,timeout=10,check=True)
+    mcp=json.loads(json.loads(r.stdout)['result']['content'][0]['text'])
+    assert mcp['byOperationVersion']==checks['byOperationVersion']
     r=subprocess.run(base+['journal','--action','health'],capture_output=True,timeout=5,check=True)
     health=json.loads(r.stdout);assert health['integrity']=='ok' and health['analysisEventLimit']==100000
     target=Path(tmp)/'backup'/'journal.sqlite'
@@ -81,7 +88,7 @@ with tempfile.TemporaryDirectory() as tmp:
     efficiency_requests=[
         ('pulse_register_asset',{'provider':'codex','assetId':'demo-release-helper','version':'1.0.0','kind':'skill'}),
         ('pulse_record_usage',{'provider':'codex','sessionId':'frozen-demo','turnId':'demo-turn','input':100,'cached_input':50,'output':20,'modelRequests':1,'complete':True}),
-        ('pulse_record_task',{'provider':'codex','taskId':'fixture-task','label':'release-check','variant':'after','criterion':'checks-v1','outcome':'accepted','callIds':[c['id'] for c in report['recentCalls']],'assetId':'demo-release-helper','version':'1.0.0','applied':True}),
+        ('pulse_record_task',{'provider':'codex','taskId':'fixture-task','label':'release-check','variant':'after','criterion':'checks-v1','outcome':'accepted','callIds':[c['id'] for c in report['recentCalls']],'assetId':'demo-release-helper','version':'1.0.0','applied':True,'eligibility':'yes'}),
         ('pulse_efficiency',{})]
     requests=[{'jsonrpc':'2.0','id':i,'method':'tools/call','params':{'name':name,'arguments':args}} for i,(name,args) in enumerate(efficiency_requests)]
     result=subprocess.run(base+['mcp','--allow-control'],input=('\n'.join(json.dumps(x) for x in requests)+'\n').encode(),capture_output=True,timeout=20,check=True)
@@ -90,6 +97,15 @@ with tempfile.TemporaryDirectory() as tmp:
     card=json.loads(replies[-1]['result']['content'][0]['text'])['assets'][0]
     assert card['tokensPerAccepted']==120 and card['cacheHitRate']==.5 and card['modelRequests']==1
     assert card['subscriptionSavings'] is None and not card['causalClaim']
+    assert card['adoptionRate']==1 and card['eligibleTasks']==1
+    # Packaged CLI can re-review the same immutable selection without duplication.
+    task=dict(efficiency_requests[2][1],applied=False,nonUseReason='unavailable')
+    subprocess.run(base+['journal','--action','task','--metadata',json.dumps(task)],capture_output=True,timeout=5,check=True)
+    result=json.loads(subprocess.run(base+['journal'],capture_output=True,timeout=5,check=True).stdout)
+    card=result['efficiency']['assets'][0];assert card['adoptionRate']==0 and card['eligibleTasks']==1 and card['nonUseReasons']=={'unavailable':1}
+    assert card['lifecycle']=='registered-awaiting-use' and card['subscriptionSavings'] is None
+    bad=dict(task,applied=True)
+    assert subprocess.run(base+['journal','--action','task','--metadata',json.dumps(bad)],capture_output=True,timeout=5).returncode==1
     parallel=[str(exe),'--state',str(Path(tmp)/'parallel-first-start')]
     def first_pair(index):
         for event in ('PreToolUse','PostToolUse'):

@@ -37,6 +37,59 @@ class EfficiencyTests(unittest.TestCase):
         self.assertIsNone(card['tokensPerAccepted']);self.assertIsNone(card['subscriptionSavings'])
         self.assertEqual(report['tasks'][0]['callIds'],[call])
 
+    def test_legacy_tasks_keep_unknown_eligibility_after_reopen(self):
+        from efficiency import efficiency_report
+        self.asset();call=self.pair('one');self.task('task-one',[call],assetId='release-helper',version='v1',applied=True)
+        self.j.db.execute('DROP TABLE task_eligibility');self.j.db.commit();self.j.close()
+        self.j=Journal(Path(self.tmp.name)/'state')
+        card=efficiency_report(self.j)['assets'][0]
+        self.assertIsNone(card['eligibleTasks']);self.assertIsNone(card['adoptionRate'])
+        self.assertEqual(card['eligibilityUnknownTasks'],1);self.assertEqual(card['lifecycle'],'accepted-awaiting-comparison')
+
+    def test_adoption_uses_only_explicit_eligible_selected_tasks(self):
+        from efficiency import efficiency_report
+        self.asset();self.asset('v2')
+        for key,eligibility,applied,reason in [('a','yes',True,''),('b','yes',False,'unavailable'),('c','no',False,'workflow-mismatch'),('d','unknown',False,'')]:
+            self.task(key,[self.pair(key)],assetId='release-helper',version='v1',eligibility=eligibility,applied=applied,nonUseReason=reason)
+        report=efficiency_report(self.j);card=next(r for r in report['assets'] if r['version']=='v1')
+        self.assertEqual(card['eligibleTasks'],2);self.assertEqual(card['adoptionRate'],.5)
+        self.assertEqual(card['nonUseReasons'],{'unavailable':1});self.assertEqual(card['eligibilityKnownTasks'],3)
+        self.assertIsNone(next(r for r in report['assets'] if r['version']=='v2')['adoptionRate'])
+        self.assertIsNone(card['subscriptionSavings']);self.assertFalse(card['causalClaim'])
+
+    def test_unassessed_application_blocks_adoption_not_zero(self):
+        from efficiency import efficiency_report
+        self.asset();call=self.pair('one');self.task('one',[call],assetId='release-helper',version='v1',eligibility='yes')
+        card=efficiency_report(self.j)['assets'][0]
+        self.assertEqual(card['eligibleTasks'],1);self.assertEqual(card['adoptionKnownTasks'],0);self.assertIsNone(card['adoptionRate'])
+        self.task('one',[call],assetId='release-helper',version='v1',nonUseReason='unknown')
+        card=efficiency_report(self.j)['assets'][0]
+        self.assertEqual(card['adoptionRate'],0);self.assertEqual(card['nonUseReasons'],{'unknown':1})
+
+    def test_partial_updates_preserve_assessment_and_contradictions_rollback(self):
+        from efficiency import efficiency_report
+        self.asset();call=self.pair('one');spec=dict(assetId='release-helper',version='v1')
+        self.task('one',[call],**spec,eligibility='no',nonUseReason='workflow-mismatch')
+        with self.assertRaisesRegex(ValueError,'contradictory_application'):self.task('one',[call],**spec,applied=True)
+        row=efficiency_report(self.j)['tasks'][0]
+        self.assertEqual(row['applied'],0);self.assertEqual(row['eligibility'],'no')
+        self.task('one',[call],**spec,eligibility='yes')
+        self.assertEqual(efficiency_report(self.j)['tasks'][0]['nonUseReason'],'workflow-mismatch')
+        self.task('one',[call],**spec,applied=True,nonUseReason='')
+        self.assertEqual(efficiency_report(self.j)['assets'][0]['adoptionRate'],1)
+
+    def test_invalid_assessments_do_not_write_and_require_version(self):
+        self.asset();call=self.pair('one')
+        for extra in [dict(eligibility=[]),dict(nonUseReason={}),dict(eligibility='maybe'),dict(nonUseReason='private note'),dict(eligibility='yes'),dict(nonUseReason='unknown')]:
+            with self.assertRaises(ValueError):self.task('one',[call],**extra)
+        self.assertEqual(self.j.db.execute('SELECT count(*) FROM reviewed_task').fetchone()[0],0)
+        self.assertEqual(self.j.db.execute('SELECT count(*) FROM task_eligibility').fetchone()[0],0)
+
+    def test_assessment_retention_tracks_task_retention(self):
+        self.asset();self.task('one',[self.pair('one')],assetId='release-helper',version='v1',eligibility='yes')
+        self.j.db.execute('UPDATE reviewed_task SET at=?',(time.time()-31*86400,));self.j.db.commit();self.j.prune()
+        self.assertEqual(self.j.db.execute('SELECT count(*) FROM task_eligibility').fetchone()[0],0)
+
     def test_overlap_rejected_and_re_review_does_not_duplicate(self):
         from efficiency import efficiency_report,record_task
         call=self.pair('one');self.task('task-one',[call]);self.task('task-one',[call])

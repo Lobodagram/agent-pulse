@@ -59,6 +59,35 @@ class DeliveryTests(unittest.TestCase):
         r=reviewed_findings(self.j,self.j.calls())[0];self.assertEqual(r['recheckState'],'awaiting-window');self.assertIsNone(r['after']);self.assertFalse(r['causalClaim']);self.assertIsNone(r['tokenSavings'])
         for args in [('a'*32,'actioned','script',1),(fid,'bad','script',1),(fid,'open','payload',1),(fid,'open','script',True)]:
             with self.assertRaises(ValueError):review_finding(self.j,*args)
+
+    def test_review_reasons_remain_visible_without_removing_evidence(self):
+        fid=self.repeats(6,self.now-200)
+        from finding_review import REASONS
+        from mcp_server import CONTROL_TOOLS
+        schema=next(t for t in CONTROL_TOOLS if t['name']=='pulse_review_finding')['inputSchema']
+        self.assertEqual(set(schema['properties']['reason']['enum']),REASONS)
+        for reason in ['waiting-process','required-check','different-task','false-positive','duplicate']:
+            review_finding(self.j,fid,'dismissed',reason)
+            result=report(self.j);finding=next(f for f in result['findings'] if f['id']==fid)
+            self.assertEqual(finding['reviewReason'],reason);self.assertEqual(finding['reviewStatus'],'dismissed')
+            self.assertEqual(result['findingReviews'][0]['lifecycle'],'dismissed');self.assertEqual(result['calls'],6)
+            self.assertIn(reason,markdown_pack(result))
+
+    def test_finding_version_lifecycle_isolated_by_provider_and_usage(self):
+        from efficiency import register_asset,record_task
+        fid=self.repeats(6,self.now-200);review_finding(self.j,fid,'open','confirmed-pattern')
+        self.assertEqual(report(self.j)['findingReviews'][0]['lifecycle'],'reviewed')
+        register_asset(self.j,{'provider':'codex','assetId':'fixture-helper','version':'v1','kind':'skill','findingId':fid})
+        register_asset(self.j,{'provider':'glm','assetId':'fixture-helper','version':'v1','kind':'skill'})
+        row=report(self.j)['findingReviews'][0]
+        self.assertEqual(row['lifecycle'],'registered-awaiting-use');self.assertEqual(len(row['linkedVersions']),1)
+        ids=[c['id'] for c in self.j.calls()]
+        spec={'provider':'codex','taskId':'one','label':'fixture-check','variant':'after','criterion':'v1','outcome':'unknown','callIds':ids,'assetId':'fixture-helper','version':'v1','applied':True,'eligibility':'yes'}
+        record_task(self.j,spec);self.assertEqual(report(self.j)['findingReviews'][0]['lifecycle'],'awaiting-acceptance')
+        record_task(self.j,dict(spec,outcome='accepted'));row=report(self.j)['findingReviews'][0]
+        self.assertEqual(row['lifecycle'],'accepted-awaiting-comparison');self.assertFalse(row['causalClaim'])
+        self.assertEqual(report(self.j,['glm'])['findingReviews'],[])
+        review_finding(self.j,fid,'dismissed','false-positive');self.assertEqual(report(self.j)['findingReviews'][0]['lifecycle'],'dismissed')
     def test_observational_lower_equal_windows(self):
         fid=self.repeats(12,self.now-200)
         review_finding(self.j,fid,'actioned','skill')

@@ -400,6 +400,13 @@ class Pulse:
         if checks:
             lines += [self.t('Helper results: ','Результаты помощников: ')+f"{checks['knownResults']} / {checks['runs']}",
                       self.t('Separate from native outcomes and human acceptance.','Отдельно от штатных исходов и приёмки человеком.')]
+            for row in checks.get('byOperationVersion',[]):
+                duration='—' if row['medianElapsedMs'] is None else f"{row['medianElapsedMs']/1000:.1f}s"
+                lines += [f"{row['provider']} · {row['operation']} · {row['version']}",
+                    self.t('Success / failed / known: ','Успех / ошибки / известные: ')+f"{row['successes']} / {row['failures']} / {row['knownResults']} ({row['runs']})",
+                    self.t('Pending / stale / conflicts / missing start: ','Не завершено / давние / конфликты / нет начала: ')+f"{row['pendingRuns']} / {row['staleRuns']} / {row['conflicts']} / {row['finishWithoutStart']}",
+                    self.t('Median paired time: ','Медиана времени парных запусков: ')+duration+f" ({row['timedRuns']})"]
+            if checks.get('operationVersionsTruncated'):lines.append(self.t('Latest 50 groups shown; all retained runs included in totals.','Показаны последние 50 групп; итоги по всем сохранённым запускам.'))
         health=report.get('storageHealth')
         if health:
             lines += [self.t('Journal quick integrity check: ','Быстрая проверка целостности журнала: ')+health['integrity'],
@@ -420,17 +427,24 @@ class Pulse:
             evidence=f"{r['loaded']} "+self.t('loaded','чтений')+f" · {r['invoked']} "+self.t('invoked','вызовов')+f" · {r['declared']} "+self.t('declared','отметок') if r['loaded']+r['invoked']+r['declared'] else self.t('No confirmed events','Нет подтверждённых событий')
             lines += [f"{r['provider']} · {r['kind']} · {r['id']}",evidence,r['status']+('' if r['inventoryFresh'] else self.t(' · refresh inventory',' · обновите каталог')),'']
         asset_rows=report.get('efficiency',{}).get('assets',[])
+        decision_ru={'unknown':'неизвестно','yes':'подходит','no':'не подходит','':'применение не оценено','unavailable':'недоступен','not-selected':'не выбран','workflow-mismatch':'сценарий не подходит','preferred-alternative':'выбран другой способ','waiting-process':'ожидание процесса','required-check':'обязательная проверка','different-task':'другая задача','false-positive':'ложная находка','duplicate':'дубликат','confirmed-pattern':'повтор подтверждён','not-applicable':'не применимо','reviewed':'проверено','dismissed':'отклонено','implemented-unlinked':'внедрено — свяжите версию','registered-awaiting-use':'версия учтена — ждём применения','awaiting-acceptance':'применено — ждём приёмки','accepted-awaiting-comparison':'принято — ждём сравнения'}
+        def decision(value):return decision_ru.get(value,value) if self.language=='ru' else value.replace('-',' ') or 'Application unassessed'
         lines=[self.t('USEFUL RESULTS · reviewed selections; quotas stay separate','ПОЛЬЗА · проверенные выборки; лимиты отдельно'),'']+lines
         for r in asset_rows:
             def metric(key,percent=False):
                 value=r.get(key)
                 return '—' if value is None else f'{value*100:.1f}%' if percent else f'{value:,.1f}'
             lines += ['',f"{r['provider']} · {r['assetId']} · {r['version']}",
+                      decision(r.get('lifecycle','unknown')),
+                      self.t('Applied / eligible: ','Применено / подходит: ')+f"{r.get('usedEligibleTasks',0)} / {r.get('eligibleTasks') if r.get('eligibleTasks') is not None else '—'} · "+metric('adoptionRate',True)+self.t(' · selected tasks only',' · только выбранные задачи'),
+                      self.t('Eligibility reviewed: ','Применимость оценена: ')+f"{r.get('eligibilityKnownTasks',0)} / {r['tasks']}",
                       f"{r['accepted']}/{r['reviewed']} "+self.t('accepted','принято')+f" · {r['usageCompleteTasks']}/{r['tasks']} "+self.t('complete reported usage','с полным переданным расходом'),
                       self.t('Tokens / accepted: ','Токены / результат: ')+metric('tokensPerAccepted')+self.t(' · input from cache: ',' · вход из кэша: ')+metric('cacheHitRate',True),
                       self.t('Reported model requests: ','Передано вызовов модели: ')+metric('modelRequests'),
                       self.t('Median wall time, ms: ','Медиана времени, мс: ')+metric('medianElapsedMs')+f" · {r['elapsedTasks']}/{r['tasks']}",
                       f"{r['nativeIdentityUses']} "+self.t('name invocations','вызовов имени')+f" · {r['declaredUses']} "+self.t('version attestations','отметок версии')]
+            lines += [decision(reason)+f': {count}' for reason,count in sorted(r.get('nonUseReasons',{}).items())]
+            lines += [self.t('Calls / accepted: ','Вызовы / результат: ')+metric('observedCallsPerAccepted')+self.t(' · model requests / accepted: ',' · вызовы модели / результат: ')+metric('modelRequestsPerAccepted')]
         lines += ['',self.t('Missing is unknown. Use and cache ratio do not prove subscription savings.','Пропуск неизвестен. Применение и доля кэша не доказывают экономию подписки.')]
         def write_metadata(action,spec):
             if self.fixture:return
@@ -454,7 +468,13 @@ class Pulse:
         tk.Label(workflows,text=self.t('Suggestions need review; repeated does not mean waste.','Предложения требуют проверки; повтор не доказывает лишнюю работу.'),bg=BG,fg=QUIET,wraplength=670).pack(anchor='w',padx=8,pady=8)
         finder=ttk.Treeview(workflows,columns=('provider','repeats'),show='tree headings',height=7);finder.heading('#0',text=self.t('Workflow','Сценарий'));finder.heading('provider',text=self.t('Client','Клиент'));finder.heading('repeats',text=self.t('Occurrences','Повторы'));finder.column('provider',width=90,stretch=False);finder.column('repeats',width=80,stretch=False);finder.pack(fill='x',padx=8)
         findings=report.get('findings',[])
-        for i,r in enumerate(findings):finder.insert('','end',iid=str(i),text=r['titleRu'] if self.language=='ru' else r['title'],values=(r['provider'],r['occurrences']))
+        show_dismissed=tk.BooleanVar(value=False)
+        def fill_findings():
+            finder.delete(*finder.get_children())
+            for i,r in enumerate(findings):
+                if show_dismissed.get() or r.get('reviewStatus')!='dismissed':finder.insert('','end',iid=str(i),text=r['titleRu'] if self.language=='ru' else r['title'],values=(r['provider'],r['occurrences']))
+        fill_findings()
+        if any(r.get('reviewStatus')=='dismissed' for r in findings):ttk.Checkbutton(workflows,text=self.t('Show dismissed findings','Показать отклонённые находки'),variable=show_dismissed,command=fill_findings).pack(anchor='w',padx=8)
         empty=self.t('No calls received. Configure observers in Settings and check native trust.','Вызовы не получены. Настройте наблюдатель и проверьте доверие клиента.') if not report.get('calls') else self.t('Calls are recorded; no repeat candidate meets the thresholds. Matching workflows need at least 3 turns. Other findings have separate thresholds.','Вызовы записываются; кандидаты пока не достигли порогов. Для одинаковых сценариев нужны минимум 3 хода. У других находок свои пороги.')
         health=[self.t('Silence can mean an idle client. Total coverage is unknown.','Тишина может означать простой клиента. Полный охват неизвестен.')]
         for c in report.get('coverage',[]):
@@ -472,7 +492,15 @@ class Pulse:
             finally:j.close()
         for title,status,reason in [(self.t('Script implemented','Внедрён скрипт'),'actioned','script'),(self.t('Skill implemented','Внедрён скилл'),'actioned','skill'),(self.t('Dismiss','Отклонить'),'dismissed','not-applicable'),(self.t('Reopen','Вернуть'),'open','unspecified')]:
             ttk.Button(controls,text=title,command=lambda st=status,re=reason:mark(st,re),state='disabled' if self.fixture else 'normal').pack(side='left',padx=2)
-        for r in report.get('findingReviews',[]):health.append(f"{r['provider']} · {r['status']} · {r['recheckState']} · {r['windowHours']}h")
+        reason_row=tk.Frame(workflows,bg=BG);reason_row.pack(fill='x',padx=8)
+        dismissal_codes=['not-applicable','waiting-process','required-check','different-task','false-positive','duplicate']
+        dismissal_labels={decision(code):code for code in dismissal_codes};dismissal=tk.StringVar(value=decision('not-applicable'))
+        ttk.Combobox(reason_row,textvariable=dismissal,values=list(dismissal_labels),width=25,state='readonly').pack(side='left')
+        ttk.Button(reason_row,text=self.t('Dismiss with reason','Отклонить с причиной'),command=lambda:mark('dismissed',dismissal_labels[dismissal.get()]),state='disabled' if self.fixture else 'normal').pack(side='left',padx=3)
+        ttk.Button(reason_row,text=self.t('Confirm pattern','Подтвердить повтор'),command=lambda:mark('open','confirmed-pattern'),state='disabled' if self.fixture else 'normal').pack(side='left',padx=3)
+        for r in report.get('findingReviews',[]):
+            health.append(f"{r['provider']} · {r['status']} · {decision(r['reason'])} · {decision(r.get('lifecycle','unknown'))} · {r['recheckState']}")
+            health += [f"{a['assetId']} · {a['version']} · {a['declaredUses']} "+self.t('declared uses','отметок применения') for a in r.get('linkedVersions',[])]
         if report.get('findingReviews'):health.append(self.t('Equal windows and partial coverage; no causal savings or resolution claim.','Равные окна и частичный охват; экономия и устранение не доказаны.'))
         def export_review():
             if self.fixture:return
@@ -501,11 +529,27 @@ class Pulse:
         ttk.Combobox(row,textvariable=outcome,values=['unknown','accepted','failed','rework'],width=10,state='readonly').pack(side='left')
         review=ttk.LabelFrame(sessions,text=self.t('Review selected task · call numbers on this page','Оценить задачу · номера вызовов на странице'));review.pack(fill='x',padx=8,pady=4)
         task_first=tk.StringVar(value='1');task_last=tk.StringVar(value='1');criterion=tk.StringVar(value='quality-v1');task_asset=tk.StringVar();task_applied=tk.BooleanVar(value=False)
+        task_eligibility=tk.StringVar(value=decision('unknown'));task_non_use=tk.StringVar(value=decision(''))
         task_assets={r['provider']+' · '+r['assetId']+' · '+r['version']:r for r in asset_rows}
         review_top=tk.Frame(review,bg=BG);review_top.pack(fill='x')
         for title,var,width in [(self.t('First','От'),task_first,4),(self.t('Last','До'),task_last,4),(self.t('Criterion','Критерий'),criterion,14)]:ttk.Label(review_top,text=title).pack(side='left');ttk.Entry(review_top,textvariable=var,width=width).pack(side='left',padx=3)
         asset_picker=ttk.Combobox(review_top,textvariable=task_asset,values=['']+list(task_assets),width=25,state='readonly');asset_picker.pack(side='left')
         review_bottom=tk.Frame(review,bg=BG);review_bottom.pack(fill='x')
+        assessment_row=tk.Frame(review,bg=BG);assessment_row.pack(fill='x')
+        eligible_labels={decision(code):code for code in ['unknown','yes','no']};nonuse_labels={decision(code):code for code in ['','unknown','unavailable','not-selected','workflow-mismatch','preferred-alternative']}
+        ttk.Label(assessment_row,text=self.t('Suitable','Подходит')).pack(side='left')
+        eligibility_picker=ttk.Combobox(assessment_row,textvariable=task_eligibility,values=list(eligible_labels),width=14,state='disabled');eligibility_picker.pack(side='left')
+        ttk.Label(assessment_row,text=self.t('Non-use reason','Причина неприменения')).pack(side='left')
+        nonuse_picker=ttk.Combobox(assessment_row,textvariable=task_non_use,values=list(nonuse_labels),width=25,state='disabled');nonuse_picker.pack(side='left')
+        def assessment_state(*_):
+            active=bool(task_asset.get())
+            eligibility_picker.configure(state='readonly' if active else 'disabled')
+            if not active or eligible_labels[task_eligibility.get()]=='no':task_applied.set(False)
+            if task_applied.get():task_non_use.set(decision(''))
+            nonuse_picker.configure(state='readonly' if active and not task_applied.get() else 'disabled')
+        task_eligibility.trace_add('write',assessment_state);task_applied.trace_add('write',assessment_state)
+        def reset_assessment(_=None):task_applied.set(False);task_eligibility.set(decision('unknown'));task_non_use.set(decision(''));assessment_state()
+        asset_picker.bind('<<ComboboxSelected>>',reset_assessment)
         ttk.Checkbutton(review_bottom,text=self.t('I confirm this version was applied','Подтверждаю применение этой версии'),variable=task_applied).pack(side='left')
         def review_task():
             if self.fixture or not tree.selection():return
@@ -515,7 +559,7 @@ class Pulse:
                 selected_calls=calls[first:last]
                 spec={'provider':selected_calls[0]['provider'],'taskId':selected_calls[0]['id']+':'+selected_calls[-1]['id'],'label':label.get(),'variant':variant.get(),'criterion':criterion.get(),'outcome':outcome.get(),'callIds':[c['id'] for c in selected_calls]}
                 if task_asset.get():
-                    asset=task_assets[task_asset.get()];spec.update(assetId=asset['assetId'],version=asset['version'],applied=task_applied.get())
+                    asset=task_assets[task_asset.get()];spec.update(assetId=asset['assetId'],version=asset['version'],applied=task_applied.get(),eligibility=eligible_labels[task_eligibility.get()],nonUseReason='' if task_applied.get() else nonuse_labels[task_non_use.get()])
                 elif task_applied.get():raise ValueError('asset_required')
                 write_metadata('task',spec)
             except (ValueError,KeyError):messagebox.showerror('Agent Pulse',self.t('Check task boundaries and version','Проверьте границы задачи и версию'),parent=w)
@@ -543,6 +587,7 @@ class Pulse:
                 finally:j.close()
             else:position.set(self.t('Demo preview only','Только демо-просмотр'))
             page_state['calls']=calls;task_first.set('1');task_last.set(str(max(1,len(calls))));task_asset.set('');task_applied.set(False)
+            reset_assessment()
             asset_picker.configure(values=['']+[key for key,asset in task_assets.items() if asset['provider']==r['provider']])
             previous.configure(state='normal' if not self.fixture and page_state['index']>0 else 'disabled')
             following.configure(state='normal' if not self.fixture and page_state['next'] else 'disabled')

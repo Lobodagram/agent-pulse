@@ -1,24 +1,19 @@
-# Agent Pulse 0.11.2 — explicit results and storage health / результаты и хранение
+# Agent Pulse 0.13.0 — reviewed improvements and direct helper metrics
 
-Existing helper calls can complete without a native exit code, leaving outcomes unknown. Opt-in check receipts now retain explicit starts/results, public helper version, elapsed interval, source-tree digest and fixed check gates. Reporter evidence remains separate from native tool outcomes and human task acceptance; conflicting deliveries stay unknown. Missing starts and stale/incomplete runs are visible. No raw command, tool result, conversation, path or credential is retained in these receipts.
+Repeated work can be required checks, process waiting or a different task. Human finding decisions now retain these reasons, including false positives; dismissed findings remain inspectable and can be reopened. Linked immutable skill/MCP/tool versions show whether they await use, acceptance or a comparable before/after review.
 
-Analysis now includes the whole retained window up to 100,000 events, removing the earlier 20,000-event analysis cutoff. Own-journal diagnostics expose a quick integrity check, retention policy, stored-event count, analysis truncation and discard counters with a tracking-start date. A verified private SQLite snapshot can be saved without replacing an existing file; it excludes credentials and native databases. No automatic restore or repair. Manual snapshots do not expire with active journal retention.
+Reviewed tasks explicitly record suitability, declared application and bounded non-use reasons. Adoption uses only suitable selected tasks with known application; old/unassessed records stay unknown. Tokens, reported model requests, cache, task intervals and subscription allowance remain separate measurements. No human acceptance, causal benefit or exact subscription savings is inferred.
 
-Reviewed-task comparisons use separate coverage gates for observed calls, summed task intervals, reported model requests and tokens per accepted result. Missing tokens no longer block otherwise available operational comparisons; quality/cohort gates remain. Time includes waiting and overlapping intervals, and is not active model time.
+Direct helper receipts now group all retained runs by client, operation and public helper version. Successes/failures, known-result coverage, incomplete/stale runs, conflicts, missing starts, failed gates and paired median time are available through CLI/MCP. Native EN/RU Overview expands version groups; Windows source shows the same counters. Preview caps are explicit and do not discard overall totals. Repeated Reporter completion retries preserve their original timestamps instead of producing false conflicts.
 
-Read-only MCP health/receipt tools and the EN/RU native/Windows overview show the scope. Receipt imports and backups require explicitly enabled control tools. Existing collection opt-ins, observer paths, settings and compact monochrome menu bar remain unchanged. No causal benefit, whole-agent visibility or subscription savings is inferred.
+macOS models, collection/configuration store, widget, token charts, analytics, settings and lifecycle now have separate Swift source files. Existing monochrome menu bar, window controls, privacy opt-ins and startup behavior are preserved. No new dependencies, model calls, conversation capture or telemetry uploads.
 
----
+## Проверенные улучшения
 
-Добавлены явные квитанции помощников: начало, результат, версия, длительность и разрешённые статусы проверок. Они отдельно от нативных исходов и приёмки человеком. Повторы не суммируются, противоречия остаются неизвестными; команды, вывод, разговоры и ключи не сохраняются.
+Добавлены причины ручных решений, связь находки с версией инструмента и этапы её проверки. Применимость и причины неприменения задачи дают долю применения с явным охватом оценок; старые неизвестные данные остаются неизвестными.
 
-Диагностика собственного журнала показывает целостность, срок хранения, усечение анализа и удаления с датой начала счётчика. Проверенная резервная копия не перезаписывает существующий файл и не содержит ключей/нативных баз. Доступные операционные метрики сравниваются независимо от токенов, с сохранением критериев качества. Полный охват агентов и экономия подписки не заявляются.
+Прямые квитанции показывают успехи, ошибки, пропуски, противоречия и время по клиенту, операции и версии. Повторная доставка завершения больше не создаёт ложный конфликт. Метрики квитанций отдельно от штатных исходов и приёмки человеком. Экономия подписки не вычисляется из них.
 
+Интерфейс macOS разделён на модули. На рабочем Mac проверены локальная 0.13.0, сохранённый включённый автозапуск, прежние настройки, журнал и реальные квитанции. Новый ребут 0.13.0 и физическая приёмка Windows не проводились. Платформенные CI и скачанные пакеты фиксируются отдельно в [QA](QA.md).
 
-## Delivery verification · 2026-10-09 / проверка поставки
-
-Mac ARM64/Intel and Windows x64 packages passed CI and downloaded checksum/runtime/version checks. On the development Mac, 0.11.2 retained its enabled startup setting and launched automatically after a real user-performed reboot; journal integrity, retained data, fresh Codex events and refreshed Codex/GLM quotas passed. Native helper receipt integration was verified separately. [Full QA and remaining platform limits](QA.md).
-
-EN/RU README and the public demo gallery show the 0.11.2 collection and comparison screens. Screenshots use invented data and are marked DEMO; they do not establish actual productivity or subscription savings.
-
-Сборки трёх платформ и скачанные архивы проверены. На рабочем Mac автозапуск после реальной перезагрузки, сохранность аналитики и поступление новых событий подтверждены. Новые экраны опубликованы с вымышленными данными; подробные границы проверки указаны в QA.
+Public screenshots use invented, DEMO-labelled metadata. They demonstrate behavior, not measured productivity or savings. [Collection contract](COLLECTION_HEALTH.md) · [Improvement review](IMPROVEMENT_LOOP.md).
