@@ -35,6 +35,7 @@ struct AnalysisView: View {
     @State var label = ""; @State var variant = "before"; @State var outcome = "unknown"
     @State var before = "before"; @State var after = "after"; @State var message = ""
     @State var comparisonMessage = ""; @State var comparisonLabel = ""
+    @State var widgetPinBusy = false
     @State var sessionCursors: [String?] = [nil]; @State var sessionPage = 0; @State var nextCursor: String?
     @State var sessionTotal = 0; @State var pageOffset = 0; @State var pageLoading = false; @State var pageRequest = UUID()
     @State var showUnobservedCapabilities = false
@@ -514,11 +515,32 @@ struct AnalysisView: View {
                 }
             }
             if !comparisonMessage.isEmpty { Text(comparisonMessage).font(.system(size: 11, design: .monospaced)).textSelection(.enabled) }
+            if compareTasks {
+                HStack {
+                    Button(tr("Pin pair in widget", "Закрепить пару в виджете")) { saveWidgetPair(clear: false) }
+                        .disabled(widgetPinBusy || comparisonLabel.isEmpty || before.isEmpty || after.isEmpty || before == after || store.isFixture)
+                    Button(tr("Clear widget pair", "Сбросить пару виджета")) { saveWidgetPair(clear: true) }.disabled(widgetPinBusy || store.isFixture)
+                }
+                if let c = store.snapshot?.providers.first(where: { $0.id == compareProvider })?.benefit?.comparison {
+                    Text(tr("Pinned: ", "Закреплено: ") + c.label + " · " + c.before + " → " + c.after).font(.system(size: 11)).foregroundStyle(quiet)
+                }
+                Text(tr("The selected pair is recalculated on refresh over retained 30-day tasks. Metrics stay unavailable until evidence passes the comparison gates.", "Выбранная пара пересчитывается при обновлении по сохранённым задачам за 30 дней. Показатели появятся, когда сравнение пройдёт проверки.")).font(.system(size: 11)).foregroundStyle(quiet)
+            }
             Text(tr("No causal claim, exact per-tool cost or promised subscription saving. Failed and rework results remain visible.", "Без заявления о причинности, точной стоимости инструмента или обещаний экономии подписки. Ошибки и доработки учитываются.")).font(.system(size: 11)).foregroundStyle(amber)
         }.onChange(of: comparisonLabel) { _, _ in comparisonMessage = "" }
         .onChange(of: before) { _, _ in comparisonMessage = "" }
         .onChange(of: after) { _, _ in comparisonMessage = "" }
         .onChange(of: compareTasks) { _, _ in comparisonMessage = "" }
         .onChange(of: compareProvider) { _, _ in comparisonMessage = "" }
+    }
+    func saveWidgetPair(clear: Bool) {
+        guard !widgetPinBusy, !store.isFixture else { return }
+        widgetPinBusy = true
+        let args = ["journal", "--action", "widget-comparison", "--provider", compareProvider] + (clear ? [] : ["--label", comparisonLabel, "--before", before, "--after", after])
+        store.run(args) { result in
+            widgetPinBusy = false
+            if case .success = result { comparisonMessage = tr("Widget selection saved", "Выбор для виджета сохранён"); store.refresh() }
+            else { comparisonMessage = tr("Could not save widget selection", "Не удалось сохранить выбор для виджета") }
+        }
     }
 }

@@ -6,6 +6,7 @@ import ServiceManagement
 @MainActor final class PulseStore: ObservableObject {
     @Published var snapshot: Snapshot?; @Published var loading = false; @Published var error: String?; @Published var settingsMessage: String?
     @Published var expanded = false; @Published var topmost = true { didSet { savePreference("topmost", topmost) } }; @Published var page = 0
+    @Published var benefitExpanded: Set<String> = []
     @Published var language: String = UserDefaults.standard.string(forKey: "language") ?? "en" { didSet { pulseLanguageOverride = language; savePreference("language", language) } }
     @Published var widgetScale: Double = min(1, max(0.8, UserDefaults.standard.double(forKey: "widgetScale") == 0 ? 1 : UserDefaults.standard.double(forKey: "widgetScale"))) { didSet { savePreference("widgetScale", widgetScale) } }
     @Published var displayMode: String = UserDefaults.standard.string(forKey: "displayMode") ?? "floating" { didSet { savePreference("displayMode", displayMode) } }
@@ -31,6 +32,7 @@ import ServiceManagement
         if let fixture {
             do { snapshot = try JSONDecoder().decode(Snapshot.self, from: Data(contentsOf: URL(fileURLWithPath: fixture))) }
             catch { self.error = tr("Could not load demo", "Не удалось прочитать демо") }
+            if args.contains("--benefit-expanded") { benefitExpanded = Set(snapshot?.providers.map(\.id) ?? []) }
         } else {
             loadPreferences()
             authMarks = authenticationMetadata()
@@ -71,7 +73,10 @@ import ServiceManagement
         if let v = values["menuNumbers"] as? Bool { menuNumbers = v }
         if let v = values["menuFollowActive"] as? Bool { menuFollowActive = v }
     }
-    var baseHeight: Double { expanded ? 430 : 270 }
+    var baseHeight: Double { (expanded ? 462 : 302) + Double(visibleProviders.filter { benefitExpanded.contains($0.id) }.count) * 62 }
+    func toggleBenefit(_ provider: String) {
+        if benefitExpanded.contains(provider) { benefitExpanded.remove(provider) } else { benefitExpanded.insert(provider) }
+    }
     var isFixture: Bool { fixture != nil }
     var pages: Int { max(1, ((snapshot?.providers.count ?? 0) + 1) / 2) }
     var visibleProviders: [Provider] { Array((snapshot?.providers ?? []).dropFirst(min(page, pages - 1) * 2).prefix(2)) }

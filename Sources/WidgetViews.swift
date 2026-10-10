@@ -78,7 +78,19 @@ struct WidgetView: View {
                 ActionButton(symbol: "xmark", help: tr("Hide widget · Agent Pulse keeps running", "Скрыть виджет · Agent Pulse продолжит работать"), action: actions.hidePanel)
             }
             if let snapshot = store.snapshot {
-                ForEach(store.visibleProviders) { p in ProviderLine(provider: p, metricMode: store.metricMode).frame(height: 78, alignment: .topLeading); Rectangle().fill(divider).frame(height: 1) }
+                ForEach(store.visibleProviders) { p in
+                    VStack(alignment: .leading, spacing: 4) {
+                        ProviderLine(provider: p, metricMode: store.metricMode)
+                        Button { store.toggleBenefit(p.id) } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: store.benefitExpanded.contains(p.id) ? "chevron.down" : "chevron.right").font(.system(size: 8))
+                                Text(tr("Pulse benefit", "Польза Pulse")).font(.system(size: 10))
+                            }.foregroundStyle(quiet).frame(maxWidth: .infinity, minHeight: 22, alignment: .leading).contentShape(Rectangle())
+                        }.buttonStyle(.plain).accessibilityLabel(tr("Pulse benefit", "Польза Pulse")).accessibilityValue(store.benefitExpanded.contains(p.id) ? tr("Expanded", "Развёрнуто") : tr("Collapsed", "Свёрнуто"))
+                        if store.benefitExpanded.contains(p.id) { WidgetBenefitView(provider: p, open: actions.showAnalysis) }
+                    }.frame(height: store.benefitExpanded.contains(p.id) ? 156 : 94, alignment: .topLeading)
+                    Rectangle().fill(divider).frame(height: 1)
+                }
                 if store.visibleProviders.isEmpty { Text(tr("Choose clients in Settings", "Выберите клиентов в настройках")).foregroundStyle(quiet); Spacer() }
                 if store.expanded {
                     ForEach(store.visibleProviders) { p in
@@ -99,7 +111,7 @@ struct WidgetView: View {
                     Spacer(); Button(store.expanded ? tr("Less ↑", "Меньше ↑") : tr("Details ↓", "Детали ↓")) { actions.toggleExpanded() }.buttonStyle(.plain).foregroundStyle(mint)
                 }.padding(.trailing, 16).font(.system(size: 11)).foregroundStyle(store.error == nil ? quiet : amber)
             } else { Spacer(); Text(store.error ?? tr("Reading client counters…", "Читаю счётчики клиентов…")).font(.system(size: 12)).foregroundStyle(quiet); Spacer() }
-        }.padding(.horizontal, 18).padding(.vertical, 10).frame(width: 360, height: store.expanded ? 430 : 270, alignment: .topLeading).background(bg).foregroundStyle(ink).colorScheme(.dark)
+        }.padding(.horizontal, 18).padding(.vertical, 10).frame(width: 360, height: store.baseHeight, alignment: .topLeading).background(bg).foregroundStyle(ink).colorScheme(.dark)
         .overlay(alignment: .bottomTrailing) {
             Image(systemName: "arrow.up.left.and.arrow.down.right").font(.system(size: 9)).foregroundStyle(quiet).padding(5)
                 .frame(width: 30, height: 30).overlay(ResizeGrip(actions: actions, scale: store.widgetScale)).help(tr("Drag to resize · 80–100%", "Потяните для изменения размера · 80–100%"))
@@ -107,3 +119,49 @@ struct WidgetView: View {
     }
 }
 // Plain SwiftUI bars avoid Swift Charts' Metal device initialization on headless Intel.
+
+func reductionText(_ value: Double?) -> String {
+    guard let value, value.isFinite else { return "—" }
+    if value == 0 { return "0%" }
+    return (value > 0 ? "↓" : "↑") + (abs(value) < 0.001 ? "<0.1" : String(format: "%.1f", abs(value) * 100)) + "%"
+}
+struct WidgetBenefitView: View {
+    let provider: Provider; var open: () -> Void
+    var comparisonLine: String {
+        guard let b = provider.benefit else { return tr("Comparison: awaiting evidence", "Сравнение: ждём данные") }
+        guard let c = b.comparison else { return tr("Comparison: choose a comparison ↗", "Сравнение: выберите сравнение ↗") }
+        let requests = c.metrics["modelRequestsPerAccepted"]?.reduction
+        let tokens = c.metrics["tokensPerAccepted"]?.reduction
+        if requests == nil && tokens == nil { return tr("Comparison: not enough comparable tasks ↗", "Сравнение: мало сравнимых задач ↗") }
+        return tr("Per result: requests ", "На результат: запросы ") + reductionText(requests) + tr(" · tokens ", " · токены ") + reductionText(tokens)
+    }
+    var explanation: String {
+        var lines = [tr("Tools explicitly linked to Pulse findings, all registered versions deduplicated. This is not proof that Pulse created them. Applied tasks are declared; calls are native observed invocations over 30 days. Observation is partial.", "Инструменты явно связаны с находками Pulse, версии объединены. Это не доказательство создания инструментов Pulse. Применение в задачах отмечено вручную; вызовы — штатные наблюдения за 30 дней. Охват частичный.")]
+        if let c = provider.benefit?.comparison {
+            lines.append(c.label + ": " + c.before + " → " + c.after)
+            lines.append(tr("Selected tasks: ", "Выбранные задачи: ") + "\(c.groups[c.before]?.tasks ?? 0) → \(c.groups[c.after]?.tasks ?? 0)")
+            lines.append(tr("Change per accepted result, all selected attempts included. Observational, not causal. Subscription savings unknown.", "Изменение на принятый результат, учитываются все выбранные попытки. Наблюдение, без доказанной причинности. Экономия подписки неизвестна."))
+            lines.append(c.metrics.values.flatMap(\.reasons).sorted().joined(separator: " · "))
+        }
+        lines.append(tr("Cache: observed local input today UTC, partial coverage; not a Pulse saving. Open Analytics → Compare to pin or clear the exact pair.", "Кэш: локальный вход за сегодня UTC, частичный охват; это не экономия Pulse. Откройте Аналитика → Сравнение для закрепления или сброса выбранной пары."))
+        return lines.joined(separator: "\n")
+    }
+    var body: some View {
+        Button(action: open) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    Text("PULSE").font(.system(size: 9, weight: .semibold, design: .monospaced)).foregroundStyle(mint)
+                    if let b = provider.benefit {
+                        Text(tr("Linked: skills ", "Связано: скиллы ") + "\(b.linkedAssets["skill"] ?? 0) · MCP \(b.linkedAssets["mcp"] ?? 0)" + tr(" · tools ", " · тулзы ") + "\(b.linkedAssets["tool"] ?? 0)")
+                    } else { Text(tr("Finding links: awaiting evidence", "Связи с находками: ждём данные")) }
+                }
+                if let b = provider.benefit, b.hasObservations || b.reviewedLinkedTasks > 0 {
+                    Text(tr("30d: applied tasks ", "30д: применено в задачах ") + "\(b.declaredAppliedTasks)" + tr(" · calls ", " · вызовы ") + "\(b.observedInvocations)")
+                } else { Text(tr("30d: no observed activity yet", "30д: пока нет наблюдений")) }
+                Text(comparisonLine).foregroundStyle(provider.benefit?.comparison == nil ? quiet : ink)
+                Text(tr("Cache today: ", "Кэш сегодня: ") + (provider.localTokenProfile?.cacheHitRate.map { String(format: "%.1f%%", $0 * 100) } ?? "—") + tr(" input · partial", " входа · частично"))
+            }.font(.system(size: 10)).foregroundStyle(quiet).lineLimit(1).minimumScaleFactor(0.85)
+                .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+        }.buttonStyle(.plain).help(explanation).accessibilityElement(children: .combine)
+    }
+}

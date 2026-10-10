@@ -593,6 +593,7 @@ def snapshot(directory, collect_patterns=None):
     finally:j.close()
     settings=store.settings()
     for item in items:
+        item['benefit']=deep.get('efficiency',{}).get('widgetBenefits',{}).get(item['id'])
         item['subscription']=settings.get(item['id'],{'date':None,'kind':'renewal','source':'manual'}) if item['id']!='codex' or item.get('accountScope') else {'date':None,'kind':'renewal','source':'manual'}
     result={'analytics':deep,'generatedAt':int(time.time()),'providers':items,'catalog':adapters.CATALOG,'localPatterns':bool(collect_patterns),'localTokens':bool(config.get('localTokens',False)),
             'history':[x for x in store.history() if x['provider'] in enabled],
@@ -618,7 +619,7 @@ def main():
     i=sub.add_parser('ingest');i.add_argument('--provider',choices=sorted(adapters.IDS),required=True);i.add_argument('--file',type=Path,required=True)
     h=sub.add_parser('hook');h.add_argument('--provider',choices=sorted(journal.PROVIDERS),required=True)
     h=sub.add_parser('hooks');h.add_argument('--provider',choices=sorted(instrumentation.NATIVE_EVENTS),required=True);h.add_argument('--action',choices=['install','remove'],required=True);h.add_argument('--observer-home',type=Path,help='Explicit isolated native config root for acceptance tests')
-    h=sub.add_parser('journal');h.add_argument('--action',choices=['report','evidence','session','inventory','scan','annotate','declare','compare','export','review','asset','task','usage','compare-tasks','checks','check','health','backup'],default='report');h.add_argument('--session');h.add_argument('--provider',choices=sorted(journal.PROVIDERS),default='codex');h.add_argument('--skills-dir',type=Path,action='append',default=[]);h.add_argument('--config',type=Path);h.add_argument('--file',type=Path);h.add_argument('--label');h.add_argument('--variant');h.add_argument('--outcome',choices=['accepted','failed','rework','unknown'],default='unknown');h.add_argument('--before');h.add_argument('--after');h.add_argument('--finding');h.add_argument('--capability');h.add_argument('--kind',choices=['skill','tool','mcp'])
+    h=sub.add_parser('journal');h.add_argument('--action',choices=['report','evidence','session','inventory','scan','annotate','declare','compare','export','review','asset','task','usage','compare-tasks','widget-comparison','checks','check','health','backup'],default='report');h.add_argument('--session');h.add_argument('--provider',choices=sorted(journal.PROVIDERS),default='codex');h.add_argument('--skills-dir',type=Path,action='append',default=[]);h.add_argument('--config',type=Path);h.add_argument('--file',type=Path);h.add_argument('--label');h.add_argument('--variant');h.add_argument('--outcome',choices=['accepted','failed','rework','unknown'],default='unknown');h.add_argument('--before');h.add_argument('--after');h.add_argument('--finding');h.add_argument('--capability');h.add_argument('--kind',choices=['skill','tool','mcp'])
     from finding_review import REASONS
     h.add_argument('--status',choices=['open','actioned','dismissed'],default='open');h.add_argument('--reason',choices=sorted(REASONS),default='unspecified');h.add_argument('--days',type=int,choices=[1,3,7],default=1)
     h.add_argument('--format',choices=['json','markdown'],default='json');h.add_argument('--language',choices=['en','ru'],default='en')

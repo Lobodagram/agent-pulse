@@ -21,6 +21,7 @@ def initialize(db):
     CREATE TABLE IF NOT EXISTS task_eligibility(task TEXT PRIMARY KEY,eligibility TEXT,non_use_reason TEXT);
     CREATE TABLE IF NOT EXISTS turn_usage_status(provider TEXT,session TEXT,turn TEXT,source TEXT,
       complete INTEGER,requests REAL,PRIMARY KEY(provider,session,turn,source));
+    CREATE TABLE IF NOT EXISTS widget_comparison(provider TEXT PRIMARY KEY,label TEXT,before_variant TEXT,after_variant TEXT);
     ''')
 
 
@@ -200,7 +201,8 @@ def summarize(rows):
 
 def efficiency_report(j,calls=None,providers=None):
     if calls is None:j.prune()
-    rows=task_rows(j,j.calls() if calls is None else calls);assets=[]
+    calls=j.calls() if calls is None else calls
+    rows=task_rows(j,calls);assets=[]
     if providers is not None:rows=[r for r in rows if r['provider'] in providers]
     for r in j.db.execute('SELECT * FROM asset_version ORDER BY at DESC'):
         if providers is not None and r['provider'] not in providers:continue
@@ -220,6 +222,7 @@ def efficiency_report(j,calls=None,providers=None):
                        'lifecycle':lifecycle})
     public_rows=[{**r,'callIds':r['callIds'][:20],'callIdsTruncated':len(r['callIds'])>20} for r in rows[:100]]
     return {'assets':assets,'tasks':public_rows,'totalTasks':len(rows),'tasksTruncated':len(rows)>100,
+      'widgetBenefits':widget_benefits(j,calls,rows,assets,providers),
       'coverage':'explicit reviewed selections; native usage only; no quota or per-tool token attribution',
       'subscriptionSavings':None,'causalClaim':False}
 
@@ -230,7 +233,12 @@ def compare_tasks(j,label,before,after,provider=None):
     if provider is not None and provider not in PROVIDERS:raise ValueError('invalid_provider')
     if before==after:raise ValueError('invalid_comparison')
     j.prune()
-    rows=task_rows(j,j.calls());groups={v:[r for r in rows if r['label']==label and r['variant']==v and (provider is None or r['provider']==provider)] for v in [before,after]}
+    return compare_rows(task_rows(j,j.calls()),label,before,after,provider)
+
+
+def compare_rows(rows,label,before,after,provider):
+    """One explicitly chosen comparison; identical gates for CLI and widget."""
+    groups={v:[r for r in rows if r['label']==label and r['variant']==v and (provider is None or r['provider']==provider)] for v in [before,after]}
     a,b=groups[before],groups[after];reasons=[]
     if min(len(a),len(b))<3:reasons.append('insufficient-tasks')
     ca=Counter(r['cohort'] for r in a);cb=Counter(r['cohort'] for r in b)
@@ -253,3 +261,69 @@ def compare_tasks(j,label,before,after,provider=None):
       'reasons':reasons,'confidence':'observational' if not reasons else 'insufficient','causalClaim':False,'subscriptionSavings':None,
       'limitations':['Equal labels and observed cohort mix do not establish equal difficulty, reasoning settings or causation.',
                     'Usage includes all selected attempts; task visibility and manual acceptance remain partial.']}
+
+
+def select_widget_comparison(j,provider,label=None,before=None,after=None):
+    """Persist direction explicitly; clearing changes no task or asset evidence."""
+    from journal import PROVIDERS
+    if provider not in PROVIDERS:raise ValueError('invalid_provider')
+    if label is None and before is None and after is None:
+        with j.db:j.db.execute('DELETE FROM widget_comparison WHERE provider=?',(provider,))
+    else:
+        slug(label);slug(before);slug(after)
+        if before==after:raise ValueError('invalid_comparison')
+        with j.db:j.db.execute('INSERT OR REPLACE INTO widget_comparison VALUES (?,?,?,?)',(provider,label,before,after))
+    return {'saved':True,'localOnly':True,'provider':provider,'selected':label is not None}
+
+
+def widget_benefits(j,calls,rows,assets,providers=None):
+    """Bounded metadata only; registration, application, invocation and effects differ."""
+    from journal import PROVIDERS
+    result={};call_ids={c['id'] for c in calls}
+    invoked=defaultdict(set)
+    for r in j.db.execute("SELECT provider,id,kind,call FROM capability_evidence WHERE evidence='invoked'"):
+        if r['call'] in call_ids:invoked[(r['provider'],r['id'],r['kind'])].add(r['call'])
+    selections={r['provider']:r for r in j.db.execute('SELECT * FROM widget_comparison')}
+    for provider in sorted(PROVIDERS if providers is None else providers):
+        linked=[a for a in assets if a['provider']==provider and a['findingId']]
+        # Versions are not additional tools. Registry order is newest first.
+        distinct={}
+        for a in linked:distinct.setdefault(a['assetId'],a['kind'])
+        registered=Counter(distinct.values());versions={(a['assetId'],a['version']) for a in linked}
+        tasks=[r for r in rows if r['provider']==provider and (r['assetId'],r['version']) in versions]
+        identities={(a['assetId'],a['kind']) for a in linked}
+        uses=set().union(*(invoked[(provider,ident,kind)] for ident,kind in identities)) if identities else set()
+        comparison=None
+        if provider in selections:
+            s=selections[provider]
+            comparison=compare_rows(rows,s['label'],s['before_variant'],s['after_variant'],provider)
+        result[provider]={'windowDays':30,'linkedAssets':{k:registered[k] for k in ('skill','mcp','tool')},
+          'observedInvocations':len(uses),'declaredAppliedTasks':sum(r['application']=='used' for r in tasks),
+          'reviewedLinkedTasks':len(tasks),'hasObservations':any(c['provider']==provider for c in calls),
+          'comparison':comparison,'subscriptionSavings':None,'causalClaim':False,
+          'coverage':'Registered finding links (all registry); observed invocations and declared task applications (retained 30 days). Not total activity or created assets.'}
+    return result
+
+
+def widget_lines(provider,ru=False):
+    """Windows text adapter for the shared summary; unknowns never become savings."""
+    def tr(en,rus):return rus if ru else en
+    b=provider.get('benefit')
+    if b is None:
+        lines=[tr('PULSE · finding links: awaiting evidence','PULSE · связи с находками: ждём данные'),tr('30d: no observed activity yet','30д: пока нет наблюдений'),tr('Comparison: awaiting evidence','Сравнение: ждём данные')]
+    else:
+        a=b['linkedAssets']
+        lines=[tr('PULSE · linked: skills ','PULSE · связано: скиллы ')+str(a['skill'])+' · MCP '+str(a['mcp'])+tr(' · tools ',' · тулзы ')+str(a['tool'])]
+        lines.append(tr('30d: applied tasks ','30д: применено в задачах ')+str(b['declaredAppliedTasks'])+tr(' · calls ',' · вызовы ')+str(b['observedInvocations']) if b['hasObservations'] or b['reviewedLinkedTasks'] else tr('30d: no observed activity yet','30д: пока нет наблюдений'))
+        c=b.get('comparison')
+        if c is None:lines.append(tr('Comparison: choose a comparison ↗','Сравнение: выберите сравнение ↗'))
+        else:
+            metrics=c['metrics'];req=metrics['modelRequestsPerAccepted']['reduction'];tokens=metrics['tokensPerAccepted']['reduction']
+            def change(v):
+                if v is None:return '—'
+                if v==0:return '0%'
+                return ('↓' if v>0 else '↑')+('<0.1' if abs(v)<.001 else f'{abs(v)*100:.1f}')+'%'
+            lines.append(tr('Per result: requests ','На результат: запросы ')+change(req)+tr(' · tokens ',' · токены ')+change(tokens) if req is not None or tokens is not None else tr('Comparison: not enough comparable tasks ↗','Сравнение: мало сравнимых задач ↗'))
+    cache=(provider.get('localTokenProfile') or {}).get('cacheHitRate')
+    lines.append(tr('Cache today: ','Кэш сегодня: ')+('—' if cache is None else f'{cache*100:.1f}%')+tr(' input · partial',' входа · частично'))
+    return lines

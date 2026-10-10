@@ -63,6 +63,9 @@ final class FloatingPanel: NSPanel {
         }
         self.panel = panel; resizePanel()
         store.$widgetScale.sink { [weak self] _ in DispatchQueue.main.async { self?.resizePanel() } }.store(in: &observations)
+        store.$benefitExpanded.dropFirst().sink { [weak self] _ in DispatchQueue.main.async { self?.resizePanel() } }.store(in: &observations)
+        store.$page.dropFirst().sink { [weak self] _ in DispatchQueue.main.async { self?.resizePanel() } }.store(in: &observations)
+        store.$snapshot.dropFirst().sink { [weak self] _ in DispatchQueue.main.async { self?.resizePanel() } }.store(in: &observations)
         store.$topmost.sink { [weak self] value in DispatchQueue.main.async { self?.panel?.level = value ? .floating : .normal } }.store(in: &observations)
         store.$displayMode.dropFirst().sink { [weak self] value in DispatchQueue.main.async { if value == "floating" { self?.panel?.orderFrontRegardless() } else { self?.panel?.orderOut(nil) }; self?.updateStatus() } }.store(in: &observations)
         if store.displayMode != "menu" { panel.orderFrontRegardless() }
@@ -256,6 +259,20 @@ final class FloatingPanel: NSPanel {
             updateStatus()
         }
         if mode == "expanded" { toggleExpanded() }
+        if args.contains("--benefit-control-check"), let id = store.visibleProviders.first?.id {
+            let initial = store.baseHeight
+            fixtureControlChecks["benefitStartsCollapsed"] = store.benefitExpanded.isEmpty
+            store.toggleBenefit(id); resizePanel()
+            fixtureControlChecks["benefitOpensAndResizes"] = store.benefitExpanded.contains(id) && abs((panel?.frame.height ?? 0) - ceil((initial + 62) * store.widgetScale)) < 0.01
+            if store.pages > 1 {
+                store.page = 1; resizePanel()
+                fixtureControlChecks["benefitPageShrinks"] = store.baseHeight == initial
+                store.page = 0; resizePanel()
+                fixtureControlChecks["benefitPageRestores"] = store.baseHeight == initial + 62
+            }
+            store.toggleBenefit(id); resizePanel()
+            fixtureControlChecks["benefitClosesAndResizes"] = store.benefitExpanded.isEmpty && abs((panel?.frame.height ?? 0) - ceil(initial * store.widgetScale)) < 0.01
+        }
         if mode.hasPrefix("analysis") { showAnalysis() }
         if mode == "analysis-small" { analysisWindow?.setContentSize(NSSize(width: 620, height: 520)) }
         if mode == "analysis-large" { analysisWindow?.setContentSize(NSSize(width: 900, height: 700)) }

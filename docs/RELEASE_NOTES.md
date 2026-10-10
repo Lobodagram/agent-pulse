@@ -1,3 +1,11 @@
+# Agent Pulse 0.14.0 — widget benefit evidence (source candidate)
+
+A collapsed-by-default Pulse benefit disclosure per client now shows finding-linked tools, observed application, an explicitly pinned task comparison and separate daily cache input. Analytics → Compare can pin or clear the exact pair; refresh re-evaluates the existing quality/cohort/counter gates. Growth, zero and unavailable are distinct. Versions do not inflate tool counts; tool calls do not become model requests. No created-by-Pulse, causal or subscription-saving claim is inferred.
+
+Для каждого клиента добавлена раскрываемая кнопка «Польза Pulse», по умолчанию свёрнутая: связанные с находками инструменты, наблюдаемое применение, явно выбранное сравнение на принятый результат и отдельная доля кэша за день. Пара сохраняется локально и пересчитывается при обновлении. Пропуски, рост расхода и нулевое изменение не скрываются. Верхняя монохромная панель сохраняет прежний вид.
+
+[Metric definitions](WIDGET_BENEFIT.md) · [Значение показателей](WIDGET_BENEFIT.ru.md). The local macOS 0.14.0 build41 is installed and checked, preserving settings, enabled startup, observer paths and journal. Public 0.14.0 packages and platform CI remain separate gates. Public widget screenshots show invented DEMO data, not measured savings.
+
 # Agent Pulse 0.13.0 — reviewed improvements and direct helper metrics
 
 Repeated work can be required checks, process waiting or a different task. Human finding decisions now retain these reasons, including false positives; dismissed findings remain inspectable and can be reopened. Linked immutable skill/MCP/tool versions show whether they await use, acceptance or a comparable before/after review.

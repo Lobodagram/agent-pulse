@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Own-window Mac fixture checks; no live accounts, peers or global screen capture."""
 from pathlib import Path
-import json,subprocess,sys,tempfile,shutil,plistlib,os,signal,time
+import json,subprocess,sys,tempfile,shutil,plistlib,os,signal,time,math
 binary=Path(sys.argv[1]).resolve();fixture=Path('examples/demo.json').resolve()
 destination=Path(sys.argv[2]).resolve() if len(sys.argv)>2 else None
 if destination:destination.mkdir(parents=True,exist_ok=True)
@@ -10,7 +10,8 @@ with tempfile.TemporaryDirectory() as tmp:
     bundle=Path(tmp)/'AgentPulseFixture.app';shutil.copytree(binary.parents[2],bundle)
     info=bundle/'Contents/Info.plist';settings=plistlib.loads(info.read_bytes());settings['CFBundleIdentifier']='app.agentpulse.widgetsmoke';info.write_bytes(plistlib.dumps(settings))
     subprocess.run(['codesign','--force','--sign','-',str(bundle)],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-    for mode,width,height in [('compact',288,216),('expanded',288,344),('resize-check',348,261),('menu-widget',288,216),('menu-bar',288,216),('menu-next',288,216),('menu-timer',288,216),('menu-active',288,216),('menu-fallback',288,216),('two-quotas',288,216),('expanded-two-quotas',288,344),('pending',288,216),('compact-en',288,216),('single-instance',288,216),('window-focus',288,216),('window-controls',288,216),('today',288,216),('today-en',288,216),('today-two-quotas',288,216),('today-pending',288,216),('glm-menu-quotas',288,216),('kimi-quotas',288,216),('kimi-menu-quotas',288,216)]:
+    for mode,width,height in [('compact',288,241.6),('expanded',288,369.6),('resize-check',348,291.93333333333334),('menu-widget',288,241.6),('menu-bar',288,241.6),('menu-next',288,241.6),('menu-timer',288,241.6),('menu-active',288,241.6),('menu-fallback',288,241.6),('two-quotas',288,241.6),('expanded-two-quotas',288,369.6),('pending',288,241.6),('compact-en',288,241.6),('single-instance',288,241.6),('window-focus',288,241.6),('window-controls',288,241.6),('today',288,241.6),('today-en',288,241.6),('today-two-quotas',288,241.6),('today-pending',288,241.6),('glm-menu-quotas',288,241.6),('kimi-quotas',288,241.6),('kimi-menu-quotas',288,241.6),('benefit-ru',288,340.8),('benefit-en',288,340.8),('benefit-worse',288,340.8),('benefit-insufficient',288,340.8),('benefit-expanded',288,468.8),('benefit-fullsize',360,426),('benefit-controls',288,241.6)]:
+        if '--benefit-only' in sys.argv and not mode.startswith('benefit'):continue
         out=Path(tmp)/(mode+'.png')
         data=json.loads(fixture.read_text())
         if mode in ('two-quotas','expanded-two-quotas','today-two-quotas','glm-menu-quotas'):data['providers'][1]['quotas']=data['providers'][0]['quotas']
@@ -19,12 +20,21 @@ with tempfile.TemporaryDirectory() as tmp:
             data['providers'][0].update(id='kimi',name='Kimi Code',todayTokens=None,todayTokenCoverage='not-reported')
         if mode in ('pending','today-pending'):data['providers'][0].update(todayTokens=None,todayTokenStatus='account-day-pending')
         if mode in ('menu-next','menu-timer','menu-active','menu-fallback'):data['providers'][1]['quotas']=[]
+        if mode.startswith('benefit'):
+            for index,p in enumerate(data['providers']):
+                reduction=None if mode=='benefit-insufficient' else -.2 if mode=='benefit-worse' else .5
+                p['benefit']={'windowDays':30,'linkedAssets':{'skill':2 if index==0 else 1,'mcp':1,'tool':0},'observedInvocations':12,'declaredAppliedTasks':6,'reviewedLinkedTasks':8,'hasObservations':True,'comparison':{'label':'demo-release-check','before':'before','after':'after','groups':{'before':{'tasks':3,'accepted':3},'after':{'tasks':3,'accepted':3}},'metrics':{key:{'reduction':reduction,'reasons':['incomplete-requests'] if reduction is None else []} for key in ['modelRequestsPerAccepted','tokensPerAccepted']}}}
+                p['localTokenProfile']={'date':'2026-01-01','inputTokens':100,'outputTokens':20,'cachedInputTokens':40,'cacheHitRate':.4,'counterCoverageRate':.9}
         demo.write_text(json.dumps(data))
         view='menu-bar' if mode in ('menu-next','menu-timer','menu-active','menu-fallback') else 'expanded' if mode=='expanded-two-quotas' else mode if mode not in ('two-quotas','pending','compact-en','single-instance') else 'compact'
+        if mode.startswith('benefit'):view='expanded' if mode=='benefit-expanded' else 'compact'
         if mode.startswith('today') or mode=='glm-menu-quotas':view='compact' if mode.startswith('today') else 'menu-bar'
         ready=Path(tmp)/(mode+'.ready')
         executable=bundle/'Contents/MacOS/AgentPulse'
-        args=[str(executable),'--fixture',str(demo),'--language','en' if mode in ('compact-en','today-en') else 'ru','--scale','.8','--metric-mode','limits','--view',view,'--snapshot',str(out),'--ready-file',str(ready)]
+        args=[str(executable),'--fixture',str(demo),'--language','en' if mode in ('compact-en','today-en','benefit-en') else 'ru','--scale','.8','--metric-mode','limits','--view',view,'--snapshot',str(out),'--ready-file',str(ready)]
+        if mode.startswith('benefit') and mode!='benefit-controls':args.append('--benefit-expanded')
+        if mode=='benefit-controls':args.append('--benefit-control-check')
+        if mode=='benefit-fullsize':args[args.index('--scale')+1]='1'
         if mode.startswith('today'):args[args.index('--metric-mode')+1]='today'
         if mode=='glm-menu-quotas':args+=['--menu-only','--status-page','1']
         if mode=='kimi-menu-quotas':args+=['--menu-only'];args[args.index('--view')+1]='menu-bar'
@@ -59,7 +69,7 @@ with tempfile.TemporaryDirectory() as tmp:
                     try:os.kill(int(parts[0]),signal.SIGTERM)
                     except ProcessLookupError:pass
         r=json.loads(out.with_suffix('.png.json').read_text())
-        assert abs(r['panelWidth']-width)<.01 and abs(r['panelHeight']-height)<.01,r
+        assert abs(r['panelWidth']-width)<.01 and abs(r['panelHeight']-math.ceil(height))<.01,r
         assert r['fixtureMode'] and out.stat().st_size>100,r
         if mode=='menu-widget':assert r['menuClickShowsPanel'] and r['visibleBefore'] and r['movable'],r
         if mode.startswith('menu'):assert r['displayMode']=='menu' and r['visibleBefore']==(mode=='menu-widget') and r['menuTitle'],r
@@ -71,6 +81,7 @@ with tempfile.TemporaryDirectory() as tmp:
         if mode=='glm-menu-quotas':assert r['menuTitle'].startswith('GLM 5ч') and '7д' in r['menuTitle'],r
         if mode=='kimi-menu-quotas':assert r['menuTitle'].startswith('KIMI 5ч') and '7д' in r['menuTitle'],r
         assert r['hidePassed'] and r['restorePassed'],r
+        if mode=='benefit-controls':assert all(r['windowControlChecks'].values()) and len(r['windowControlChecks'])==5,r
         if mode=='window-controls':assert all(r['windowControlChecks'].values()) and len(r['windowControlChecks'])==12,r
         if mode=='window-focus':
             assert r['utilityTogglePassed'] and r['utilityRestorePassed'] and r['utilityFocusPassed'] and r['utilityPlacementPassed'],r

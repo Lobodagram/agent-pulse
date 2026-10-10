@@ -39,6 +39,9 @@ def run(args):
         if args.action=='compare-tasks':
             from efficiency import compare_tasks
             return compare_tasks(j,args.label,args.before,args.after,args.provider)
+        if args.action=='widget-comparison':
+            from efficiency import select_widget_comparison
+            return select_widget_comparison(j,args.provider,args.label,args.before,args.after)
         if args.action=='review':
             from finding_review import review_finding
             return review_finding(j,args.finding,args.status,args.reason,args.days)

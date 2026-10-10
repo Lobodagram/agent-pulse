@@ -28,7 +28,7 @@ BG='#151a1d';FG='#f2f6f4';MINT='#a4e8cd';QUIET='#a6b4b0'
 class Pulse:
     def __init__(self,root,fixture=None,smoke=False,language='en'):
         self.root=root;self.state=state_directory();self.fixture=fixture;self.smoke=smoke;self.data={};self.loading=False;self.page=0;self.pending=queue.Queue();self.language=language;self.auth_revision=0;self.auth_marks={};self.reading_limits=False
-        self.utility_windows={};self.utility_press=None
+        self.utility_windows={};self.utility_press=None;self.benefit_expanded=set()
         self.collapsed=False;self.compact_page=0;self.full_position=(100,100);self.refresh_failed=False
         root.title('Agent Pulse');root.geometry('400x310+100+100');root.configure(bg=BG);root.overrideredirect(True);root.attributes('-topmost',True)
         self.brand_image=tk.PhotoImage(file=str(asset('logo-32.png')))
@@ -119,7 +119,9 @@ class Pulse:
     def set_scale(self,value,save=True):
         self.scale=min(1,max(.8,float(value)))
         if self.collapsed:return
-        self.root.geometry(f'{round(400*self.scale)}x{round(310*self.scale)}')
+        benefit_count=sum(p['id'] in self.benefit_expanded for p in self.data.get('providers',[])[self.page*2:self.page*2+2])
+        base_height=340+50*benefit_count
+        self.root.geometry(f'{round(400*self.scale)}x{round(base_height*self.scale)}')
         def visit(w):
             if isinstance(w,tk.Toplevel):return
             if isinstance(w,tk.Label) and w.master is self.content:w.configure(bd=0,padx=0,pady=0)
@@ -129,6 +131,9 @@ class Pulse:
             if 'wraplength' in w.keys() and float(w.cget('wraplength'))>0:w.configure(wraplength=round(400*self.scale-32))
             for child in w.winfo_children():visit(child)
         visit(self.root)
+        self.root.update_idletasks()
+        needed=self.header.winfo_reqheight()+self.content.winfo_reqheight()+self.footer.winfo_reqheight()+12
+        self.root.geometry(f'{round(400*self.scale)}x{max(round(base_height*self.scale),needed)}')
         if save:self.save_scale()
     def t(self,en,ru):return ru if self.language=='ru' else en
     def begin_drag(self,e):self.offset=(e.x_root-self.root.winfo_x(),e.y_root-self.root.winfo_y())
@@ -321,6 +326,17 @@ class Pulse:
             if q:
                 at=p.get('quotaObservedAt',p.get('observedAt'))
                 tk.Label(self.content,text=self.t('Limit read: ','Лимит получен: ')+(datetime.fromtimestamp(at).strftime('%H:%M:%S') if at else '—'),bg=BG,fg=QUIET,font=('Segoe UI',8),anchor='w').pack(fill='x')
+            ident=p['id'];is_open=ident in self.benefit_expanded
+            def toggle_benefit(ident=ident):
+                if ident in self.benefit_expanded:self.benefit_expanded.remove(ident)
+                else:self.benefit_expanded.add(ident)
+                self.render()
+            tk.Button(self.content,text=('▾ ' if is_open else '▸ ')+self.t('Pulse benefit','Польза Pulse'),command=toggle_benefit,bg=BG,fg=QUIET,activebackground=BG,activeforeground=FG,relief='flat',anchor='w',font=('Segoe UI',8),bd=0).pack(fill='x',pady=2)
+            if is_open:
+                from efficiency import widget_lines
+                for line in widget_lines(p,self.language=='ru'):
+                    field=tk.Label(self.content,text=line,bg=BG,fg=QUIET,font=('Segoe UI',8),anchor='w',wraplength=365)
+                    field.pack(fill='x');field.bind('<Button-1>',lambda e:self.analysis())
             s=p['subscription'];date=s.get('date');billing=self.t('Billing date not set','Дата подписки не указана') if not date else s['kind']+': '+date+' · '+self.t('manual','вручную')
             if s['kind']=='none':billing=self.t('No subscription','Без подписки')
             tk.Label(self.content,text=billing,bg=BG,fg=QUIET,font=('Segoe UI',9),anchor='w').pack(fill='x')
@@ -639,6 +655,20 @@ class Pulse:
             except ValueError:messagebox.showerror('Agent Pulse',self.t('Invalid labels','Проверьте метки'))
             finally:j.close()
         ttk.Button(row,text=self.t('Compare','Сравнить'),command=compare).pack(side='left')
+        pinrow=tk.Frame(comparison,bg=BG);pinrow.pack(fill='x',padx=8)
+        def pin(clear=False):
+            if self.fixture or not compare_tasks.get():return
+            j=Journal(self.state)
+            try:
+                from efficiency import select_widget_comparison
+                select_widget_comparison(j,compare_provider.get(),*([] if clear else [task.get(),before.get(),after.get()]))
+                self.refresh()
+                messagebox.showinfo('Agent Pulse',self.t('Widget selection saved','Выбор для виджета сохранён'),parent=w)
+            except ValueError:messagebox.showerror('Agent Pulse',self.t('Invalid labels','Проверьте метки'),parent=w)
+            finally:j.close()
+        ttk.Button(pinrow,text=self.t('Pin pair in widget','Закрепить пару в виджете'),command=pin,state='disabled' if self.fixture else 'normal').pack(side='left')
+        ttk.Button(pinrow,text=self.t('Clear widget pair','Сбросить пару виджета'),command=lambda:pin(True),state='disabled' if self.fixture else 'normal').pack(side='left',padx=4)
+        tk.Label(pinrow,text=self.t('30-day tasks · per accepted result · observational','Задачи за 30 дней · на принятый результат · наблюдение'),bg=BG,fg=QUIET,wraplength=650).pack(anchor='w')
         if self.smoke:
             for index in range(len(book.tabs())):book.select(index);w.update_idletasks()
             for day in days:

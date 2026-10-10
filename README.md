@@ -1,5 +1,7 @@
 # Agent Pulse
 
+The source adds a per-client **Pulse benefit** disclosure, collapsed by default: linked tools, observed application, one explicitly pinned task comparison, and separate daily cache input. [Metric definitions](docs/WIDGET_BENEFIT.md).
+
 <p><img src="brand/agent-pulse.png" alt="Agent Pulse" width="112" height="112"></p>
 
 Widget: **Limits ⇄ / Today ⇄**, persisted per device; opt-in personal GLM Coding Plan quotas via a masked Settings field. [Setup and coverage](docs/PROVIDERS.md).

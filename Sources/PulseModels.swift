@@ -50,7 +50,18 @@ struct Provider: Codable, Identifiable {
     var sessions: Double?; var resetCredits: Double?; var sourceStatus: [String]; var quotaError: String?
     var accountScope: String?; var quotaObservedAt: Double?; var observedAt: Double?; var lastSuccessfulAt: Double?; var tokenSource: String?; var tokenCoverage: String?; var todayTokenCoverage: String?; var todayTokenStatus: String?; var subscription: Subscription
     var localTokenProfile: LocalTokenProfile?
+    var benefit: WidgetBenefit? = nil
 }
+struct WidgetBenefit: Codable {
+    var windowDays: Int; var linkedAssets: [String:Int]; var observedInvocations: Int; var declaredAppliedTasks: Int
+    var reviewedLinkedTasks: Int; var hasObservations: Bool; var comparison: WidgetComparison?
+}
+struct WidgetComparison: Codable {
+    var label: String; var before: String; var after: String; var metrics: [String: WidgetReduction]
+    var groups: [String: WidgetComparisonGroup]
+}
+struct WidgetReduction: Codable { var reduction: Double?; var reasons: [String] }
+struct WidgetComparisonGroup: Codable { var tasks: Int; var accepted: Int }
 struct ProviderSpec: Codable, Identifiable { var id: String; var name: String; var mode: String; var support: String }
 struct DayUsage: Codable, Identifiable {
     var provider: String; var date: String; var tokens: Double; var coverage: String?

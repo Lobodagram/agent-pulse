@@ -1,5 +1,7 @@
 {
   "docs/screenshots/analytics-en.png": "76d4965a397d7f9e46f184c4ad48468f7da159940c89d05ed37277645672d580",
+  "docs/screenshots/benefit-en.png": "81323207d9543baedb019f855777b9a30104f4a9acf7a3bc204d592cb0a57dde",
+  "docs/screenshots/benefit-ru.png": "56f0d411ddb3a8b487b9321f6c1f7a128a4edd4ad9440ec85aeeec4a7c3e26cf",
   "docs/screenshots/capabilities-en.png": "21606a07bc2686b43eebeb8ab6b6805078086834bb4fbdb93eff748db2d23fe8",
   "docs/screenshots/capabilities-ru.png": "12ee6c72eaf8f900a6151df19e73525ad776178021d67ba6a6c806af3fb82474",
   "docs/screenshots/collection-en.png": "17c796417e67ae45496394c5afc394fc1a7414102b51d05a3da88ab0903de333",
@@ -18,10 +20,10 @@
   "docs/screenshots/today-en.png": "392c571335a7df6cef8193a1154605f7e03c411969c6ed201bd892be1da06978",
   "docs/screenshots/tokens-en.png": "25b8ee7113197f64487aed859186ec50442c061decf6e1c04c1c52ac274da94b",
   "docs/screenshots/tokens-ru.png": "856e0b7bdd4a43faed75455c9aeecfe85eff60de58ea95e89679b29aa28c0344",
-  "docs/screenshots/widget-en.png": "920c061afbd82d6562a27ea02d917924a7ed2709c1353a89411b373bb008d294",
-  "docs/screenshots/widget-ru.png": "5ff0fd0b1a4f1b9d9d8c69724a5d1088510e73f9dccf27fb2c7b98486648bab7",
+  "docs/screenshots/widget-en.png": "e73c9b58f311e348471d136b9c0574b9345731b8fea00ff2604afe6a816f3688",
+  "docs/screenshots/widget-ru.png": "052e2edf07f61b1729ffa0b7a454be0469a98c3cc7805bb6dd9c725ac19df7c9",
   "docs/screenshots/widget-small-en.png": "a28a282f1dafa97b995bf8dea2583ce60c064955fa2ad93c834442e57300c11c",
-  "docs/screenshots/widget-small-ru.png": "57a0cf8d8d577e3ce43fc197aa3a6b45f1326304347fc6bb0bba82e06c658830",
+  "docs/screenshots/widget-small-ru.png": "052e2edf07f61b1729ffa0b7a454be0469a98c3cc7805bb6dd9c725ac19df7c9",
   "docs/screenshots/workflows-en.png": "5127ce9161ce03bf0619092793eddaeb5230e0eeae1e2280ffa6a28a2f524a0b",
   "docs/screenshots/workflows-ru.png": "a3a2b38f7a288d7b433cd2c8f1ce16c5484f5fd16cc27021d15c2b374ff2201e"
 }

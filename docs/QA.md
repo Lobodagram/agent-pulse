@@ -1,5 +1,13 @@
 # QA evidence
 
+## 0.14.0 local widget disclosure · 2026-10-10
+
+The approved local macOS build41 is installed. Both canonical/observer bundles passed strict signing and MCP version checks; four protected configuration/key/hook files retained their bytes and modes. Journal integrity remained OK, with continued real events. Settings show Russian, 80%, menu-only placement and enabled launch at login. Live clicks verified a collapsed-by-default Pulse benefit button, independent Codex expansion and collapse; GLM remained collapsed. No new reboot was performed.
+
+305 isolated source tests, syntax, documentation links and allowlisted privacy export passed. Thirty own-window widget/menu/control scenarios were checked; seven final disclosure states were rerun after adding spacing. Five explicit assertions cover default collapse, expansion/resize, page shrink/restore and collapse/resize. Two comparison forms were inspected in EN/RU at the minimum utility size. Packaged pin/clear metadata roundtrip, version/build and local ZIP CRC checks passed. Windows floating layout now adapts to requested content height; actual Windows GUI CI and public0.14.0 release artifacts remain separate gates.
+
+The widget shows finding-linked registrations (not inferred creation), observed invocation vs declared task application, one explicitly pinned observational task comparison and separate daily cache input. No causal or subscription-saving percentage is claimed. Screenshots are invented DEMO data. Existing public0.13.0 package acceptance below remains valid for those immutable artifacts.
+
 ## 0.13.0 verified public delivery · 2026-10-10
 
 Immutable release [v0.13.0](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.13.0) points to `9b3cfa15c88e21f5bad016f80a6470c467fabaa5`. [Source CI](https://github.com/Lobodagram/agent-pulse/actions/runs/38077373116) passed Linux, macOS ARM/Intel and Windows; [package CI](https://github.com/Lobodagram/agent-pulse/actions/runs/38077799504) passed all three packages and publication. All 174 exported remote blob hashes/modes matched the checked export. A separate clean checkout of this commit/tag passed 293 tests, privacy/export, Python syntax and 164 document links. The 39 runtime/native source inputs of the installed local build match this release commit; downloaded packages and that installed candidate are separate byte sets.
