@@ -1,13 +1,13 @@
 # Changelog
 
-## 0.13.0 · unreleased
+## 0.13.0 · 2026-10-10
 
 - Direct helper receipts now expose operation/version/client cohorts: successes, failures, result coverage, incomplete/stale runs, conflicts, missing starts and paired median time. Metrics include all retained runs; group previews are bounded and explicitly marked when truncated.
 - Repeated Reporter completion retries preserve the original timestamp and deduplicate. Conflicting results remain unknown. No inferred task acceptance, native outcome, token or subscription savings.
 - macOS models, store, widget, token chart, analytics, settings and lifecycle now live in separate Swift files; the build includes all Swift sources. Existing menu-bar appearance and startup behavior are preserved.
 - Добавлена аналитика прямых запусков по версиям и операциям; интерфейс macOS разделён на модули.
 
-## 0.12.0 · unreleased
+## 0.12.0 · local preview · included in 0.13.0
 
 - Human review reasons distinguish process waiting, required checks, different tasks and false positives. Dismissed candidates stay inspectable and can be reopened.
 - Finding decisions expose linked immutable asset versions and declared application/acceptance stages; accepted work awaits a comparable before/after review.
