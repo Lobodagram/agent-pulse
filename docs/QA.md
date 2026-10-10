@@ -1,5 +1,23 @@
 # QA evidence
 
+## 0.13.0 verified public delivery · 2026-10-10
+
+Immutable release [v0.13.0](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.13.0) points to `9b3cfa15c88e21f5bad016f80a6470c467fabaa5`. [Source CI](https://github.com/Lobodagram/agent-pulse/actions/runs/38077373116) passed Linux, macOS ARM/Intel and Windows; [package CI](https://github.com/Lobodagram/agent-pulse/actions/runs/38077799504) passed all three packages and publication. All 174 exported remote blob hashes/modes matched the checked export. A separate clean checkout of this commit/tag passed 293 tests, privacy/export, Python syntax and 164 document links. The 39 runtime/native source inputs of the installed local build match this release commit; downloaded packages and that installed candidate are separate byte sets.
+
+All three downloaded packages matched their GitHub API digests, sizes and SHA256SUMS. CRC, safe paths, runtime/notices, both Mac build39 plists and embedded 0.13.0 versions passed. Windows collector and GUI versions were independently read from decoded Python modules. Scoped raw/base64/hex comparison against two approved own credential stores found zero matches across the 174 tag source files, archive entries and all four decoded CArchive/PYZ archives. Historical Git objects and CI-log credential scans were not included.
+
+Downloaded ARM64 passed strict signature, frozen receipt/health/backup/hooks/MCP/deadline checks, 23 widget/window scenarios and 24 synthetic EN/RU usefulness/form/helper renders. Small RU and large EN helper metrics, RU task assessment and EN version registration were visually inspected. The first archive-check attempt rejected a partial file while download was ongoing; the passing checks use completed files with matching API digests. Synthetic states and temporary app bundles stay separate from the live journal.
+
+Installed 0.13.0 settings, enabled startup, unchanged observer paths and continued real events passed the local acceptance below. The real reboot evidence belongs to 0.11.2, not a new 0.13.0 reboot. Physical Windows/Intel interaction, notarization, live Kimi and causal productivity/subscription savings remain separate, unrun/unknown gates. Screenshots contain invented DEMO data.
+
+| Downloaded package | SHA256 |
+| --- | --- |
+| macOS ARM64 | `677b997d47e34f11cbb8b0d787eb5cccbffde037c79c06fbf905521078d2e6e3` |
+| macOS Intel | `e3dca5301a08a7ac047f9ce34d839f4a86e6a06bfdbfcb5dd2c0040ae1893fa3` |
+| Windows x64 | `a2a0643c6742e4a67334b1759547fce5dc76eac1b7ef5bff7cfb95751f9b2f94` |
+
+Опубликованы и проверены три пакета 0.13.0. На рабочем Mac установлена проверенная локальная сборка с теми же исходниками; сохранены настройки, автозапуск, пути наблюдателей и аналитика. Метрики запусков не являются доказательством приёмки задач или экономии подписки.
+
 ## 0.13.0 local acceptance · 2026-10-10
 
 The local ARM64 candidate (build39) passed 293 tests, Python syntax, allowlisted public export, 160 document links, Swift compilation, strict signature and frozen CLI/MCP/hooks/receipt/backup checks. All 23 widget/window scenarios and 24 EN/RU analytics/form/helper renders passed. Representative forms and new helper metrics were visually inspected; the synthetic task-assessment setup now fills values from its asset-change callback instead of racing delayed resets. These source counts refer to the checked local candidate before the final release documentation/gallery update.
