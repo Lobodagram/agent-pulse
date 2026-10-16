@@ -3,6 +3,12 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Existing version tag to publish after a tests/docs-only CI correction; blank builds artifacts only'
+        required: false
+        default: ''
+        type: string
 permissions:
   contents: read
 jobs:
@@ -27,6 +33,12 @@ jobs:
       - name: Validate tag against canonical version
         run: >-
           python -c "import os; from pulse_version import __version__; assert os.environ.get('GITHUB_REF_TYPE') != 'tag' or os.environ.get('GITHUB_REF_NAME') == 'v'+__version__; print(__version__)"
+      - name: Verify manual publication has identical runtime and build inputs
+        if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+        env:
+          PULSE_RELEASE_TAG: ${{ inputs.release_tag }}
+        run: >-
+          python -c "import os,subprocess; from pulse_version import __version__; tag=os.environ['PULSE_RELEASE_TAG']; assert tag=='v'+__version__, 'release_tag_version_mismatch'; subprocess.run(['git','fetch','--no-tags','origin','tag',tag],check=True); changed=subprocess.check_output(['git','diff','--name-only',tag,'HEAD'],text=True).splitlines(); allowed=lambda p: p.startswith(('tests/','docs/')) or p in ('README.md','README.ru.md','CHANGELOG.md','.github/workflows/release.yml'); assert all(allowed(p) for p in changed), 'tag_runtime_or_build_drift'; print('Identical tagged runtime/build inputs; tests/docs/workflow-only correction:',changed)"
       - run: python -m unittest discover -s tests -v
       - run: python -m pip install -r requirements-build.txt
       - if: runner.os == 'macOS'
@@ -81,7 +93,7 @@ jobs:
           if-no-files-found: error
   publish:
     needs: package
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -94,7 +106,7 @@ jobs:
       - run: cd packages && sha256sum *.zip > SHA256SUMS.txt
       - env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release create "$RELEASE_TAG" --verify-tag --prerelease --title "Agent Pulse $RELEASE_TAG — public preview / публичная версия" --notes-file docs/RELEASE_NOTES.md
