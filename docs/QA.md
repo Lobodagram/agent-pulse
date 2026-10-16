@@ -1,12 +1,20 @@
 # QA evidence
 
-## 0.14.6 delivery · 2026-10-16
+## 0.14.6 verified public delivery · 2026-10-16
 
-The local macOS ARM64 build47 is installed and verified. Canonical and preserved observer-compatible bundles passed strict signatures, CLI/MCP version, health and daily-review checks. Existing configuration, credentials, hook paths and enabled startup setting were preserved; real new events continued. This is local acceptance, separate from downloaded release bytes. No new reboot is claimed.
+Release [v0.14.6](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.14.6) retains the original tag at `5a47c66335cdb69a4af4406fa56aa982187b71ba`. The initial Windows run found two test portability errors (default non-UTF-8 decoding and POSIX permission assumptions), corrected without changing application code. [Source CI](https://github.com/Lobodagram/agent-pulse/actions/runs/38877665683) passed Linux, Windows and macOS ARM64/Intel. [Package/publication CI](https://github.com/Lobodagram/agent-pulse/actions/runs/38877732426) passed all three platforms and publication from `87d145ea38fcc09987d53def5dd8046ebefa869e`. Compared with the tag, only that test and the guarded recovery workflow differ: all runtime/build inputs are identical. The tag was not moved and the failed first attempt remains inspectable.
 
-The reviewed runtime passed 400 source tests, privacy export, syntax and 193 document links. Frozen hook/deadline/MCP checks, exact 30-module hashes and seven selected native model/chart renders passed; representative images were inspected. The final local candidate SHA256 is `182e22fc34921329ee3187235a7790d7181b7a88ec057fd7e504969544c259eb`. Release documentation and changed screenshots are refreshed for 0.14.6; unchanged historical evidence below retains its original version/date.
+All three downloaded packages matched GitHub API digests/sizes and SHA256SUMS, ZIP CRC/safe paths, embedded version0.14.6, both Mac build47 plists, bundled runtimes and license notices. Windows collector and GUI versions were independently decoded. Scoped raw/base64/hex comparison against two approved own credential stores found zero matches across the exported source, ZIP entries and all four decoded Python executable archives. Historical Git objects and CI-log credential scanning are outside this scope.
 
-Public source/platform CI and downloadable package verification are pending in this preparation snapshot. Their final immutable commit, runs and package hashes will be recorded here after completion. Physical Windows/Intel interaction, notarization, live Kimi and causal productivity/subscription savings remain separate unknown/unrun gates. UI captures contain invented DEMO data only.
+Eight gallery files were refreshed from the current local0.14.6: English/Russian compact widgets, small-widget copies, five-row benefit states and Settings viewports. Six distinct captures were visually inspected. Demonstrations explicitly show invented data and unevaluated effect, not measured savings. Unchanged older screens retain their original provenance. Module ownership, privacy, setup EN/RU, portable analysis skill, diagnostic definitions and recovery instructions are current.
+
+The approved local0.14.6 ARM64 install passed its separate strict-signature/frozen/hook/MCP/health/settings/live-event acceptance. The downloaded ARM64 separately passed strict/deep signature, exact30module source hashes, frozen prospective-envelope/component and hook/MCP/deadline smoke, plus current EN/RU benefit renders. Temporary bundles were removed; publication did not reinstall the app. Physical Windows/Intel interaction, a new reboot, notarization, live Kimi and causal productivity/subscription savings remain unrun/unknown.
+
+| Downloaded package | SHA256 |
+| --- | --- |
+| agent-pulse-macos-arm64.zip | `944502d47c838f64ca8af4ed0f75489b1bbb6b700b9ffc0c614e68cfd473a2d7` |
+| agent-pulse-macos-x64.zip | `f22f46c7463ecfb9e8624ac5480471a8b51970f933f314882ad9dc7d5647de7c` |
+| agent-pulse-windows-x64.zip | `af6b631e0383aaa0226181d94c06a722bc38b70a348241fa5df66dc6cd795e36` |
 
 ## 0.14.0 local widget disclosure · 2026-10-10
 

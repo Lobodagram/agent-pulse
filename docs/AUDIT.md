@@ -1,3 +1,9 @@
+# Audit scope and current delivery
+
+Current public version: **0.14.6**. See [QA](QA.md) for current source/platform/package checks, [diagnostics](DIAGNOSTICS.md) for prospective coverage limits, and [release notes](RELEASE_NOTES.md) for changes. The dated audits below describe their original versions; historical scores or tests are not a new evaluation of 0.14.6. Human task acceptance and causal subscription savings remain unestablished.
+
+Текущая публичная версия — **0.14.6**. Актуальные проверки и ограничения указаны в QA; записи ниже исторические и сохраняют исходную дату и версию. Оценки прошлых аудитов не являются новой оценкой текущего релиза.
+
 ## 0.10.0 acceptance scope · 2026-10-07
 
 This iteration adds explicit Kimi Code 2.x TOML observation and masked own-key quota configuration. 220 source tests and isolated Mac controls establish contract/privacy/inverse-removal correctness. Official CLI 2.1.1 is installed and help/doctor verified; no login, model calls or sessions were started. Live account acceptance was not performed: do not call Kimi account quotas or real hook delivery field-tested. Explicit .com/.ai selection does not prove both live schemas; wrong account/region returns safe unavailable rather than sending a key to another host.

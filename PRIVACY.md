@@ -66,3 +66,9 @@ Kimi Code 2.x observer configuration is opt-in and byte-preserving outside its m
 
 
 0.11.2: opt-in helper receipts store only fixed operation/version, hashed run ID, times/status, source digest and fixed gate codes (30 days, maximum5000). Reporter provider/status is not native evidence or human acceptance. Retention counters contain only numbers and tracking-start dates. Verified manual journal snapshots contain sanitized telemetry/HMAC identities, no credentials or native DBs; their lifetime is controlled by the owner. New MCP writes remain explicit control opt-in. / Квитанции и диагностика не содержат команд, вывода, текстов или ключей. Ручные резервные копии очищенного журнала хранятся отдельно и не удаляются по сроку активной базы.
+
+## Prospective coverage metadata (0.14.6)
+
+New events may retain fixed command-recognition reasons, collector version and fixed command-component families. New terminal events may retain response-container types and fixed exit-field states. Only allowlisted category values/counts are stored: no raw field names, output, arguments, code, messages or exception stacks. Format evidence describes the first received completion; later duplicate delivery may update the native outcome separately. Existing events are not replayed to reconstruct missing metadata.
+
+Daily reviews read Pulse-owned retained events and saved quota points. No native conversation database, account refresh, model request or telemetry upload is triggered by a daily review. Local exported reports contain sanitized personal activity and remain local unless their owner explicitly chooses to share them. Public screenshots and examples are synthetic.

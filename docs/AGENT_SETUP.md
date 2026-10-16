@@ -95,3 +95,7 @@ In Settings, use **Launch at login** to start Agent Pulse after signing in. It i
 Windows uses only this user's `AgentPulse` value in the [Run key](https://learn.microsoft.com/en-us/windows/win32/setupapi/run-and-runonce-registry-keys); unchecking removes that value and preserves other programs. The packaged app registers its exact executable; source mode registers the interpreter and script without copying fixture/CLI arguments. Windows startup policy/Task Manager can independently block launch. Fixture mode never changes startup. Enabling does not reboot or log out the computer; a real login/reboot remains a separate acceptance check.
 
 [Versioned task metrics / Польза версий](EFFICIENCY.md).
+
+## Daily review and coverage in 0.14.6
+
+After confirming actual event collection, use the read-only `pulse_daily_review` with an explicit date, UTC offset and client. `pulse_diagnostics` explains retained coverage and fixed error categories. See [daily/compact review commands](WORKFLOW_AUTOMATION.md) and [diagnostic definitions](DIAGNOSTICS.md). The compact repository helper is separate from the installed collector; pass its actual executable path on other operating systems. Scheduling delivery belongs to your existing agent/scheduler; Pulse never starts an agent or paid model.

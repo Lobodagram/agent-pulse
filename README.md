@@ -20,6 +20,8 @@ A local tool for improving coding-agent workspaces: collect sanitized tool event
 
 The release includes better bounded shell/skill recognition, separate component coverage for partially understood chains, missing-finish versus unknown-result counts, and fixed response-format evidence for new events. It never turns shell output into a successful exit or reconstructs old payloads. The compact review helper uses saved local quota observations; resets, reported UTC tokens and subscription savings remain separate. [Release notes](docs/RELEASE_NOTES.md) · [Workflow automation](docs/WORKFLOW_AUTOMATION.md).
 
+[Screenshot provenance](docs/screenshots/README.md).
+
 ![Direct helper results by version — current UI, invented demo data — invented demo data](docs/screenshots/collection-en.png)
 ![Reviewed-task comparison — unchanged screen — invented results, not measured savings](docs/screenshots/comparison-en.png)
 

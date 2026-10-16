@@ -12,6 +12,10 @@ Agent Pulse — локальный наблюдатель. Он не запус�
 | Silent event receiver / Приём событий | `hook_bridge.py` or packaged `pulse-collector hook` |
 | Sanitized journal, pairing and deduplication / Журнал, пары и исключение повторной доставки | `journal.py`, `sanitizers.py`, `result_metadata.py` |
 | Deterministic patterns, evidence, sessions and reviews / Паттерны, свидетельства, сессии и решения | `analytics.py`, `command_profile.py`, `session_view.py`, `finding_review.py` |
+| Coverage diagnostics, result-envelope shapes and fixed failure categories / Диагностика охвата и формата ответов | `diagnostics.py`, `result_metadata.py`; new-event metadata only |
+| Retained local-day evidence and saved quota windows / Сводки локального дня и сохранённые лимиты | `daily_review.py`; reads Pulse-owned journal/metrics |
+| Opt-in shared catalog refresh / Обновление разрешённого реестра | `inventory_refresh.py`; preserves prior inventory on failure |
+| Compact report and native fixture QA / Краткая сводка и проверка интерфейса | `scripts/economy_review.py`, `scripts/native_qa.py`; repository helpers, not an agent loop |
 | Model/capability attribution / Модели и подтверждённые навыки | `model_evidence.py`, `capability_detection.py`, `capability_report.py` |
 | Read-only MCP and optional bounded controls / MCP и ограниченное управление по выбору | `mcp_server.py`, `agent_control.py` |
 | macOS UI / Интерфейс macOS | `Sources/PulseModels.swift`, `PulseStore.swift`, `WidgetViews.swift`, `TokenHistory.swift`, `AnalysisView.swift`, `HelperMetricView.swift`, `SettingsView.swift`, `AppDelegate.swift`; `AgentPulse.swift` is the entrypoint |

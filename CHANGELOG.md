@@ -1,7 +1,8 @@
 # Changelog
 
-## 0.14.6 · 2026-10-16 · public release preparation
+## 0.14.6 · 2026-10-16
 
+- Public Mac ARM64/Intel and Windows x64 packages include the accumulated 0.14.1–0.14.6 changes; current EN/RU documentation and synthetic gallery updated. Windows log-test portability corrected; application runtime unchanged.
 - New terminal events retain fixed response-envelope types and field states separately, without output, keys or messages. The first received shape is explicit; old events/retries are not backfilled and native result classification is unchanged.
 - Daily and compact economy reviews separate missing finishes, completed unknown results and missing recognizable exit codes. Recorded-format coverage remains distinct from result coverage; native shell text is never promoted to success.
 

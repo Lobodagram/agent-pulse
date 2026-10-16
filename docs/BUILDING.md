@@ -63,3 +63,7 @@ Before publication, `scripts/public_export.py NEW_DIRECTORY` exports an allowlis
 Local Mac development: `script/build_and_run.sh` builds/launches an isolated local-run bundle; `--verify`, `--debug`, `--logs`, `--telemetry` supported. Set `AGENT_PULSE_PYTHON` to a Python 3.11+ interpreter for source builds without the frozen collector. Fixture/snapshot paths are resolved from the repository. Public release bundles still use `build.sh` and bundled Python.
 
 For isolated acceptance, pass an explicit temporary output directory to `build.sh` and set `AGENT_PULSE_COLLECTOR_DIR` to a freshly frozen onedir helper. This avoids replacing the active `dist` observer or accidentally using a stale helper from `.build`. Keep runtime and helper together.
+
+## Same-version recovery after a tests/docs-only CI correction
+
+Create version tags after source CI passes on all supported platforms. Never silently move a published tag. If a post-tag correction changes only tests/documentation, the manual `Release packages` input `release_tag` can publish packages for the existing version. Each platform validates the input against `pulse_version.py`, fetches the existing tag and rejects any runtime/build-input drift; only tests, documentation, README/changelog and the recovery workflow itself may differ. Blank input keeps the former artifacts-only behavior. Publication waits for every package job; the existing per-job permission boundary is unchanged. Record the exact artifact build commit, tagged runtime identity and the original failure in QA.
