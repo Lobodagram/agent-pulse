@@ -231,6 +231,9 @@ struct AnalysisView: View {
                     }.id("helper-metrics")
                 }
             }
+            ForEach(report.diagnostics?.commandCoverage ?? []) { row in
+                commandCoverageLine(row)
+            }
             if report.checkRuns != nil { Text(tr("Helper evidence is separate from native outcomes and human acceptance", "Квитанции отдельно от штатных исходов и приёмки человеком")).font(.system(size: 10)).foregroundStyle(quiet) }
             if let health = report.storageHealth {
                 Text(tr("Journal integrity: ", "Целостность журнала: ") + (health.integrity == "ok" ? tr("quick check passed", "быстрая проверка пройдена") : tr("check failed", "проверка не пройдена")) + " · \(health.retentionDays) " + tr("days retained", "дней хранения")).font(.system(size: 10)).foregroundStyle(quiet)
@@ -281,6 +284,9 @@ struct AnalysisView: View {
             Text(tr("Literal cat/sed/head/tail reads match registered paths only. Reading does not establish application. MCP namespaces are not proof of a plugin or live server.", "Буквальные cat/sed/head/tail учитываются только по зарегистрированным путям. Чтение не доказывает применение. Пространство MCP не подтверждает плагин или доступность сервера.")).font(.system(size: 11)).foregroundStyle(quiet)
             }
             Text(tr("Observed tools", "Наблюдаемые инструменты")).font(.system(size: 16, weight: .semibold))
+            ForEach(report.diagnostics?.skillEvidenceCoverage ?? []) { row in
+                skillEvidenceLine(row)
+            }
             if (report.toolUsage ?? []).isEmpty { Text(tr("No tool calls received in this view.", "В этом разделе пока нет полученных вызовов инструментов.")).foregroundStyle(quiet) }
             ForEach(report.toolUsage ?? [], id: \.identity) { row in
                 VStack(alignment: .leading, spacing: 4) {
@@ -296,6 +302,19 @@ struct AnalysisView: View {
             ForEach(visible, id: \.identity) { row in capabilityCard(row); Divider() }
 
         }
+    }
+    func commandCoverageLine(_ row: CommandCoverage) -> some View {
+        let counts = "\(row.classified)/\(row.calls) · " + percentText(row.classifiedRate)
+        let label = row.provider.uppercased() + " · " + tr("Command types: ", "Типы команд: ") + counts
+        return Text(label + tr(" · unknown ", " · неизвестно ") + "\(row.unknown)")
+            .font(.system(size: 10)).foregroundStyle(quiet).fixedSize(horizontal: false, vertical: true)
+    }
+    func skillEvidenceLine(_ row: SkillEvidenceCoverage) -> some View {
+        let calls = tr("Skill calls ", "Вызовы навыков ") + "\(row.mappedSkillToolCalls)"
+        let reads = tr(" · reads ", " · чтения ") + "\(row.skillReadCalls)"
+        let unmatched = tr(" · unmatched Skill ", " · Skill вне каталога ") + "\(row.unmappedSuccessfulSkillToolCalls)"
+        return Text(row.provider.uppercased() + " · " + calls + reads + unmatched)
+            .font(.system(size: 11)).foregroundStyle(quiet).fixedSize(horizontal: false, vertical: true)
     }
     func namespaceCard(_ row: McpNamespace) -> some View {
         let suffix = row.registered ? "" : tr(" · not registered", " · вне каталога")
@@ -345,7 +364,10 @@ struct AnalysisView: View {
                     if row.loaded + row.invoked + row.declared == 0 { Text(tr("No confirmed events", "Нет подтверждённых событий")).font(.system(size: 11)).foregroundStyle(quiet) }
                     else { Text("\(row.loaded) " + tr("loaded · ", "чтений · ") + "\(row.invoked) " + tr("invoked · ", "вызовов · ") + "\(row.declared) " + tr("declared", "отметок")).font(.system(size: 11)).foregroundStyle(mint) }
                     if let sources = row.evidenceSources, let count = sources["shell-literal"] { Text("\(count) " + tr("literal shell reads", "буквальных чтений shell")).font(.system(size: 10)).foregroundStyle(quiet) }
-                    Text(row.status + (row.inventoryFresh ? "" : tr(" · inventory needs refresh", " · обновите каталог"))).font(.system(size: 10)).foregroundStyle(quiet)
+                    if row.status == "not-in-current-inventory" {
+                        Text(tr("Observed event · outside this client's inventory", "Подтверждено событием · вне реестра этого клиента")).font(.system(size: 10)).foregroundStyle(quiet)
+                    } else { Text(row.status + (row.inventoryFresh ? "" : tr(" · inventory needs refresh", " · обновите каталог"))).font(.system(size: 10)).foregroundStyle(quiet) }
+                    if row.kind == "skill" { Text(tr("Read/name invocation does not verify application or version", "Чтение/вызов имени не подтверждает применение или версию")).font(.system(size: 10)).foregroundStyle(quiet) }
                 }.padding(.vertical, 4)
     }
     func workflows(_ report: AnalyticsReport) -> some View {

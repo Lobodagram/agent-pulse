@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.14.6 · 2026-10-16 · public release preparation
+
+- New terminal events retain fixed response-envelope types and field states separately, without output, keys or messages. The first received shape is explicit; old events/retries are not backfilled and native result classification is unchanged.
+- Daily and compact economy reviews separate missing finishes, completed unknown results and missing recognizable exit codes. Recorded-format coverage remains distinct from result coverage; native shell text is never promoted to success.
+
+## 0.14.5 · included in 0.14.6
+
+- Newly received shell calls retain fixed component families separately from whole-call classification. Partly known chains remain unknown as whole calls; no branch execution or per-part result is inferred.
+- Simple literal assignments and `echo`/`printf` outer invocations receive fixed families. Diagnostic, daily and economy reviews show component evidence coverage. Historical and duplicate events are not backfilled; old observer insert schemas remain compatible.
+
+## 0.14.4 · included in 0.14.6
+
+- Prospective fixed command-recognition reasons and first-received collector-version provenance are recorded without native payloads. A compact repository economy helper uses the installed collector and existing accepted-task comparison gates.
+
+## 0.14.3 · included in 0.14.6
+
+- Benefit widgets separate observed 30-day Skill/read/MCP/helper activity from finding-linked improvement registrations and reviewed effect. Unlinked activity is visible; absent evaluation stays “not evaluated” rather than a misleading zero-use row.
+- Model cache is explicitly labelled separately from Pulse efficacy. Existing comparison quality gates, provider isolation and collapsed-by-default behavior remain; macOS and Windows widget height accommodates five rows.
+
+## 0.14.2 · included in 0.14.6
+
+- Future command metadata recognizes bounded newline/redirection syntax, a terminal opaque here-doc, directory/environment prefixes, script invocations and common checks/file operations. Only fixed operation families are retained; code purpose and execution are not inferred.
+- Successful native skill invocations and exact skill-file reads can match an already reviewed shared catalog across clients. The event belongs to the actual client; peer configuration never establishes MCP availability. Reading, invocation, application, version and acceptance remain separate.
+- Diagnostics, review packs and desktop analytics show command classification coverage and unmapped successful Skill calls. Missing evidence never becomes confirmed non-use or savings.
+- Улучшено распознавание будущих команд GLM и учёт подтверждённых событий навыков из проверенного общего каталога. Добавлены показатели охвата; старые неизвестные события не восстанавливаются.
+
+[Definitions](docs/DIAGNOSTICS.md) · [Описание](docs/DIAGNOSTICS.ru.md)
+
+## 0.14.1 · included in 0.14.6
+
+- Bounded failure-family diagnostics include different failed inputs, known-result coverage and scan freshness. Read-only MCP/CLI support an explicit local-day selection over all retained metadata.
+- Explicit trusted skill roots support shared profile folder links and bind both path hashes. Optional remembered source scans refresh hourly during snapshots; failures preserve the last good inventory and peers. No client/project/session discovery or live-availability inference.
+- Shell exits absent from native metadata remain unknown. Historical error causes and token savings are not inferred.
+- Future failed events retain only fixed reported exception categories, never messages/stacks. Conflicts remain explicit; a side table preserves older collector compatibility.
+- Добавлена диагностика семейств ошибок и результатов вызовов; поддержаны доверенные ссылки на общие скиллы и добровольное обновление реестра.
+
+[Definitions and setup](docs/DIAGNOSTICS.md) · [Описание и настройка](docs/DIAGNOSTICS.ru.md)
+
 ## 0.13.0 · 2026-10-10
 
 - Direct helper receipts now expose operation/version/client cohorts: successes, failures, result coverage, incomplete/stale runs, conflicts, missing starts and paired median time. Metrics include all retained runs; group previews are bounded and explicitly marked when truncated.

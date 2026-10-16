@@ -80,6 +80,12 @@ def recommendation(j,key,kind,calls,sequence=None,*,summary_only=False):
       'inventoryStatus':match,'inventoryDetail':detail,'inventoryCandidates':[{'id':r['id'],'kind':r['kind'],'status':r['status']} for r in relevant[:10]],
       'measuredTokenSavings':None,'limitations':['Observed calls only; unknown coverage outside this journal.','Frequency does not prove waste or exact per-tool token cost.']}
 
+def trivial_shell_call(call):
+    """Formatting output and literal assignments alone are not workflow candidates."""
+    words=(call.get('operation') or '').split()
+    return bool(words) and all(w in {'run.shell-output','environment.shell-assignment',';','&&','||','|'} for w in words)
+
+
 def findings(j,calls,*,summary_only=False):
     ranks={}
     def card(key,kind,items,sequence=None):
@@ -89,7 +95,7 @@ def findings(j,calls,*,summary_only=False):
         return entry
     groups=defaultdict(list);reads=defaultdict(list);families=defaultdict(list);lanes=defaultdict(list)
     for c in calls:
-        if c['paired'] and not control_tool(c.get('tool','')):
+        if c['paired'] and not control_tool(c.get('tool','')) and not trivial_shell_call(c):
             groups[(c['provider'],c['project'],c['fingerprint'])].append(c)
             families[(c['provider'],c['project'],c['template'],c.get('operation'))].append(c)
             if c['category']=='read' and c['resource'] and c['revision']:
@@ -109,7 +115,7 @@ def findings(j,calls,*,summary_only=False):
         # Build only execution-order segments: overlapping calls cannot establish causal chains.
         segments=[];segment=[];busy_until=0
         for c in items:
-            if control_tool(c.get('tool','')) or not c['paired'] or c['outcome']=='failed' or c.get('outcomeSource')=='running-process' or c['endedAt']<c['startedAt']:
+            if control_tool(c.get('tool','')) or trivial_shell_call(c) or not c['paired'] or c['outcome']=='failed' or c.get('outcomeSource')=='running-process' or c['endedAt']<c['startedAt']:
                 segments.append(segment);segment=[]
                 if c['endedAt'] is None or c.get('outcomeSource')=='running-process':busy_until=float('inf')
                 elif c['startedAt'] is not None and c['endedAt']>=c['startedAt']:busy_until=max(busy_until,c['endedAt'])
@@ -241,6 +247,7 @@ def report(j,providers=None,session_limit=100):
     from efficiency import efficiency_report
     efficiency=efficiency_report(j,calls,providers)
     reviews=reviewed_findings(j,calls,providers,efficiency['assets'])
+    from diagnostics import diagnostic_report
     return {'schemaVersion':5,'generatedAt':time.time(),'coverage':coverage,'sessions':sorted(summaries,key=lambda x:x['startedAt'] or 0,reverse=True)[:session_limit] if session_limit is not None else sorted(summaries,key=lambda x:x['startedAt'] or 0,reverse=True),
       'sessionsTruncated':session_limit is not None and len(summaries)>session_limit,'efficiency':efficiency,
       'findings':findings(j,calls),'recentCalls':calls[-100:],'calls':len(calls),'eventLimitReached':total>MAX_EVENTS,
@@ -259,6 +266,7 @@ def report(j,providers=None,session_limit=100):
         'typedOperationCalls':sum(c.get('operation') not in {'unknown','legacy','shell','other','remote','bookkeeping',None} for c in calls),
         'unknownOperationCalls':sum(c.get('operation') in {'unknown','legacy',None} for c in calls),
         'basis':'Allowlisted command/tool names; historical unknown shell payloads cannot be reconstructed.'},
+      'diagnostics':diagnostic_report(j,calls,providers),
       'inventoryCount':j.db.execute('SELECT count(*) FROM inventory').fetchone()[0],'localOnly':True}
 
 def compare(j,label,before,after):

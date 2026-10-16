@@ -589,7 +589,11 @@ def snapshot(directory, collect_patterns=None):
             codex['todayTokenStatus']='partial-local' if codex['todayTokens'] is not None else 'local-day-pending'
         else:codex['todayTokenCoverage']='account-reported'
     j=journal.Journal(directory)
-    try:deep=analytics.report(j,enabled)
+    try:
+        from inventory_refresh import refresh_inventory
+        inventory_refresh_status=refresh_inventory(j,enabled)
+        deep=analytics.report(j,enabled)
+        deep['inventoryRefresh']=inventory_refresh_status
     finally:j.close()
     settings=store.settings()
     for item in items:
@@ -619,12 +623,16 @@ def main():
     i=sub.add_parser('ingest');i.add_argument('--provider',choices=sorted(adapters.IDS),required=True);i.add_argument('--file',type=Path,required=True)
     h=sub.add_parser('hook');h.add_argument('--provider',choices=sorted(journal.PROVIDERS),required=True)
     h=sub.add_parser('hooks');h.add_argument('--provider',choices=sorted(instrumentation.NATIVE_EVENTS),required=True);h.add_argument('--action',choices=['install','remove'],required=True);h.add_argument('--observer-home',type=Path,help='Explicit isolated native config root for acceptance tests')
-    h=sub.add_parser('journal');h.add_argument('--action',choices=['report','evidence','session','inventory','scan','annotate','declare','compare','export','review','asset','task','usage','compare-tasks','widget-comparison','checks','check','health','backup'],default='report');h.add_argument('--session');h.add_argument('--provider',choices=sorted(journal.PROVIDERS),default='codex');h.add_argument('--skills-dir',type=Path,action='append',default=[]);h.add_argument('--config',type=Path);h.add_argument('--file',type=Path);h.add_argument('--label');h.add_argument('--variant');h.add_argument('--outcome',choices=['accepted','failed','rework','unknown'],default='unknown');h.add_argument('--before');h.add_argument('--after');h.add_argument('--finding');h.add_argument('--capability');h.add_argument('--kind',choices=['skill','tool','mcp'])
+    h=sub.add_parser('journal');h.add_argument('--action',choices=['report','evidence','session','inventory','scan','annotate','declare','compare','export','review','asset','task','usage','compare-tasks','widget-comparison','checks','check','health','backup','diagnostics','daily'],default='report');h.add_argument('--session');h.add_argument('--provider',choices=sorted(journal.PROVIDERS),default='codex');h.add_argument('--skills-dir',type=Path,action='append',default=[]);h.add_argument('--config',type=Path);h.add_argument('--file',type=Path);h.add_argument('--label');h.add_argument('--variant');h.add_argument('--outcome',choices=['accepted','failed','rework','unknown'],default='unknown');h.add_argument('--before');h.add_argument('--after');h.add_argument('--finding');h.add_argument('--capability');h.add_argument('--kind',choices=['skill','tool','mcp'])
     from finding_review import REASONS
     h.add_argument('--status',choices=['open','actioned','dismissed'],default='open');h.add_argument('--reason',choices=sorted(REASONS),default='unspecified');h.add_argument('--days',type=int,choices=[1,3,7],default=1)
     h.add_argument('--format',choices=['json','markdown'],default='json');h.add_argument('--language',choices=['en','ru'],default='en')
     h.add_argument('--cursor');h.add_argument('--limit',type=int,default=500)
     h.add_argument('--metadata',help='Bounded asset/task/usage/check counters; no raw payloads')
+    h.add_argument('--date',help='Exact YYYY-MM-DD for diagnostics; retained metadata only')
+    h.add_argument('--utc-offset-minutes',type=int,default=0,help='Local-day UTC offset for diagnostics, e.g. 120')
+    h.add_argument('--trusted-skills-dir',type=Path,action='append',default=[],help='Explicit trusted targets for linked skill folders')
+    h.add_argument('--remember-sources',action='store_true',help='Opt in to hourly snapshot rescans of these exact sources')
     h=sub.add_parser('mcp');h.add_argument('--allow-control',action='store_true')
     h=sub.add_parser('settings');h.add_argument('--update',action='store_true',help='Bounded JSON changes on stdin, no credentials')
     sub.add_parser('tls-check',help='Inspect actual TLS trust and verify a fixed public quota endpoint without any key')

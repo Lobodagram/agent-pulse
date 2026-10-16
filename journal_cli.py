@@ -11,9 +11,21 @@ from session_view import session_page
 def run(args):
     j=Journal(args.state)
     try:
+        if args.action=='daily':
+            from daily_review import daily_review, daily_markdown
+            result=daily_review(j,getattr(args,'date',None),getattr(args,'utc_offset_minutes',0),args.provider)
+            if getattr(args,'format','json')=='markdown':
+                result=daily_markdown(result,args.language)
+            if args.file:
+                (atomic_text if isinstance(result,str) else atomic_json)(args.file,result)
+                return {'saved':True,'localOnly':True}
+            return result
         if args.action=='health':
             from collection_health import health
             return health(j)
+        if args.action=='diagnostics':
+            from diagnostics import diagnostic_report
+            return diagnostic_report(j,day=getattr(args,'date',None),utc_offset_minutes=getattr(args,'utc_offset_minutes',0))
         if args.action=='backup':
             from collection_health import backup
             if not args.file:raise ValueError('backup_file_required')
@@ -63,10 +75,21 @@ def run(args):
             if not args.file or args.file.is_symlink() or args.file.stat().st_size>1024*1024:raise ValueError('invalid_inventory_file')
             j.import_inventory(json.loads(args.file.read_text()));return {'saved':True}
         if args.action=='scan':
-            data=scan_inventory(args.provider,args.skills_dir,args.config)
+            trusted=getattr(args,'trusted_skills_dir',[])
+            data=scan_inventory(args.provider,args.skills_dir,args.config,trusted)
             # Replace only this provider; preserve the peer's inventory.
-            current=[dict(r) for r in j.db.execute('SELECT provider,id,kind,category,status,observed FROM inventory WHERE provider!=?',(args.provider,))]
-            j.import_inventory(current+data);return {'saved':True,'entries':len(data),'availability':'configured, not live verified'}
+            if getattr(args,'remember_sources',False):
+                from inventory_refresh import remember_sources
+                if not (args.skills_dir or args.config):raise ValueError('inventory_sources_required')
+                # Refuse an invalid stored plan before changing the registry.
+                from inventory_refresh import load_plans
+                load_plans(j.state)
+            from inventory_refresh import replace_provider
+            replace_provider(j,args.provider,data)
+            if getattr(args,'remember_sources',False):
+                remember_sources(j,args.provider,args.skills_dir,args.config,trusted)
+            return {'saved':True,'entries':len({(r['kind'],r['id']) for r in data}),'availability':'configured, not live verified',
+                    'autoRefresh':bool(getattr(args,'remember_sources',False))}
         if args.action=='annotate':
             j.annotate(args.session,args.label,args.outcome,args.variant);return {'saved':True}
         if args.action=='declare':

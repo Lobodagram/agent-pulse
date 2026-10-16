@@ -1,6 +1,6 @@
 # Agent Pulse
 
-The source adds a per-client **Pulse benefit** disclosure, collapsed by default: linked tools, observed application, one explicitly pinned task comparison, and separate daily cache input. [Metric definitions](docs/WIDGET_BENEFIT.md).
+Version **0.14.6** separates observed automation activity, reviewed improvements and measured effect in the per-client **Pulse benefit** disclosure. It also adds bounded daily reviews and prospective command/result coverage diagnostics. [Metric definitions](docs/WIDGET_BENEFIT.md) · [Diagnostics](docs/DIAGNOSTICS.md).
 
 <p><img src="brand/agent-pulse.png" alt="Agent Pulse" width="112" height="112"></p>
 
@@ -16,14 +16,16 @@ A local tool for improving coding-agent workspaces: collect sanitized tool event
 
 [Architecture and module ownership](docs/ARCHITECTURE.md) · [Linux/headless runtime](docs/HEADLESS.md) · Runtime wheel: Python 3.11+
 
-**[0.13.0 public preview](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.13.0)** is available for macOS ARM/Intel and Windows x64. Kimi account limits and live native delivery remain unverified; settings and fixtures are tested. Package verification is recorded in [QA](docs/QA.md). macOS has a native SwiftUI/AppKit widget. Windows has an always-on-top Tk widget with a shared collector. Live provider coverage varies; selecting a client does not expose its private billing API.
+**[0.14.6 public preview](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.14.6)** targets macOS ARM64/Intel and Windows x64. Source checks, package publication and downloaded verification are recorded separately in [QA](docs/QA.md). macOS uses SwiftUI/AppKit; Windows has a Tk widget with the same collector. Selecting a client does not establish access to its account statistics.
 
-Version 0.13.0 adds human review reasons, finding-to-version stages, explicit task eligibility and adoption coverage, plus direct helper metrics by client, operation and version. macOS source is split into focused modules. Launch at login passed a real reboot check on this development device with 0.11.2; 0.13.0 preserves the enabled registration and passed installed settings/window checks. A new 0.13.0 reboot, physical Windows acceptance and actual Kimi account use remain separate. [Release notes](docs/RELEASE_NOTES.md) · [Delivery checks](docs/QA.md).
+The release includes better bounded shell/skill recognition, separate component coverage for partially understood chains, missing-finish versus unknown-result counts, and fixed response-format evidence for new events. It never turns shell output into a successful exit or reconstructs old payloads. The compact review helper uses saved local quota observations; resets, reported UTC tokens and subscription savings remain separate. [Release notes](docs/RELEASE_NOTES.md) · [Workflow automation](docs/WORKFLOW_AUTOMATION.md).
 
-![Direct helper results by version in 0.13.0 — invented demo data](docs/screenshots/collection-en.png)
-![Reviewed-task comparison — unchanged screen from 0.11.2 — invented results, not measured savings](docs/screenshots/comparison-en.png)
+![Direct helper results by version — current UI, invented demo data — invented demo data](docs/screenshots/collection-en.png)
+![Reviewed-task comparison — unchanged screen — invented results, not measured savings](docs/screenshots/comparison-en.png)
 
 **Confirm collection first:** configured observers are not proof of observation. After setup, start a new native session, review hook trust when required, perform an ordinary task, and check Workflows for actual paired calls. See the [readiness audit](docs/AUDIT.md). Capabilities separates exact registered skill-file loads, explicit invocations and manual declarations. No observed use is not proof of non-use; command families are bounded static classifications, not semantic understanding of arbitrary code.
+
+![Current Pulse benefit — invented data, no evaluated effect](docs/screenshots/benefit-en.png)
 
 ![Compact English widget — invented demo data](docs/screenshots/widget-en.png)
 ![Workflows — invented demo events](docs/screenshots/workflows-en.png)

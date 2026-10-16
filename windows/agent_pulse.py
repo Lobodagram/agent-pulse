@@ -120,7 +120,7 @@ class Pulse:
         self.scale=min(1,max(.8,float(value)))
         if self.collapsed:return
         benefit_count=sum(p['id'] in self.benefit_expanded for p in self.data.get('providers',[])[self.page*2:self.page*2+2])
-        base_height=340+50*benefit_count
+        base_height=340+65*benefit_count
         self.root.geometry(f'{round(400*self.scale)}x{round(base_height*self.scale)}')
         def visit(w):
             if isinstance(w,tk.Toplevel):return
@@ -430,8 +430,12 @@ class Pulse:
         for c in report.get('coverage',[]):
             lines.append(f"{c['provider']}: {c['state']} · {c['pairedCalls']}/{c['calls']} · rejected {c['rejected']}")
             lines.append(self.t('Known results / unknown / collection gaps: ','Результат известен / неизвестен / пропуски: ')+f"{c.get('knownOutcomes','—')} / {c.get('unknownOutcomes','—')} / {c.get('collectionGaps','—')}")
+        for row in report.get('diagnostics',{}).get('commandCoverage',[]):
+            lines.append(row['provider']+' · '+self.t('Command types: ','Типы команд: ')+f"{row['classified']} / {row['calls']}"+self.t(' · unknown: ',' · неизвестно: ')+str(row['unknown']))
         textview(overview,lines)
         lines=[self.t('Read ≠ invoked ≠ declared. No observation does not prove non-use.','Чтение ≠ вызов ≠ отметка. Отсутствие наблюдения не доказывает неиспользование.'),'']
+        for row in report.get('diagnostics',{}).get('skillEvidenceCoverage',[]):
+            lines.append(row['provider']+' · '+self.t('Skill calls / reads / unmatched Skill: ','Вызовы навыков / чтения / Skill вне каталога: ')+f"{row['mappedSkillToolCalls']} / {row['skillReadCalls']} / {row['unmappedSuccessfulSkillToolCalls']}")
         catalog=report.get('capabilities',[])
         observed=sum(r['loaded']+r['invoked']+r['declared']>0 for r in catalog)
         lines += [f"{len(catalog)} "+self.t('catalog entries','записей каталога')+f" · {observed} "+self.t('with evidence','с подтверждением'),self.t('Literal cat/sed/head/tail reads match registered paths only; reading does not prove application.','Буквальные cat/sed/head/tail учитываются по зарегистрированным путям; чтение не доказывает применение.'),'']

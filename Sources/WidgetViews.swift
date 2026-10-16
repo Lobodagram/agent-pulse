@@ -88,7 +88,7 @@ struct WidgetView: View {
                             }.foregroundStyle(quiet).frame(maxWidth: .infinity, minHeight: 22, alignment: .leading).contentShape(Rectangle())
                         }.buttonStyle(.plain).accessibilityLabel(tr("Pulse benefit", "Польза Pulse")).accessibilityValue(store.benefitExpanded.contains(p.id) ? tr("Expanded", "Развёрнуто") : tr("Collapsed", "Свёрнуто"))
                         if store.benefitExpanded.contains(p.id) { WidgetBenefitView(provider: p, open: actions.showAnalysis) }
-                    }.frame(height: store.benefitExpanded.contains(p.id) ? 156 : 94, alignment: .topLeading)
+                    }.frame(height: store.benefitExpanded.contains(p.id) ? 172 : 94, alignment: .topLeading)
                     Rectangle().fill(divider).frame(height: 1)
                 }
                 if store.visibleProviders.isEmpty { Text(tr("Choose clients in Settings", "Выберите клиентов в настройках")).foregroundStyle(quiet); Spacer() }
@@ -128,15 +128,23 @@ func reductionText(_ value: Double?) -> String {
 struct WidgetBenefitView: View {
     let provider: Provider; var open: () -> Void
     var comparisonLine: String {
-        guard let b = provider.benefit else { return tr("Comparison: awaiting evidence", "Сравнение: ждём данные") }
-        guard let c = b.comparison else { return tr("Comparison: choose a comparison ↗", "Сравнение: выберите сравнение ↗") }
+        guard let c = provider.benefit?.comparison else { return tr("Effect: not evaluated yet ↗", "Эффект: ещё не оценён ↗") }
         let requests = c.metrics["modelRequestsPerAccepted"]?.reduction
         let tokens = c.metrics["tokensPerAccepted"]?.reduction
-        if requests == nil && tokens == nil { return tr("Comparison: not enough comparable tasks ↗", "Сравнение: мало сравнимых задач ↗") }
+        if requests == nil && tokens == nil { return tr("Effect: insufficient evidence ↗", "Эффект: недостаточно данных ↗") }
         return tr("Per result: requests ", "На результат: запросы ") + reductionText(requests) + tr(" · tokens ", " · токены ") + reductionText(tokens)
     }
     var explanation: String {
-        var lines = [tr("Tools explicitly linked to Pulse findings, all registered versions deduplicated. This is not proof that Pulse created them. Applied tasks are declared; calls are native observed invocations over 30 days. Observation is partial.", "Инструменты явно связаны с находками Pulse, версии объединены. Это не доказательство создания инструментов Pulse. Применение в задачах отмечено вручную; вызовы — штатные наблюдения за 30 дней. Охват частичный.")]
+        var lines = [tr("30 days of partial observations. Skill and MCP calls are received native events, including failed or pending calls. Reads do not establish application. Helper runs are reporter-supplied receipts, not accepted tasks. No observations do not establish non-use.", "Частичные наблюдения за 30 дней. Skill и MCP — полученные штатные вызовы, включая ошибки и незавершённые. Чтение не подтверждает применение. Помощники — переданные квитанции запусков, а не принятые задачи. Отсутствие наблюдений не доказывает неиспользование.")]
+        if let a = provider.benefit?.activity {
+            lines.append(tr("Successful Skill calls: ", "Успешных вызовов Skill: ") + "\(a.successfulSkillCalls) · " + tr("matched: ", "учтено: ") + "\(a.matchedSkillCalls) · " + tr("unmatched: ", "вне каталога: ") + "\(a.unmatchedSkillCalls)")
+            lines.append(tr("Helper known results: ", "Известные исходы помощников: ") + "\(a.helperKnownResults)/\(a.helperRuns)")
+        }
+        if let b = provider.benefit {
+            lines.append(tr("Pulse improvement links: skills ", "Связи с находками Pulse: скиллы ") + "\(b.linkedAssets["skill"] ?? 0) · MCP \(b.linkedAssets["mcp"] ?? 0)" + tr(" · tools ", " · тулзы ") + "\(b.linkedAssets["tool"] ?? 0)")
+            lines.append(tr("Linked invocations / manually applied tasks: ", "Связанные вызовы / ручные отметки применения: ") + "\(b.observedInvocations)/\(b.declaredAppliedTasks)")
+        }
+        lines.append(tr("Explicit finding links do not prove creation by Pulse. Effect needs comparable reviewed tasks and quality checks.", "Явная связь с находкой не доказывает создание инструмента Pulse. Эффект требует сопоставимых проверенных задач и контроля качества."))
         if let c = provider.benefit?.comparison {
             lines.append(c.label + ": " + c.before + " → " + c.after)
             lines.append(tr("Selected tasks: ", "Выбранные задачи: ") + "\(c.groups[c.before]?.tasks ?? 0) → \(c.groups[c.after]?.tasks ?? 0)")
@@ -146,20 +154,31 @@ struct WidgetBenefitView: View {
         lines.append(tr("Cache: observed local input today UTC, partial coverage; not a Pulse saving. Open Analytics → Compare to pin or clear the exact pair.", "Кэш: локальный вход за сегодня UTC, частичный охват; это не экономия Pulse. Откройте Аналитика → Сравнение для закрепления или сброса выбранной пары."))
         return lines.joined(separator: "\n")
     }
+    var activityLines: [String] {
+        guard let a = provider.benefit?.activity else { return [tr("30d: activity not reported", "30д: активность не передана"), tr("MCP / helpers: awaiting evidence", "MCP / помощники: ждём данные")] }
+        if a.observedCalls == 0 && a.helperRuns == 0 { return [tr("30d: no observed activity yet", "30д: пока нет наблюдений"), tr("MCP / helpers: no observed runs", "MCP / помощники: запусков не получено")] }
+        return [tr("30d · Skill ", "30д · Skill ") + "\(a.skillCalls)" + tr(" · reads ", " · чтения ") + "\(a.skillReads)",
+                tr("MCP calls ", "MCP-вызовы ") + "\(a.mcpCalls)" + tr(" · helpers ", " · помощники ") + "\(a.helperRuns)"]
+    }
+    var improvementLine: String {
+        guard let b = provider.benefit else { return tr("Pulse: improvements not recorded yet", "Pulse: улучшения ещё не учтены") }
+        let linked = b.linkedAssets.values.reduce(0, +)
+        if linked == 0 { return tr("Pulse: improvements not recorded yet", "Pulse: улучшения ещё не учтены") }
+        let state = b.reviewedLinkedTasks == 0 ? tr(" · awaiting review", " · ждём оценку") : tr(" · applied tasks ", " · применений ") + "\(b.declaredAppliedTasks)"
+        return tr("Pulse: recorded ", "Pulse: учтено ") + "\(linked)" + state
+    }
+    var cacheLine: String {
+        guard let rate = provider.localTokenProfile?.cacheHitRate else { return tr("Model cache: — · not reported", "Кэш модели: — · нет данных") }
+        return tr("Model cache: ", "Кэш модели: ") + String(format: "%.1f%%", rate * 100) + tr(" input · partial", " входа · частично")
+    }
+    var displayLines: [String] { activityLines + [improvementLine, comparisonLine, cacheLine] }
     var body: some View {
         Button(action: open) {
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 8) {
-                    Text("PULSE").font(.system(size: 9, weight: .semibold, design: .monospaced)).foregroundStyle(mint)
-                    if let b = provider.benefit {
-                        Text(tr("Linked: skills ", "Связано: скиллы ") + "\(b.linkedAssets["skill"] ?? 0) · MCP \(b.linkedAssets["mcp"] ?? 0)" + tr(" · tools ", " · тулзы ") + "\(b.linkedAssets["tool"] ?? 0)")
-                    } else { Text(tr("Finding links: awaiting evidence", "Связи с находками: ждём данные")) }
-                }
-                if let b = provider.benefit, b.hasObservations || b.reviewedLinkedTasks > 0 {
-                    Text(tr("30d: applied tasks ", "30д: применено в задачах ") + "\(b.declaredAppliedTasks)" + tr(" · calls ", " · вызовы ") + "\(b.observedInvocations)")
-                } else { Text(tr("30d: no observed activity yet", "30д: пока нет наблюдений")) }
+                ForEach(activityLines, id: \.self) { Text($0) }
+                Text(improvementLine).foregroundStyle(mint)
                 Text(comparisonLine).foregroundStyle(provider.benefit?.comparison == nil ? quiet : ink)
-                Text(tr("Cache today: ", "Кэш сегодня: ") + (provider.localTokenProfile?.cacheHitRate.map { String(format: "%.1f%%", $0 * 100) } ?? "—") + tr(" input · partial", " входа · частично"))
+                Text(cacheLine)
             }.font(.system(size: 10)).foregroundStyle(quiet).lineLimit(1).minimumScaleFactor(0.85)
                 .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
         }.buttonStyle(.plain).help(explanation).accessibilityElement(children: .combine)

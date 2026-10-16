@@ -13,6 +13,8 @@ from providers import IDS as PROVIDER_IDS, ConfigBusy
 from session_view import session_page
 from finding_review import REASONS
 TOOLS=[
+ {'name':'pulse_daily_review','description':'One bounded local-day review of calls, failures, workflow candidates, helper evidence and retained account quota endpoints. No model calls, native store reads or subscription savings claim.','inputSchema':{'type':'object','properties':{'date':{'type':'string','pattern':'^[0-9]{4}-[0-9]{2}-[0-9]{2}$'},'utcOffsetMinutes':{'type':'integer','minimum':-840,'maximum':840},'provider':{'type':'string','enum':sorted(PROVIDER_IDS)},'language':{'type':'string','enum':['en','ru']}},'required':['date'],'additionalProperties':False}},
+ {'name':'pulse_diagnostics','description':'Bounded failure families, unknown outcomes and inventory scan dates. Optional local day with explicit UTC offset; never reconstructs error messages or causes.','inputSchema':{'type':'object','properties':{'date':{'type':'string','pattern':'^[0-9]{4}-[0-9]{2}-[0-9]{2}$'},'utcOffsetMinutes':{'type':'integer','minimum':-840,'maximum':840}},'additionalProperties':False}},
  {'name':'pulse_report','description':'Local observed workflow findings and coverage; not exact tool token costs.','inputSchema':{'type':'object','properties':{},'additionalProperties':False}},
  {'name':'pulse_session','description':'Read a bounded page of sanitized calls. Pass nextCursor back as cursor to continue one fixed snapshot.','inputSchema':{'type':'object','properties':{'sessionId':{'type':'string'},'cursor':{'type':'string'},'limit':{'type':'integer','minimum':1,'maximum':100}},'required':['sessionId'],'additionalProperties':False}},
  {'name':'pulse_compare','description':'Observational before/after comparison using manually reviewed task labels.','inputSchema':{'type':'object','properties':{'label':{'type':'string'},'before':{'type':'string'},'after':{'type':'string'}},'required':['label','before','after'],'additionalProperties':False}},
@@ -80,7 +82,15 @@ def dispatch(request,state,allow_control=False):
         return {'content':[{'type':'text','text':json.dumps(data,ensure_ascii=False,allow_nan=False)}],'isError':False}
     j=Journal(state)
     try:
-        if name=='pulse_report' and not args:
+        if name=='pulse_daily_review' and 'date' in args and set(args)<={'date','utcOffsetMinutes','provider','language'}:
+            from daily_review import daily_review, daily_markdown
+            data=daily_review(j,args['date'],args.get('utcOffsetMinutes',0),args.get('provider'))
+            if 'language' in args:
+                data={'format':'markdown','language':args['language'],'markdown':daily_markdown(data,args['language']),'localOnly':True}
+        elif name=='pulse_diagnostics' and set(args)<={'date','utcOffsetMinutes'}:
+            from diagnostics import diagnostic_report
+            data=diagnostic_report(j,day=args.get('date'),utc_offset_minutes=args.get('utcOffsetMinutes',0))
+        elif name=='pulse_report' and not args:
             data=report(j);data['checkRuns']['truncated'] |= len(data['checkRuns']['recent'])>5;data['checkRuns']['recent']=data['checkRuns']['recent'][:5]
             data['checkRuns']['operationVersionsTruncated'] |= len(data['checkRuns']['byOperationVersion'])>5
             data['checkRuns']['byOperationVersion']=data['checkRuns']['byOperationVersion'][:5]

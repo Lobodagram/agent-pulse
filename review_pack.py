@@ -21,6 +21,34 @@ def markdown_pack(report,language='en'):
                 tr('; bookkeeping excluded from pattern candidates: ','; служебных вызовов исключено из кандидатов: ')+str(analysis['bookkeepingCalls'])+'.',
                 tr('Exact repeats precede broad sequence hypotheses. Historical unknown shell calls remain unknown.',
                    'Точные повторы показаны раньше общих цепочек. Старые неизвестные shell-вызовы остаются неизвестными.')]
+    diagnostic=report.get('diagnostics',{})
+    if diagnostic:
+        lines+=['', '## '+tr('Failure families and inventory scans','Семейства ошибок и сканирование реестра'),
+                tr('Rates use known paired outcomes only; shared cause is unverified.','Доли рассчитаны среди пар с известным результатом; общая причина не подтверждена.')]
+        for row in diagnostic.get('failureGroups',[])[:5]:
+            lines.append(f"- {row['provider']} · {value(row['tool'])} · {row['failed']} / {row['knownOutcomes']} " +
+                         tr('known results failed; distinct inputs: ','известных результатов с ошибкой; разных запросов: ') + str(row['distinctFailedInputs']))
+            if row.get('failureClasses'):
+                lines.append('  '+tr('Reported categories: ','Сообщённые категории: ')+', '.join(f'{name}={count}' for name,count in sorted(row['failureClasses'].items())))
+        for row in diagnostic.get('inventoryHealth',[]):
+            lines.append(f"- {row['provider']} · {row['entries']} " + tr('inventory entries; scan status: ','записей в реестре; статус сканирования: ') + row['state'])
+        lines.append(tr('Configured inventory does not verify live availability.','Запись о настройке в реестре не подтверждает доступность инструмента.'))
+        for row in diagnostic.get('commandCoverage',[]):
+            reasons=row.get('unknownReasons',{})
+            if reasons:lines.append(tr('Unclassified command reasons: ','Причины нераспознанных команд: ')+', '.join(f'{k}={v}' for k,v in reasons.items()))
+            lines.append(f"- {row['provider']} · "+tr('Classified commands: ','Распознаны команды: ')+f"{row['classified']} / {row['calls']}"+
+                         tr('; unknown: ','; неизвестны: ')+str(row['unknown']))
+            components=row.get('components',{})
+            if components.get('recordedCalls'):
+                lines.append(tr('Partial chains / known parts: ','Частичные цепочки / известные части: ')+
+                             f"{components['partialCalls']} / {components['recognizedInPartialCalls']} · "+
+                             tr('execution of individual parts unverified','выполнение отдельных частей не проверено'))
+        for row in diagnostic.get('skillEvidenceCoverage',[]):
+            lines.append(f"- {row['provider']} · "+tr('Skill identity invocations: ','Подтверждённые вызовы имени навыка: ')+str(row['mappedSkillToolCalls'])+
+                         tr('; successful Skill calls without a catalog match: ','; успешные Skill без совпадения в каталоге: ')+str(row['unmappedSuccessfulSkillToolCalls'])+
+                         tr('; skill reads: ','; чтения навыков: ')+str(row['skillReadCalls']))
+        lines.append(tr('Opaque script purpose, skill application/version and non-use are not inferred.',
+                        'Назначение кода, применение/версия навыка и неиспользование не выводятся из этих счётчиков.'))
     checks=report.get('checkRuns',{})
     if checks:
         lines+=['',tr('Helper receipts: ','Квитанции помощников: ')+f"{checks['knownResults']} / {checks['runs']}"+tr(' results known; conflicts: ',' результатов известно; противоречий: ')+str(checks['conflicts'])+'.',

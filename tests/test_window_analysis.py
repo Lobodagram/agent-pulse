@@ -13,7 +13,7 @@ SUMMARY_KEYS=('id','provider','kind','occurrences','sessions','evidenceIds')
 def fixture_calls():
     calls=[]
     def add(kind,n,**changes):
-        c={'id':str(len(calls)), 'provider':'codex','project':kind,'session':kind,
+        c={'id':str(len(calls)), 'provider':'codex','project':kind,'session':kind,'tool':'fixture-tool',
            'turn':str(n%3),'turn_source':'native','actor':'main','paired':True,
            'fingerprint':kind,'template':kind,'category':'remote','operation':'remote.lookup',
            'resource':'','revision':'','outcome':'success','outcomeSource':'native',

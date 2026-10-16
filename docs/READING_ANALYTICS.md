@@ -42,3 +42,7 @@ Compact Mac menu cycles full uppercase client names without a page counter. Wind
 ## Daily token details
 
 Mac: Tokens; Windows: Daily tokens. The Mac chart uses readable units rather than scientific notation. Hover previews a UTC day, clicking pins it, and the date selector works without a pointer. Exact counters and coverage appear per enabled client; no entry means unknown, not zero. These daily sources do not expose hourly counters. Local Codex backlog recovery skips older unread bytes within the existing bounded read; the baseline is reset so skipped cumulative usage cannot be charged to today. A source warning records the gap. Native account-day totals take precedence over overlapping local counters.
+
+## Consolidated local-day evidence
+
+See [daily review and native QA](WORKFLOW_AUTOMATION.md) for one local-day report with retained quota endpoints and fixed error-review steps.

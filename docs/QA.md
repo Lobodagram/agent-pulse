@@ -1,5 +1,13 @@
 # QA evidence
 
+## 0.14.6 delivery · 2026-10-16
+
+The local macOS ARM64 build47 is installed and verified. Canonical and preserved observer-compatible bundles passed strict signatures, CLI/MCP version, health and daily-review checks. Existing configuration, credentials, hook paths and enabled startup setting were preserved; real new events continued. This is local acceptance, separate from downloaded release bytes. No new reboot is claimed.
+
+The reviewed runtime passed 400 source tests, privacy export, syntax and 193 document links. Frozen hook/deadline/MCP checks, exact 30-module hashes and seven selected native model/chart renders passed; representative images were inspected. The final local candidate SHA256 is `182e22fc34921329ee3187235a7790d7181b7a88ec057fd7e504969544c259eb`. Release documentation and changed screenshots are refreshed for 0.14.6; unchanged historical evidence below retains its original version/date.
+
+Public source/platform CI and downloadable package verification are pending in this preparation snapshot. Their final immutable commit, runs and package hashes will be recorded here after completion. Physical Windows/Intel interaction, notarization, live Kimi and causal productivity/subscription savings remain separate unknown/unrun gates. UI captures contain invented DEMO data only.
+
 ## 0.14.0 local widget disclosure · 2026-10-10
 
 The approved local macOS build41 is installed. Both canonical/observer bundles passed strict signing and MCP version checks; four protected configuration/key/hook files retained their bytes and modes. Journal integrity remained OK, with continued real events. Settings show Russian, 80%, menu-only placement and enabled launch at login. Live clicks verified a collapsed-by-default Pulse benefit button, independent Codex expansion and collapse; GLM remained collapsed. No new reboot was performed.
@@ -543,3 +551,7 @@ Source CI candidate 3649e9c exposed a Windows-only export check defect: native b
 Seven focused regression tests pass after demonstrating the previous false-success cases. A new frozen helper check sends invented malformed/bounded responses through actual hooks into a throwaway journal and asserts unknown provenance and no result-canary leakage. Ordinary successful native metadata and explicit failure semantics remain covered.207tests,131allowlisted blobs/modes, AST/privacy/links passed; [source CI37610410539](https://github.com/Lobodagram/agent-pulse/actions/runs/37610410539) passed Linux/Windows/MacARM/Intel. Immutable tag7ef6544932e9a6288fc44a6201dfa8da42c17eb7; [packages37610828204](https://github.com/Lobodagram/agent-pulse/actions/runs/37610828204) passed all three binaries/publication, with an explicit Windows result-gate marker.
 
 All3downloaded archives matched SHA256SUMS/version27/runtime/notices/path and two own credential stores raw/base64/hex, including four decoded embedded Python surfaces: zero matches. Downloaded ARM64 strict/deep ad-hoc signature, first actual isolated strict2s hook/journal/read-only MCP, held-lock recovery and conservative-result gates passed;20widget and5chart scenarios passed. The initial local helper path was nonexistent and failed before execution; the verified Resources path corrected it. Installed0.9.6/build27 at the existing stable development path with previous0.9.5 retained; keybytes0600 and config semantics preserved, one instance. Live widget/source counters and Settings/Analytics open-close checked. UI sources and prior accepted synthetic images unchanged; no fresh chart visual acceptance or all-six-tab reacceptance claimed in this narrow correction. No production event rewriting, fake acceptance/reviews, native session launch or client configuration change. True cold-machine start, signing/notarization and physical Windows/Intel/Spaces checks remain open.
+
+## Consolidated native fixture suites
+
+Use [native_qa.py](../scripts/native_qa.py) to combine existing suites, retain a screenshot gallery and reuse only exact verified local artifacts. See [the helper contract](WORKFLOW_AUTOMATION.md). Source and frozen-collector checks remain separate; visual acceptance is still required.

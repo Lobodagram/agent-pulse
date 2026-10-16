@@ -17,7 +17,7 @@ import zipfile
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from scripts.public_export import export
-from journal import atomic_json
+from journal import atomic_json, atomic_text
 from pulse_version import __version__
 from check_receipts import Reporter
 from journal import PROVIDERS
@@ -46,7 +46,17 @@ def archives(directory,version):
         results.append({'name':name,'sha256':digest,'versionChecked':checked,'binaryExecuted':False})
     return results
 
-def source_check():
+def save_test_log(test,path):
+    """Opt-in bounded private log, never embedded in the result/handoff pack."""
+    if path is None:return {'localTestLogSaved':False}
+    data=('stdout:\n'+test.stdout+'\nstderr:\n'+test.stderr).encode('utf-8')
+    truncated=len(data)>30000
+    text=('[truncated to final 30000 UTF-8 bytes]\n' if truncated else '')+data[-30000:].decode('utf-8',errors='ignore')
+    atomic_text(path,text)
+    return {'localTestLogSaved':True,'localTestLogTruncated':truncated,'localTestLogBytes':len(text.encode('utf-8'))}
+
+
+def source_check(test_log=None):
     checks={};version=__version__
     with tempfile.TemporaryDirectory() as tmp:
         tree=Path(tmp)/'public';manifest=export(tree);files=[tree/f for f in manifest['files']]
@@ -66,6 +76,7 @@ def source_check():
         checks.update(publicFiles=len(files),pythonSyntax='passed',documentLinks=count,privacyExport='passed')
     test=subprocess.run([sys.executable,'-m','unittest','discover','-s','tests'],cwd=ROOT,capture_output=True,text=True,timeout=60)
     checks['unitTests']='passed' if test.returncode==0 else 'failed'
+    checks.update(save_test_log(test,test_log))
     match=re.search(r'Ran (\d+) tests?',test.stderr);checks['unitTestCount']=int(match[1]) if match else None
     # Failure tracebacks may contain local paths/payloads; never include them in this pack.
     return version,checks
@@ -94,9 +105,12 @@ def handoff(result):
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('mode',choices=['check','handoff']);parser.add_argument('--output',type=Path,required=True);parser.add_argument('--input',type=Path);parser.add_argument('--archives',type=Path)
+    parser.add_argument('--test-log',type=Path,help='Opt-in private bounded test log; not included in the summary pack')
     parser.add_argument('--pulse-state',type=Path,help='Explicit opt-in receipt destination; no native observer changes')
     parser.add_argument('--pulse-provider',choices=sorted(PROVIDERS),help='Reporter-declared client; not native invocation evidence')
     args=parser.parse_args()
+    if args.test_log and args.mode!='check':parser.error('--test-log requires check')
+    if args.test_log and args.test_log.resolve()==args.output.resolve():parser.error('--test-log must differ from --output')
     if args.pulse_state and (not args.pulse_provider or args.mode!='check'):parser.error('receipt collection requires check and --pulse-provider')
     reporter=Reporter(args.pulse_state,args.pulse_provider,'workflow-check',__version__)
     try:
@@ -104,7 +118,7 @@ def main():
             if not args.input or args.input.is_symlink() or args.input.stat().st_size>32768:raise ValueError('invalid_check_file')
             result=handoff(json.loads(args.input.read_text(encoding='utf-8')))
         else:
-            version,checks=source_check();head=subprocess.run(['git','rev-parse','HEAD'],cwd=ROOT,capture_output=True,text=True,timeout=5)
+            version,checks=source_check(args.test_log);head=subprocess.run(['git','rev-parse','HEAD'],cwd=ROOT,capture_output=True,text=True,timeout=5)
             commit=head.stdout.strip() if head.returncode==0 and re.fullmatch('[a-f0-9]{40}',head.stdout.strip()) else None
             dirty=subprocess.run(['git','status','--porcelain','--untracked-files=normal'],cwd=ROOT,capture_output=True,text=True,timeout=5)
             if dirty.returncode:raise ValueError('source_status_unavailable')

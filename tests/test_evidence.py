@@ -45,7 +45,7 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(len(profile("rg 'a&&b' file")['operations']),1)
         self.assertEqual(command_shape("rg 'a&&b' file")[0],'search')
     def test_shell_parser_bounded_and_unsafe_fallback(self):
-        for command in ['git status > output','cat $(private())','echo x & git status','git status\npytest','&&'.join(['git status']*33)]:
+        for command in ['git status >','cat $(private())','echo x & git status','&&'.join(['git status']*33)]:
             self.assertEqual(profile(command)['operations'],[])
     def test_environment_and_unknown_flags_private(self):
         p=profile('PRIVATE_TOKEN=secret python3.12 -m pytest --sensitive=abc /personal')

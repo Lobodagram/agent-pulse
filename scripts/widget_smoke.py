@@ -5,13 +5,15 @@ import json,subprocess,sys,tempfile,shutil,plistlib,os,signal,time,math
 binary=Path(sys.argv[1]).resolve();fixture=Path('examples/demo.json').resolve()
 destination=Path(sys.argv[2]).resolve() if len(sys.argv)>2 else None
 if destination:destination.mkdir(parents=True,exist_ok=True)
+verified=[]
 with tempfile.TemporaryDirectory() as tmp:
     demo=Path(tmp)/'demo.json';shutil.copyfile(fixture,demo)
     bundle=Path(tmp)/'AgentPulseFixture.app';shutil.copytree(binary.parents[2],bundle)
     info=bundle/'Contents/Info.plist';settings=plistlib.loads(info.read_bytes());settings['CFBundleIdentifier']='app.agentpulse.widgetsmoke';info.write_bytes(plistlib.dumps(settings))
     subprocess.run(['codesign','--force','--sign','-',str(bundle)],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-    for mode,width,height in [('compact',288,241.6),('expanded',288,369.6),('resize-check',348,291.93333333333334),('menu-widget',288,241.6),('menu-bar',288,241.6),('menu-next',288,241.6),('menu-timer',288,241.6),('menu-active',288,241.6),('menu-fallback',288,241.6),('two-quotas',288,241.6),('expanded-two-quotas',288,369.6),('pending',288,241.6),('compact-en',288,241.6),('single-instance',288,241.6),('window-focus',288,241.6),('window-controls',288,241.6),('today',288,241.6),('today-en',288,241.6),('today-two-quotas',288,241.6),('today-pending',288,241.6),('glm-menu-quotas',288,241.6),('kimi-quotas',288,241.6),('kimi-menu-quotas',288,241.6),('benefit-ru',288,340.8),('benefit-en',288,340.8),('benefit-worse',288,340.8),('benefit-insufficient',288,340.8),('benefit-expanded',288,468.8),('benefit-fullsize',360,426),('benefit-controls',288,241.6)]:
+    for mode,width,height in [('compact',288,241.6),('expanded',288,369.6),('resize-check',348,291.93333333333334),('menu-widget',288,241.6),('menu-bar',288,241.6),('menu-next',288,241.6),('menu-timer',288,241.6),('menu-active',288,241.6),('menu-fallback',288,241.6),('two-quotas',288,241.6),('expanded-two-quotas',288,369.6),('pending',288,241.6),('compact-en',288,241.6),('single-instance',288,241.6),('window-focus',288,241.6),('window-controls',288,241.6),('today',288,241.6),('today-en',288,241.6),('today-two-quotas',288,241.6),('today-pending',288,241.6),('glm-menu-quotas',288,241.6),('kimi-quotas',288,241.6),('kimi-menu-quotas',288,241.6),('benefit-ru',288,366.4),('benefit-en',288,366.4),('benefit-worse',288,366.4),('benefit-insufficient',288,366.4),('benefit-expanded',288,494.4),('benefit-fullsize',360,458),('benefit-controls',288,241.6),('benefit-unlinked',288,366.4),('benefit-unlinked-en',288,366.4),('benefit-empty',288,366.4),('benefit-empty-en',288,366.4),('benefit-legacy',288,366.4),('benefit-large',288,366.4)]:
         if '--benefit-only' in sys.argv and not mode.startswith('benefit'):continue
+        if '--case' in sys.argv and mode!=sys.argv[sys.argv.index('--case')+1]:continue
         out=Path(tmp)/(mode+'.png')
         data=json.loads(fixture.read_text())
         if mode in ('two-quotas','expanded-two-quotas','today-two-quotas','glm-menu-quotas'):data['providers'][1]['quotas']=data['providers'][0]['quotas']
@@ -25,13 +27,23 @@ with tempfile.TemporaryDirectory() as tmp:
                 reduction=None if mode=='benefit-insufficient' else -.2 if mode=='benefit-worse' else .5
                 p['benefit']={'windowDays':30,'linkedAssets':{'skill':2 if index==0 else 1,'mcp':1,'tool':0},'observedInvocations':12,'declaredAppliedTasks':6,'reviewedLinkedTasks':8,'hasObservations':True,'comparison':{'label':'demo-release-check','before':'before','after':'after','groups':{'before':{'tasks':3,'accepted':3},'after':{'tasks':3,'accepted':3}},'metrics':{key:{'reduction':reduction,'reasons':['incomplete-requests'] if reduction is None else []} for key in ['modelRequestsPerAccepted','tokensPerAccepted']}}}
                 p['localTokenProfile']={'date':'2026-01-01','inputTokens':100,'outputTokens':20,'cachedInputTokens':40,'cacheHitRate':.4,'counterCoverageRate':.9}
+                p['benefit']['activity']={'observedCalls':30,'skillCalls':0 if index==0 else 5,'successfulSkillCalls':0 if index==0 else 5,'matchedSkillCalls':0 if index==0 else 2,'unmatchedSkillCalls':0 if index==0 else 3,'skillReads':0 if index==0 else 1,'mcpCalls':234 if index==0 else 23,'helperRuns':13 if index==0 else 0,'helperKnownResults':13 if index==0 else 0}
+                if mode in ('benefit-unlinked','benefit-unlinked-en','benefit-empty','benefit-empty-en','benefit-legacy'):
+                    p['benefit'].update(linkedAssets={'skill':0,'mcp':0,'tool':0},reviewedLinkedTasks=0,declaredAppliedTasks=0,observedInvocations=0,comparison=None)
+                    if index==1:p['localTokenProfile']=None
+                if mode.startswith('benefit-empty'):
+                    p['benefit']['activity']={k:0 for k in p['benefit']['activity']}
+                if mode=='benefit-legacy':p['benefit'].pop('activity')
+                if mode=='benefit-large':
+                    p['benefit']['activity'].update(observedCalls=100000,skillCalls=50000,skillReads=11111,mcpCalls=100000,helperRuns=5000,helperKnownResults=4999)
+
         demo.write_text(json.dumps(data))
         view='menu-bar' if mode in ('menu-next','menu-timer','menu-active','menu-fallback') else 'expanded' if mode=='expanded-two-quotas' else mode if mode not in ('two-quotas','pending','compact-en','single-instance') else 'compact'
         if mode.startswith('benefit'):view='expanded' if mode=='benefit-expanded' else 'compact'
         if mode.startswith('today') or mode=='glm-menu-quotas':view='compact' if mode.startswith('today') else 'menu-bar'
         ready=Path(tmp)/(mode+'.ready')
         executable=bundle/'Contents/MacOS/AgentPulse'
-        args=[str(executable),'--fixture',str(demo),'--language','en' if mode in ('compact-en','today-en','benefit-en') else 'ru','--scale','.8','--metric-mode','limits','--view',view,'--snapshot',str(out),'--ready-file',str(ready)]
+        args=[str(executable),'--fixture',str(demo),'--language','en' if mode in ('compact-en','today-en','benefit-en','benefit-unlinked-en','benefit-empty-en') else 'ru','--scale','.8','--metric-mode','limits','--view',view,'--snapshot',str(out),'--ready-file',str(ready)]
         if mode.startswith('benefit') and mode!='benefit-controls':args.append('--benefit-expanded')
         if mode=='benefit-controls':args.append('--benefit-control-check')
         if mode=='benefit-fullsize':args[args.index('--scale')+1]='1'
@@ -82,10 +94,22 @@ with tempfile.TemporaryDirectory() as tmp:
         if mode=='kimi-menu-quotas':assert r['menuTitle'].startswith('KIMI 5ч') and '7д' in r['menuTitle'],r
         assert r['hidePassed'] and r['restorePassed'],r
         if mode=='benefit-controls':assert all(r['windowControlChecks'].values()) and len(r['windowControlChecks'])==5,r
+        if mode.startswith('benefit') and mode!='benefit-controls':
+            assert len(r['benefitRows'])==2 and all(len(v)==5 for v in r['benefitRows'].values()),r
+            rows=r['benefitRows']['glm']
+            if mode.startswith('benefit-unlinked'):
+                assert 'Skill 5' in rows[0] and ('reads 1' in rows[0] or 'чтения 1' in rows[0]),r
+                assert 'ещё не оценён' in rows[3] or 'not evaluated' in rows[3],r
+                assert 'Model cache' in rows[4] or 'Кэш модели' in rows[4],r
+            if mode.startswith('benefit-empty'):assert 'пока нет наблюдений' in rows[0] or 'no observed activity' in rows[0],r
+            if mode=='benefit-legacy':assert 'не передана' in rows[0],r
+
         if mode=='window-controls':assert all(r['windowControlChecks'].values()) and len(r['windowControlChecks'])==12,r
         if mode=='window-focus':
             assert r['utilityTogglePassed'] and r['utilityRestorePassed'] and r['utilityFocusPassed'] and r['utilityPlacementPassed'],r
             assert all(r['utilityFocusChecks'].get(k) is True for k in ('readyBefore','readyAfter','widgetKey','utilityMain','hidden')),r
         if destination:
             shutil.copy2(out,destination/out.name);shutil.copy2(out.with_suffix('.png.json'),destination/(out.name+'.json'))
-print('PASS: minimum compact/detail, resize handler, menu-only launch, movable menu-click widget, rotating status buttons and foreground/fallback selection')
+        verified.append(mode)
+if not verified:raise ValueError('invalid_widget_case_selection')
+print(json.dumps({'passedWidgetModes':verified,'syntheticDataOnly':True}))

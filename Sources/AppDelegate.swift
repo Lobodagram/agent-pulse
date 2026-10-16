@@ -200,6 +200,8 @@ final class FloatingPanel: NSPanel {
             checkFixtureFocus(stage: 1, deadline: Date().addingTimeInterval(0.8))
         } else {
             fixtureTogglePassed = fixtureFocusChecks["hidden"] == true && fixtureFocusChecks["widgetKey"] == true && fixtureFocusChecks["utilityMain"] == true
+            // Verify focus at the end of the focus action, before unrelated bitmap capture.
+            fixtureFocusChecks["focusAfterRestore"] = ready
         }
     }
     func checkFixtureWindowControls(stage: Int, deadline: Date) {
@@ -263,12 +265,12 @@ final class FloatingPanel: NSPanel {
             let initial = store.baseHeight
             fixtureControlChecks["benefitStartsCollapsed"] = store.benefitExpanded.isEmpty
             store.toggleBenefit(id); resizePanel()
-            fixtureControlChecks["benefitOpensAndResizes"] = store.benefitExpanded.contains(id) && abs((panel?.frame.height ?? 0) - ceil((initial + 62) * store.widgetScale)) < 0.01
+            fixtureControlChecks["benefitOpensAndResizes"] = store.benefitExpanded.contains(id) && abs((panel?.frame.height ?? 0) - ceil((initial + 78) * store.widgetScale)) < 0.01
             if store.pages > 1 {
                 store.page = 1; resizePanel()
                 fixtureControlChecks["benefitPageShrinks"] = store.baseHeight == initial
                 store.page = 0; resizePanel()
-                fixtureControlChecks["benefitPageRestores"] = store.baseHeight == initial + 62
+                fixtureControlChecks["benefitPageRestores"] = store.baseHeight == initial + 78
             }
             store.toggleBenefit(id); resizePanel()
             fixtureControlChecks["benefitClosesAndResizes"] = store.benefitExpanded.isEmpty && abs((panel?.frame.height ?? 0) - ceil(initial * store.widgetScale)) < 0.01
@@ -302,8 +304,11 @@ final class FloatingPanel: NSPanel {
                 let before = panel.isVisible
                 self.hidePanel(); let hidden = !panel.isVisible
                 self.togglePanel(); let restored = panel.isVisible
-                let report: [String: Any] = ["view": mode, "utilityFocusChecks": self.fixtureFocusChecks, "utilityTogglePassed": mode != "window-focus" || self.fixtureTogglePassed, "utilityRestorePassed": mode != "window-focus" || (self.analysisWindow?.isVisible == true && self.analysisWindow?.isMiniaturized == false && self.settingsWindow?.isVisible == true), "utilityFocusPassed": mode != "window-focus" || (self.settingsWindow?.isKeyWindow == true && NSApp.isActive), "utilityPlacementPassed": mode != "window-focus" || (self.settingsWindow?.level == .normal && self.settingsWindow?.collectionBehavior.contains(.moveToActiveSpace) == true), "panelWidth": panel.frame.width, "panelHeight": panel.frame.height, "floatingLevel": panel.level == .floating, "joinsAllSpaces": panel.collectionBehavior.contains(.canJoinAllSpaces), "fullScreenAuxiliary": panel.collectionBehavior.contains(.fullScreenAuxiliary), "movable": panel.isMovableByWindowBackground, "visibleBefore": before, "hidePassed": hidden, "restorePassed": restored, "statusItem": self.statusItem.button != nil, "fixtureMode": self.store.isFixture, "metricMode": self.store.metricMode, "scale": self.store.widgetScale, "menuClickShowsPanel": mode == "menu-widget" && before, "menuTooltip": self.statusItem.button?.toolTip ?? "", "displayMode": self.store.displayMode, "menuTitle": self.statusItem.button?.title ?? "", "capturedSize": [w?.contentView?.bounds.width ?? 0, w?.contentView?.bounds.height ?? 0]]
+                let report: [String: Any] = ["view": mode, "utilityFocusChecks": self.fixtureFocusChecks, "utilityTogglePassed": mode != "window-focus" || self.fixtureTogglePassed, "utilityRestorePassed": mode != "window-focus" || (self.analysisWindow?.isVisible == true && self.analysisWindow?.isMiniaturized == false && self.settingsWindow?.isVisible == true), "utilityFocusPassed": mode != "window-focus" || self.fixtureFocusChecks["focusAfterRestore"] == true, "utilityFocusAtCapture": self.settingsWindow?.isKeyWindow == true && NSApp.isActive, "utilityPlacementPassed": mode != "window-focus" || (self.settingsWindow?.level == .normal && self.settingsWindow?.collectionBehavior.contains(.moveToActiveSpace) == true), "panelWidth": panel.frame.width, "panelHeight": panel.frame.height, "floatingLevel": panel.level == .floating, "joinsAllSpaces": panel.collectionBehavior.contains(.canJoinAllSpaces), "fullScreenAuxiliary": panel.collectionBehavior.contains(.fullScreenAuxiliary), "movable": panel.isMovableByWindowBackground, "visibleBefore": before, "hidePassed": hidden, "restorePassed": restored, "statusItem": self.statusItem.button != nil, "fixtureMode": self.store.isFixture, "metricMode": self.store.metricMode, "scale": self.store.widgetScale, "menuClickShowsPanel": mode == "menu-widget" && before, "menuTooltip": self.statusItem.button?.toolTip ?? "", "displayMode": self.store.displayMode, "menuTitle": self.statusItem.button?.title ?? "", "capturedSize": [w?.contentView?.bounds.width ?? 0, w?.contentView?.bounds.height ?? 0]]
                 var result = report; result["windowControlChecks"] = self.fixtureControlChecks
+                if self.store.isFixture {
+                    result["benefitRows"] = Dictionary(uniqueKeysWithValues: self.store.visibleProviders.filter { self.store.benefitExpanded.contains($0.id) }.map { ($0.id, WidgetBenefitView(provider: $0, open: {}).displayLines) })
+                }
                 if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]) {
                     try? data.write(to: URL(fileURLWithPath: path + ".json"))
                 }

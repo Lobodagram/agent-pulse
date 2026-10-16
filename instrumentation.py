@@ -126,14 +126,26 @@ def configure_kimi_hooks(state,enable=True,home=None):
             if Path(tmp).exists():Path(tmp).unlink()
     return {'provider':'kimi','configured':enable,'requiresNewSession':True,'nativeTrustReviewMayBeRequired':True,'events':NATIVE_EVENTS['kimi'] if enable else [],'modelCalls':0,'clientFamily':'kimi-code-2.x'}
 
-def scan_inventory(provider,skill_dirs=(),config_path=None):
+def scan_inventory(provider,skill_dirs=(),config_path=None,trusted_skill_dirs=()):
     if provider not in PROVIDERS:raise ValueError('invalid_provider')
+    if len(skill_dirs)>8 or len(trusted_skill_dirs)>8:raise ValueError('invalid_skill_directory')
+    trusted=[]
+    for directory in trusted_skill_dirs:
+        directory=Path(directory)
+        if directory.is_symlink() or not directory.is_dir():raise ValueError('invalid_skill_directory')
+        trusted.append(directory.resolve())
     entries=[]
     for root in skill_dirs:
         root=Path(root)
         if root.is_symlink() or not root.is_dir():raise ValueError('invalid_skill_directory')
-        for f in sorted(root.glob('*/SKILL.md'))[:500]:
-            if f.is_symlink() or f.parent.is_symlink():continue
+        files=sorted(root.glob('*/SKILL.md'))
+        if len(files)>500:raise ValueError('inventory_scan_limit')
+        for f in files:
+            if f.is_symlink():continue
+            if f.parent.is_symlink():
+                target=f.parent.resolve()
+                # Only a direct skill folder in an explicitly trusted root is accepted.
+                if target.parent not in trusted or target.is_symlink():continue
             # Names only. Do not read instructions, descriptions, client projects or code.
             name=safe_name(f.parent.name)
             if name=='other':continue
@@ -141,14 +153,26 @@ def scan_inventory(provider,skill_dirs=(),config_path=None):
             if 'test' in name or 'qa' in name:kind='test'
             elif 'search' in name or 'context' in name:kind='search'
             entries.append({'provider':provider,'id':name,'kind':'skill','category':kind,'status':'configured','locator':str(f.absolute())})
+            if f.parent.is_symlink():
+                entries.append(dict(entries[-1],locator=str(f.resolve())))
     if config_path:
         p=Path(config_path)
         if p.is_symlink() or p.stat().st_size>1024*1024:raise ValueError('invalid_config')
         text=p.read_text();d=tomllib.loads(text) if p.suffix=='.toml' else json.loads(text)
-        servers=d.get('mcp_servers',d.get('mcpServers',d.get('mcp',{}).get('servers',{})))
-        if isinstance(servers,list):servers={r.get('name','other'):r for r in servers if isinstance(r,dict)}
+        if not isinstance(d,dict):raise ValueError('invalid_config')
+        if 'mcp_servers' in d:servers=d['mcp_servers']
+        elif 'mcpServers' in d:servers=d['mcpServers']
+        else:
+            mcp=d.get('mcp',{})
+            if not isinstance(mcp,dict):raise ValueError('invalid_config')
+            servers=mcp.get('servers',{})
+        if isinstance(servers,list):
+            if len(servers)>500:raise ValueError('inventory_scan_limit')
+            servers={r.get('name','other'):r for r in servers if isinstance(r,dict)}
+        if not isinstance(servers,dict):raise ValueError('invalid_config')
         if isinstance(servers,dict):
-            for name,r in list(servers.items())[:500]:
+            if len(servers)>500:raise ValueError('inventory_scan_limit')
+            for name,r in servers.items():
                 name=safe_name(name)
                 if name=='other':continue
                 entries.append({'provider':provider,'id':name,'kind':'mcp','category':'remote','status':'disabled' if isinstance(r,dict) and (r.get('enabled') is False or r.get('disabled') is True) else 'configured'})

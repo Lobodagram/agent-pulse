@@ -55,6 +55,12 @@ struct Provider: Codable, Identifiable {
 struct WidgetBenefit: Codable {
     var windowDays: Int; var linkedAssets: [String:Int]; var observedInvocations: Int; var declaredAppliedTasks: Int
     var reviewedLinkedTasks: Int; var hasObservations: Bool; var comparison: WidgetComparison?
+    var activity: WidgetActivity? = nil
+}
+struct WidgetActivity: Codable {
+    var observedCalls: Int; var skillCalls: Int; var successfulSkillCalls: Int
+    var matchedSkillCalls: Int; var unmatchedSkillCalls: Int; var skillReads: Int
+    var mcpCalls: Int; var helperRuns: Int; var helperKnownResults: Int
 }
 struct WidgetComparison: Codable {
     var label: String; var before: String; var after: String; var metrics: [String: WidgetReduction]
@@ -123,6 +129,19 @@ struct AnalyticsReport: Codable {
     var efficiency: EfficiencyReport?
     var checkRuns: CheckRunSummary?; var storageHealth: StorageSummary?
     var quality: OutcomeQuality?
+    var diagnostics: DiagnosticCoverage?
+}
+struct DiagnosticCoverage: Codable {
+    var commandCoverage: [CommandCoverage]?
+    var skillEvidenceCoverage: [SkillEvidenceCoverage]?
+}
+struct CommandCoverage: Codable, Identifiable {
+    var provider: String; var calls: Int; var classified: Int; var unknown: Int; var classifiedRate: Double?
+    var id: String { provider }
+}
+struct SkillEvidenceCoverage: Codable, Identifiable {
+    var provider: String; var mappedSkillToolCalls: Int; var unmappedSuccessfulSkillToolCalls: Int; var skillReadCalls: Int
+    var id: String { provider }
 }
 struct CheckRunSummary: Codable {
     var runs: Int; var knownResults: Int; var knownResultRate: Double?; var pendingRuns: Int; var conflicts: Int; var finishWithoutStart: Int
@@ -177,7 +196,7 @@ struct ToolStat: Codable {
     var identity: String { provider + "." + tool }
 }
 func categoryText(_ code: String) -> String {
-    let ru = ["read":"чтение", "search":"поиск", "edit":"изменение", "test":"проверка", "build":"сборка", "inspect":"осмотр", "remote":"внешний инструмент", "shell":"команда", "other":"прочее", "delegate":"делегирование", "environment":"среда"]
+    let ru = ["read":"чтение", "search":"поиск", "edit":"изменение", "test":"проверка", "build":"сборка", "inspect":"осмотр", "run":"запуск", "remote":"внешний инструмент", "shell":"команда", "other":"прочее", "delegate":"делегирование", "environment":"среда"]
     return russian ? ru[code] ?? code : code
 }
 func outcomeText(_ code: String) -> String {

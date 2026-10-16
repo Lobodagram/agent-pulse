@@ -17,7 +17,7 @@ MAX_INPUT = 1024 * 1024
 MAX_EVENTS = 100000
 EVENTS = {'SessionStart','UserPromptSubmit','PreToolUse','PostToolUse','PostToolUseFailure','Stop','SessionEnd','Interrupt','SubagentStart','SubagentStop','PreCompact','PostCompact'}
 PROVIDERS = {'codex','glm','claude','kimi','qwen','gemini','cursor','copilot','windsurf','deepseek','openrouter'}
-CATEGORIES = {'read','search','edit','test','build','inspect','environment','remote','delegate','shell','other','lifecycle'}
+CATEGORIES = {'read','search','edit','test','build','run','inspect','environment','remote','delegate','shell','other','lifecycle'}
 
 from sanitizers import number, safe_name
 
@@ -61,8 +61,8 @@ def timestamp(raw,now):
     if raw.get('timestamp',raw.get('at')) is not None and (v is None or not now-31*86400<=v<=now+60):raise ValueError('invalid_event_time')
     return v if v is not None else now
 
-from command_profile import command_shape, profile, control_tool, tool_operation
-from result_metadata import classify
+from command_profile import command_shape, profile, control_tool, tool_operation, component_projection, component_evidence
+from result_metadata import classify, response_evidence, stored_response_evidence
 
 def category(tool,args):
     name=tool.lower()
@@ -122,7 +122,11 @@ class Journal:
         CREATE TABLE IF NOT EXISTS turn_usage(provider TEXT,session TEXT,turn TEXT,input REAL,cached_input REAL,
           output REAL,source TEXT,at REAL,PRIMARY KEY(provider,session,turn,source));
         CREATE TABLE IF NOT EXISTS call_metadata(event TEXT PRIMARY KEY, signature TEXT, outcome_source TEXT);
+        CREATE TABLE IF NOT EXISTS collection_metadata(event TEXT PRIMARY KEY, version TEXT, reason TEXT);
+        CREATE TABLE IF NOT EXISTS command_components(event TEXT PRIMARY KEY, data TEXT);
+        CREATE TABLE IF NOT EXISTS response_envelope(event TEXT PRIMARY KEY, data TEXT);
         CREATE TABLE IF NOT EXISTS model_conflict(event TEXT PRIMARY KEY);
+        CREATE TABLE IF NOT EXISTS failure_metadata(event TEXT PRIMARY KEY, class TEXT, source TEXT);
         CREATE TABLE IF NOT EXISTS capability_locator(provider TEXT,id TEXT,locator TEXT,PRIMARY KEY(provider,id,locator));
         CREATE TABLE IF NOT EXISTS capability_evidence(provider TEXT,session TEXT,turn TEXT,call TEXT,
           id TEXT,kind TEXT,evidence TEXT,at REAL,PRIMARY KEY(provider,session,call,id,evidence));
@@ -200,7 +204,7 @@ class Journal:
         eid=self.digest('event',[provider,session,call,phase]) if istool else self.digest('event',[provider,session,actor,event,turn,at])
         values=(eid,provider,session,turn,project,actor,call,phase,at,now,tool,kind,fingerprint,template,resource,revision,status,code,duration,duration_source,safe_name(source),turn_source,safe_name(raw.get('model')))
         # Retry deliveries deduplicate. Hook and historical projection remain distinct; no claims of complete coverage.
-        self.db.execute('INSERT OR IGNORE INTO observation VALUES ('+','.join('?' for _ in values)+')',values)
+        inserted=self.db.execute('INSERT OR IGNORE INTO observation VALUES ('+','.join('?' for _ in values)+')',values).rowcount
         if istool:
             reported_model=safe_name(raw.get('model'))
             stored_model=self.db.execute('SELECT model FROM observation WHERE id=?',(eid,)).fetchone()['model']
@@ -211,10 +215,28 @@ class Journal:
                     self.db.execute('INSERT OR IGNORE INTO model_conflict VALUES (?)',(eid,))
                     self.db.execute("UPDATE observation SET model='other' WHERE id=?",(eid,))
         p=profile(command) if command else None
+        if istool and inserted:
+            from command_profile import shell_tool
+            from pulse_version import __version__
+            reason=(p['recognitionReason'] if p else 'missing-command') if shell_tool(tool) else 'not-shell'
+            self.db.execute('INSERT OR IGNORE INTO collection_metadata VALUES (?,?,?)',(eid,__version__,reason))
+            if shell_tool(tool):
+                self.db.execute('INSERT OR IGNORE INTO command_components VALUES (?,?)',
+                                (eid,json.dumps(component_projection(p or profile(None)),separators=(',',':'))))
+            if phase=='finish':
+                self.db.execute('INSERT OR IGNORE INTO response_envelope VALUES (?,?)',
+                                (eid,json.dumps(response_evidence(raw,tool,status),separators=(',',':'))))
         signature='unknown' if p and (not p['operations'] or any(o['family']=='unknown' for o in p['operations'])) else (
             ' '.join(o['category']+'.'+o['family']+(' '+p['operators'][i] if i<len(p['operators']) else '')
                      for i,o in enumerate(p['operations'])) if p else tool_operation(tool,kind))
         self.db.execute('INSERT OR IGNORE INTO call_metadata VALUES (?,?,?)',(eid,signature,osource))
+        if phase=='finish' and status=='failed':
+            from result_metadata import failure_class
+            label,error_source=failure_class(raw,tool)
+            old=self.db.execute('SELECT class FROM failure_metadata WHERE event=?',(eid,)).fetchone()
+            if old and old['class'] not in {'unknown',label} and label!='unknown':label='conflicting';error_source='conflicting-reports'
+            if not old or label!='unknown':
+                self.db.execute('INSERT OR REPLACE INTO failure_metadata VALUES (?,?,?)',(eid,label,error_source))
         if phase=='finish':
             previous=self.db.execute('SELECT outcome,exit_code,at,outcome_source FROM observation JOIN call_metadata ON observation.id=call_metadata.event WHERE id=?',(eid,)).fetchone()
             if previous and at>=previous['at']:
@@ -262,14 +284,22 @@ class Journal:
     def observe_capabilities(self,provider,session,turn,call,tool,args,cwd,at):
         from capability_detection import literal_reads, mcp_namespace
         args=args if isinstance(args,dict) else {}
-        entries=self.db.execute('SELECT id,kind FROM inventory WHERE provider=?',(provider,)).fetchall()
+        entries=[dict(r) for r in self.db.execute('SELECT id,kind FROM inventory WHERE provider=?',(provider,))]
+        own_skills={r['id'] for r in entries if r['kind']=='skill'}
+        # Shared identity catalog only. An actual successful event must establish
+        # access/invocation; the peer's configuration grants no availability.
+        shared_skills={r['id'] for r in self.db.execute("SELECT id FROM inventory WHERE kind='skill'")}
+        entries += [{'id':name,'kind':'skill'} for name in sorted(shared_skills-own_skills)]
         path=args.get('file_path',args.get('path'))
         direct=tool.lower() in {'read','read_file','cat_file'}
         paths=[path] if direct else literal_reads(tool,args)
         loaded=set()
         for p in paths:
             loc=self.locator(p,cwd)
-            if loc:loaded.update(r['id'] for r in self.db.execute('SELECT id FROM capability_locator WHERE provider=? AND locator=?',(provider,loc)))
+            if loc:
+                matched={r['id'] for r in self.db.execute("SELECT l.id FROM capability_locator l JOIN inventory i ON l.provider=i.provider AND l.id=i.id WHERE l.locator=? AND i.kind='skill'",(loc,))}
+                # One path mapped to several labels does not establish identity.
+                if len(matched)==1:loaded.update(matched)
         explicit=args.get('skill',args.get('skill_name',args.get('name'))) if tool.lower() in {'skill','use_skill'} else None
         for entry in entries:
             name,kind=entry['id'],entry['kind'];evidence=None
@@ -282,6 +312,7 @@ class Journal:
                 self.db.execute('INSERT OR IGNORE INTO capability_evidence VALUES (?,?,?,?,?,?,?,?)',
                                 (provider,session,turn,call,name,kind,evidence,at))
                 source='read-tool' if evidence=='loaded' and direct else 'shell-literal' if evidence=='loaded' else 'explicit-skill' if kind=='skill' else 'mcp-namespace' if kind=='mcp' else 'exact-tool'
+                if kind=='skill' and name not in own_skills:source='shared-catalog-'+source
                 self.db.execute('INSERT OR REPLACE INTO capability_source VALUES (?,?,?,?,?,?)',(provider,session,call,name,evidence,source))
     def declare_capability(self,provider,session,name,kind):
         if not isinstance(session,str) or not re.fullmatch('[a-f0-9]{32}',session):raise ValueError('invalid_session')
@@ -313,7 +344,7 @@ class Journal:
         args=[ceiling-days*86400,ceiling];where='received>=? AND received<=?'
         if through_rowid is not None:where+=' AND observation.rowid<=?';args.append(through_rowid)
         if session:where+=' AND session=?';args.append(session)
-        rows=self.db.execute('SELECT observation.*,call_metadata.signature,call_metadata.outcome_source,EXISTS(SELECT 1 FROM model_conflict WHERE event=observation.id) AS model_conflicted FROM observation LEFT JOIN call_metadata ON observation.id=call_metadata.event WHERE '+where+' ORDER BY received DESC LIMIT ?',args+[MAX_EVENTS]).fetchall()
+        rows=self.db.execute('SELECT observation.*,call_metadata.signature,call_metadata.outcome_source,failure_metadata.class AS failure_class,failure_metadata.source AS failure_class_source,collection_metadata.version AS collector_version,collection_metadata.reason AS recognition_reason,command_components.data AS command_components,response_envelope.data AS response_envelope,EXISTS(SELECT 1 FROM model_conflict WHERE event=observation.id) AS model_conflicted FROM observation LEFT JOIN call_metadata ON observation.id=call_metadata.event LEFT JOIN failure_metadata ON observation.id=failure_metadata.event LEFT JOIN collection_metadata ON observation.id=collection_metadata.event LEFT JOIN command_components ON observation.id=command_components.event LEFT JOIN response_envelope ON observation.id=response_envelope.event WHERE '+where+' ORDER BY received DESC LIMIT ?',args+[MAX_EVENTS]).fetchall()
         boundaries={}
         for r in rows:
             if r['phase'] in {'Stop','Interrupt','SessionEnd'}:
@@ -328,6 +359,11 @@ class Journal:
             start=parts.get('start');end=parts.get('finish');r=start or end
             from model_evidence import call_model
             model,model_source=call_model(start,end)
+            observed=[v for v in (start,end) if v]
+            versions=sorted({v['collector_version'] for v in observed if v['collector_version']})
+            recorded=sum(bool(v['collector_version']) for v in observed)
+            version_coverage='complete' if recorded==len(observed) else 'partial' if recorded else 'not-recorded'
+            collector_version=versions[0] if len(versions)==1 and version_coverage=='complete' else 'mixed' if len(versions)>1 else 'unknown'
             status=end['outcome'] if end else 'pending'
             duration=end.get('duration_ms') if end else None;dsource=end['duration_source'] if end else 'unknown'
             if duration is None and start and end and end['at']>=start['at']:
@@ -336,6 +372,12 @@ class Journal:
                 'id':r['call'],'startedAt':start['at'] if start else None,'endedAt':end['at'] if end else None,
                 'outcome':status,'exitCode':end['exit_code'] if end else None,'durationMs':duration,'durationSource':dsource,
                 'operation':tool_operation(r['tool'],r['signature'] or 'legacy'),'outcomeSource':end['outcome_source'] or 'legacy' if end else 'not-finished',
+                'failureClass':end['failure_class'] or 'unknown' if end and status=='failed' else 'unknown',
+                'failureClassSource':end['failure_class_source'] or 'unreported' if end and status=='failed' else 'unreported',
+                'recognitionReason':r['recognition_reason'] or 'not-recorded',
+                'commandComponents':component_evidence(r['command_components']),
+                'responseEnvelope':stored_response_evidence(end['response_envelope']) if end else None,
+                'collectorVersion':collector_version,'collectorVersions':versions,'collectorVersionCoverage':version_coverage,
                 'model':model,'modelSource':model_source,
                 'collectionIssue':('missing-finish-after-boundary' if boundaries.get((r['provider'],r['session'],r['actor']),0)>=r['at'] else
                                    'stale-unpaired' if time.time()-r['received']>600 else 'awaiting-finish') if not end else 'missing-start' if not start else None,
@@ -357,7 +399,11 @@ class Journal:
         capped=self.db.execute('DELETE FROM observation WHERE id IN (SELECT id FROM observation ORDER BY received DESC LIMIT -1 OFFSET ?)',(MAX_EVENTS,)).rowcount
         self.db.execute('UPDATE collection_counter SET value=value+? WHERE key=?',(capped,'capped-events'))
         self.db.execute('DELETE FROM call_metadata WHERE event NOT IN (SELECT id FROM observation)')
+        self.db.execute('DELETE FROM collection_metadata WHERE event NOT IN (SELECT id FROM observation)')
+        self.db.execute('DELETE FROM command_components WHERE event NOT IN (SELECT id FROM observation)')
+        self.db.execute('DELETE FROM response_envelope WHERE event NOT IN (SELECT id FROM observation)')
         self.db.execute('DELETE FROM model_conflict WHERE event NOT IN (SELECT id FROM observation)')
+        self.db.execute('DELETE FROM failure_metadata WHERE event NOT IN (SELECT id FROM observation)')
         self.db.execute('DELETE FROM capability_evidence WHERE at<? OR session NOT IN (SELECT session FROM observation)',(cutoff,))
         self.db.execute('DELETE FROM capability_evidence WHERE rowid IN (SELECT rowid FROM capability_evidence ORDER BY at DESC LIMIT -1 OFFSET ?)',(MAX_EVENTS,))
         self.db.execute('DELETE FROM capability_source WHERE NOT EXISTS (SELECT 1 FROM capability_evidence c WHERE c.provider=capability_source.provider AND c.session=capability_source.session AND c.call=capability_source.call AND c.id=capability_source.id AND c.evidence=capability_source.evidence)')

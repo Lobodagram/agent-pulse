@@ -73,7 +73,7 @@ import ServiceManagement
         if let v = values["menuNumbers"] as? Bool { menuNumbers = v }
         if let v = values["menuFollowActive"] as? Bool { menuFollowActive = v }
     }
-    var baseHeight: Double { (expanded ? 462 : 302) + Double(visibleProviders.filter { benefitExpanded.contains($0.id) }.count) * 62 }
+    var baseHeight: Double { (expanded ? 462 : 302) + Double(visibleProviders.filter { benefitExpanded.contains($0.id) }.count) * 78 }
     func toggleBenefit(_ provider: String) {
         if benefitExpanded.contains(provider) { benefitExpanded.remove(provider) } else { benefitExpanded.insert(provider) }
     }

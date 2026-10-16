@@ -1,6 +1,27 @@
 """Counts approved capability identities; loading, invocation and declaration differ."""
 import time
 
+def observation_coverage(j,calls,providers=None):
+    """Counts missing evidence without guessing which unknown skill was used."""
+    rows=[]
+    allowed=set(providers) if providers is not None else {c['provider'] for c in calls}
+    for provider in sorted(allowed):
+        selected=[c for c in calls if c['provider']==provider]
+        skill_calls=[c for c in selected if c['tool'].lower() in {'skill','use_skill'}]
+        successes=[c for c in skill_calls if c['paired'] and c['outcome']=='success']
+        ids={c['id'] for c in selected}
+        evidence=[dict(r) for r in j.db.execute("SELECT call,evidence FROM capability_evidence WHERE provider=? AND kind='skill'",(provider,)) if r['call'] in ids]
+        mapped={r['call'] for r in evidence if r['evidence']=='invoked'}
+        loaded={r['call'] for r in evidence if r['evidence']=='loaded'}
+        rows.append({'provider':provider,'skillToolCalls':len(skill_calls),
+                     'successfulSkillToolCalls':len(successes),
+                     'mappedSkillToolCalls':sum(c['id'] in mapped for c in successes),
+                     'unmappedSuccessfulSkillToolCalls':sum(c['id'] not in mapped for c in successes),
+                     'skillReadCalls':len(loaded),'state':'observed' if mapped or loaded else 'not-observed',
+                     'nonUseEstablished':False,'versionVerified':False,
+                     'basis':'Successful native Skill and exact catalog file reads; reading is not application.'})
+    return rows
+
 def capabilities(j,providers=None):
     inventory={(r['provider'],r['id'],r['kind']):dict(r) for r in j.db.execute('SELECT * FROM inventory')}
     usage={}

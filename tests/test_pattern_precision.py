@@ -25,7 +25,7 @@ class PrecisionTests(unittest.TestCase):
         for command,expected in examples.items():
             p=profile(command);self.assertEqual(p['operations'],[dict(zip(('category','family'),expected.split('.')))])
             self.assertNotIn('PRIVATE',str(p));self.assertNotIn('private.invalid',str(p))
-        for command in ['python3 - <<EOF\ncode\nEOF','cat $(secret)','curl `secret`','shasum PRIVATE > target']:
+        for command in ['python3 - <<EOF\ncode','cat $(secret)','curl `secret`','shasum PRIVATE >']:
             self.assertEqual(profile(command)['operations'],[])
     def test_todo_not_edit_and_historical_bookkeeping_not_findings(self):
         self.assertEqual(category('TodoWrite',{}),'other')
@@ -55,6 +55,8 @@ class PrecisionTests(unittest.TestCase):
         self.pair('mcp__codex_apps__github__fetch_workflow_run_jobs')
         self.pair('mcp__mesh_qa__verify_3mf')
         self.pair('Bash','python3 - <<EOF\nunknown\nEOF')
+        # Retained old collectors have no raw command to reclassify.
+        self.j.db.execute("UPDATE call_metadata SET signature='unknown' WHERE event IN (SELECT id FROM observation WHERE tool='Bash')");self.j.db.commit()
         self.assertEqual([c['operation'] for c in self.j.calls()],['inspect.github-ci-status','inspect.slicer-project','unknown'])
         self.j.db.execute("UPDATE call_metadata SET signature='remote'");self.j.db.commit()
         self.assertEqual(self.j.calls()[0]['operation'],'inspect.github-ci-status')

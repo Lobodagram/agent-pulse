@@ -279,6 +279,11 @@ def select_widget_comparison(j,provider,label=None,before=None,after=None):
 def widget_benefits(j,calls,rows,assets,providers=None):
     """Bounded metadata only; registration, application, invocation and effects differ."""
     from journal import PROVIDERS
+    from capability_report import observation_coverage
+    from capability_detection import mcp_namespace
+    from check_receipts import check_report
+    skill_coverage={r['provider']:r for r in observation_coverage(j,calls,providers)}
+    helper_coverage={r['provider']:r for r in check_report(j,providers)['byProvider']}
     result={};call_ids={c['id'] for c in calls}
     invoked=defaultdict(set)
     for r in j.db.execute("SELECT provider,id,kind,call FROM capability_evidence WHERE evidence='invoked'"):
@@ -297,9 +302,23 @@ def widget_benefits(j,calls,rows,assets,providers=None):
         if provider in selections:
             s=selections[provider]
             comparison=compare_rows(rows,s['label'],s['before_variant'],s['after_variant'],provider)
+        skill=skill_coverage.get(provider,{})
+        helpers=helper_coverage.get(provider,{})
+        selected=[c for c in calls if c['provider']==provider]
+        activity={'observedCalls':len(selected),'skillCalls':skill.get('skillToolCalls',0),
+                  'successfulSkillCalls':skill.get('successfulSkillToolCalls',0),
+                  'matchedSkillCalls':skill.get('mappedSkillToolCalls',0),
+                  'unmatchedSkillCalls':skill.get('unmappedSuccessfulSkillToolCalls',0),
+                  'skillReads':skill.get('skillReadCalls',0),
+                  'mcpCalls':sum(mcp_namespace(c['tool']) is not None for c in selected),
+                  'helperRuns':helpers.get('runs',0),'helperKnownResults':helpers.get('knownResults',0),
+                  'coverage':'partial observed calls and reporter-supplied helper receipts; not application or efficacy',
+                  'nonUseEstablished':False}
         result[provider]={'windowDays':30,'linkedAssets':{k:registered[k] for k in ('skill','mcp','tool')},
           'observedInvocations':len(uses),'declaredAppliedTasks':sum(r['application']=='used' for r in tasks),
           'reviewedLinkedTasks':len(tasks),'hasObservations':any(c['provider']==provider for c in calls),
+          'activity':activity,
+          'improvementEvaluationState':'no-linked-improvements' if not linked else 'awaiting-task-review' if not tasks else 'selected-tasks',
           'comparison':comparison,'subscriptionSavings':None,'causalClaim':False,
           'coverage':'Registered finding links (all registry); observed invocations and declared task applications (retained 30 days). Not total activity or created assets.'}
     return result
@@ -309,21 +328,28 @@ def widget_lines(provider,ru=False):
     """Windows text adapter for the shared summary; unknowns never become savings."""
     def tr(en,rus):return rus if ru else en
     b=provider.get('benefit')
-    if b is None:
-        lines=[tr('PULSE · finding links: awaiting evidence','PULSE · связи с находками: ждём данные'),tr('30d: no observed activity yet','30д: пока нет наблюдений'),tr('Comparison: awaiting evidence','Сравнение: ждём данные')]
+    activity=(b or {}).get('activity')
+    if activity is None:
+        lines=[tr('30d: activity not reported','30д: активность не передана'),tr('MCP / helpers: awaiting evidence','MCP / помощники: ждём данные')]
+    elif not activity['observedCalls'] and not activity['helperRuns']:
+        lines=[tr('30d: no observed activity yet','30д: пока нет наблюдений'),tr('MCP / helpers: no observed runs','MCP / помощники: запусков не получено')]
     else:
-        a=b['linkedAssets']
-        lines=[tr('PULSE · linked: skills ','PULSE · связано: скиллы ')+str(a['skill'])+' · MCP '+str(a['mcp'])+tr(' · tools ',' · тулзы ')+str(a['tool'])]
-        lines.append(tr('30d: applied tasks ','30д: применено в задачах ')+str(b['declaredAppliedTasks'])+tr(' · calls ',' · вызовы ')+str(b['observedInvocations']) if b['hasObservations'] or b['reviewedLinkedTasks'] else tr('30d: no observed activity yet','30д: пока нет наблюдений'))
+        lines=[tr('30d · Skill ','30д · Skill ')+str(activity['skillCalls'])+tr(' · reads ',' · чтения ')+str(activity['skillReads']),
+               tr('MCP calls ','MCP-вызовы ')+str(activity['mcpCalls'])+tr(' · helpers ',' · помощники ')+str(activity['helperRuns'])]
+    linked=sum((b or {}).get('linkedAssets',{}).values())
+    if not linked:lines.append(tr('Pulse: improvements not recorded yet','Pulse: улучшения ещё не учтены'))
+    elif not b['reviewedLinkedTasks']:lines.append(tr('Pulse: recorded ','Pulse: учтено ')+str(linked)+tr(' · awaiting review',' · ждём оценку'))
+    else:lines.append(tr('Pulse: recorded ','Pulse: учтено ')+str(linked)+tr(' · applied tasks ',' · применений ')+str(b['declaredAppliedTasks']))
+    if b is None or b.get('comparison') is None:
+        lines.append(tr('Effect: not evaluated yet ↗','Эффект: ещё не оценён ↗'))
+    else:
         c=b.get('comparison')
-        if c is None:lines.append(tr('Comparison: choose a comparison ↗','Сравнение: выберите сравнение ↗'))
-        else:
-            metrics=c['metrics'];req=metrics['modelRequestsPerAccepted']['reduction'];tokens=metrics['tokensPerAccepted']['reduction']
-            def change(v):
-                if v is None:return '—'
-                if v==0:return '0%'
-                return ('↓' if v>0 else '↑')+('<0.1' if abs(v)<.001 else f'{abs(v)*100:.1f}')+'%'
-            lines.append(tr('Per result: requests ','На результат: запросы ')+change(req)+tr(' · tokens ',' · токены ')+change(tokens) if req is not None or tokens is not None else tr('Comparison: not enough comparable tasks ↗','Сравнение: мало сравнимых задач ↗'))
+        metrics=c['metrics'];req=metrics['modelRequestsPerAccepted']['reduction'];tokens=metrics['tokensPerAccepted']['reduction']
+        def change(v):
+            if v is None:return '—'
+            if v==0:return '0%'
+            return ('↓' if v>0 else '↑')+('<0.1' if abs(v)<.001 else f'{abs(v)*100:.1f}')+'%'
+        lines.append(tr('Per result: requests ','На результат: запросы ')+change(req)+tr(' · tokens ',' · токены ')+change(tokens) if req is not None or tokens is not None else tr('Effect: insufficient evidence ↗','Эффект: недостаточно данных ↗'))
     cache=(provider.get('localTokenProfile') or {}).get('cacheHitRate')
-    lines.append(tr('Cache today: ','Кэш сегодня: ')+('—' if cache is None else f'{cache*100:.1f}%')+tr(' input · partial',' входа · частично'))
+    lines.append(tr('Model cache: ','Кэш модели: ')+('—'+tr(' · not reported',' · нет данных') if cache is None else f'{cache*100:.1f}%'+tr(' input · partial',' входа · частично')))
     return lines

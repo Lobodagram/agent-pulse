@@ -44,6 +44,15 @@ with tempfile.TemporaryDirectory() as tmp:
         assert not r.stdout and not r.stderr,'hook must stay silent'
     r=subprocess.run(base+['journal'],capture_output=True,timeout=20,check=True)
     report=json.loads(r.stdout);assert report['calls']==1 and report['recentCalls'][0]['paired'] and report['recentCalls'][0]['outcome']=='success'
+    from datetime import datetime, timezone
+    daily_date=datetime.fromtimestamp(report['recentCalls'][0]['startedAt'],timezone.utc).date().isoformat()
+    daily_result=subprocess.run(base+['journal','--action','daily','--date',daily_date,'--provider','codex'],capture_output=True,timeout=20,check=True)
+    daily=json.loads(daily_result.stdout)
+    assert daily['providers'][0]['calls']==1 and daily['providers'][0]['knownPairedOutcomes']==1
+    assert daily['causalSavings'] is None and daily['modelsCalled']==0
+    assert daily['providers'][0]['collectorVersions'][0]['versions']=={__version__:1}
+    assert report['recentCalls'][0]['collectorVersion']==__version__
+    assert report['recentCalls'][0]['recognitionReason']=='classified'
     assert report['recentCalls'][0]['model']=='demo-model' and report['modelHistory']['knownModelCalls']==1
     requests=[{'jsonrpc':'2.0','id':1,'method':'initialize','params':{}},{'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'pulse_report','arguments':{}}},{'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'pulse_review_pack','arguments':{'language':'ru'}}},{'jsonrpc':'2.0','id':4,'method':'tools/list','params':{}}]
     r=subprocess.run(base+['mcp'],input=('\n'.join(json.dumps(x) for x in requests)+'\n').encode(),capture_output=True,timeout=20,check=True)
@@ -51,7 +60,7 @@ with tempfile.TemporaryDirectory() as tmp:
     assert responses[0]['result']['serverInfo']['version']==__version__
     assert json.loads(responses[1]['result']['content'][0]['text'])['calls']==1
     assert 'пакет проверки' in json.loads(responses[2]['result']['content'][0]['text'])['markdown']
-    assert {t['name'] for t in responses[3]['result']['tools']}=={'pulse_report','pulse_session','pulse_evidence','pulse_compare','pulse_review_pack','pulse_settings','pulse_efficiency','pulse_compare_tasks','pulse_collection_health','pulse_check_receipts'}
+    assert {t['name'] for t in responses[3]['result']['tools']}=={'pulse_report','pulse_session','pulse_evidence','pulse_compare','pulse_review_pack','pulse_settings','pulse_efficiency','pulse_compare_tasks','pulse_collection_health','pulse_check_receipts','pulse_diagnostics','pulse_daily_review'}
     # Exercise the actual packaged control path with a different process holding
     # its lock. No test events/settings enter a real user's state.
     busy={'jsonrpc':'2.0','id':5,'method':'tools/call','params':{'name':'pulse_configure','arguments':{'changes':{'metricMode':'today'}}}}
@@ -145,3 +154,50 @@ with tempfile.TemporaryDirectory() as tmp:
     r=subprocess.run(base+['hooks','--provider','kimi','--action','remove','--observer-home',str(home)],capture_output=True,timeout=5,check=True)
     assert config.read_bytes()==original and b'PRIVATE' not in r.stdout
 print(json.dumps({'kimiNativeSchemaAndInverse':'passed'}))
+
+# Prospective fixed shell components in throwaway state only.
+with tempfile.TemporaryDirectory() as tmp:
+    base=[sys.argv[1],'--state',str(Path(tmp)/'component-fixture')]
+    for number,command in enumerate(['git status || PRIVATE_TOOL PRIVATE_ARGUMENT',
+                                    'PRIVATE_VAR=PRIVATE ; printf PRIVATE ; git status',
+                                    'cat $(PRIVATE)']):
+        for event in ['PreToolUse','PostToolUse']:
+            raw={'hook_event_name':event,'session_id':'components','turn_id':str(number),
+                 'tool_use_id':str(number),'tool_name':'Bash','tool_input':{'command':command},
+                 'tool_response':{'exit_code':0}}
+            response=subprocess.run(base+['hook','--provider','glm'],input=json.dumps(raw).encode(),
+                                    capture_output=True,check=True,timeout=2)
+            assert not response.stdout and not response.stderr
+    response=subprocess.run(base+['journal'],capture_output=True,check=True,timeout=20)
+    assert b'PRIVATE' not in response.stdout
+    calls=json.loads(response.stdout)['recentCalls']
+    assert len(calls)==3 and all(c['paired'] and c['outcome']=='success' for c in calls)
+    partial=next(c for c in calls if c['recognitionReason']=='partial-chain')
+    assert partial['operation']=='unknown' and partial['commandComponents']['recognized']==1
+    assert partial['commandComponents']['executionVerified'] is False
+    response=subprocess.run(base+['journal','--action','diagnostics'],capture_output=True,check=True,timeout=20)
+    row=next(r for r in json.loads(response.stdout)['commandCoverage'] if r['provider']=='glm')
+    assert row['calls']==3 and row['classified']==1 and row['unknown']==2
+    assert row['components']['partialCalls']==1 and row['components']['recognizedInPartialCalls']==1
+print(json.dumps({'prospectiveCommandComponents':'passed','perPartExecutionInferred':False}))
+
+# Response shape is prospective metadata, never an inferred shell exit.
+with tempfile.TemporaryDirectory() as tmp:
+    base=[sys.argv[1],'--state',str(Path(tmp)/'response-fixture')]
+    for number,response in enumerate(['Process exited with code 0 PRIVATE',{'exit_code':2,'output':'PRIVATE'}]):
+        for event in ['PreToolUse','PostToolUse']:
+            raw={'hook_event_name':event,'session_id':'response','turn_id':str(number),
+                 'tool_use_id':str(number),'tool_name':'Bash','tool_input':{'command':'git status'},'tool_response':response}
+            result=subprocess.run(base+['hook','--provider','codex'],input=json.dumps(raw).encode(),
+                                  capture_output=True,check=True,timeout=2)
+            assert not result.stdout and not result.stderr
+    result=subprocess.run(base+['journal'],capture_output=True,check=True,timeout=20)
+    assert b'PRIVATE' not in result.stdout
+    calls=json.loads(result.stdout)['recentCalls']
+    assert len(calls)==2
+    unknown=next(c for c in calls if c['outcome']=='unknown')
+    assert unknown['responseEnvelope']['responseKind']=='string' and unknown['exitCode'] is None
+    result=subprocess.run(base+['journal','--action','diagnostics'],capture_output=True,check=True,timeout=20)
+    evidence=json.loads(result.stdout)['resultEvidence'][0]
+    assert evidence['unknownResponseKinds']=={'string':1} and evidence['unknownFinished']==1
+print(json.dumps({'prospectiveResponseEnvelope':'passed','stdoutExitInferred':False}))
