@@ -1,3 +1,7 @@
+# 0.14.7 patch acceptance · 2026-10-19
+
+The early-rejection patch is being verified with isolated source and packaged receiver tests. It retains the 1 MiB limit and fail-open behavior, exposes rejection-only providers without inventing activity, and does not reconstruct historical missing finishes. UI is unchanged; the existing dated DEMO screenshot provenance remains applicable. Platform CI and downloadable artifact acceptance will be recorded after completion; their prior-version results do not certify this patch.
+
 # QA evidence
 
 ## 0.14.6 verified public delivery · 2026-10-16

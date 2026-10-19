@@ -1,17 +1,17 @@
-# Agent Pulse 0.14.6 — evidence coverage and daily reviews / охват данных и ежедневные сводки
+# Agent Pulse 0.14.7 — hook rejection counters / счётчики отклонений хуков
 
-This release brings the locally reviewed 0.14.1–0.14.6 improvements to the public packages:
+This patch fixes a diagnostic blind spot: oversized inputs, malformed JSON/encoding and input-read failures now increment the existing provider rejection counter when the local journal is available. Source, compatibility and packaged hook entrypoints use the same bounded receiver.
 
-- Pulse benefit separates ordinary Skill/read/MCP/helper activity, finding-linked improvements, quality-qualified task comparisons and the model's own cache. Missing evaluations say “not evaluated”.
-- Read-only daily CLI/MCP and the compact repository review combine retained Codex/GLM calls, outcomes, bounded findings and saved quota observations. Time zones, reset windows, reported UTC tokens and unknown coverage remain explicit.
-- New events retain fixed recognition reasons, collector provenance and component families for partly understood commands. Components do not increase call totals or establish branch execution.
-- New terminal events retain only fixed response-envelope types/field states. Missing finishes, unknown completed results and format coverage are separate. No output, field names, messages or stacks are retained; stdout and stringified JSON are never converted into shell success. Older events and duplicate deliveries are not backfilled.
-- Opt-in source inventory refresh and trusted shared skill roots improve catalog matching without proving availability, application or productivity.
+- Rejection-only clients are visible in report coverage without invented activity.
+- No payloads, messages, commands or exception text are retained. The 1 MiB input limit stays unchanged.
+- Hooks remain silent and fail open. Native tool outcomes and old observations are not rewritten.
+- Storage initialization, counter-write or process failures can still prevent counting; zero rejections is not proof of complete collection.
+- Isolated regression tests cover rejection counts, bounded reads, privacy, storage failures and valid events after rejection. Packaged smoke checks enforce the existing 2-second callback budget.
 
-The read-only collector never starts models or the peer, changes subscriptions, uploads telemetry or edits native conversations. No causal productivity or subscription saving is claimed. Public screenshots use invented DEMO data. [Delivery evidence and remaining platform limits](QA.md).
+This does not establish the cause of historical missing finishes or any token/subscription saving. UI is unchanged; existing public DEMO screenshots remain representative. Source/package verification and platform limits are recorded in [QA](QA.md).
 
 ## По-русски
 
-В публичную версию включены накопленные улучшения 0.14.1–0.14.6: честный блок пользы, ежедневные сводки, распознавание частей команд и причин неизвестных результатов, ограниченное обновление реестра навыков. Вызов инструмента не считается выполненной задачей. Отсутствующая оценка пользы, неизвестный результат и недоступный лимит не подменяются нулями.
+Исправлено слепое место диагностики: слишком большие входы, некорректный JSON/кодировка и ошибки чтения теперь увеличивают существующий счётчик отклонений клиента, если журнал доступен. Исходный, совместимый и упакованный запуск используют один ограниченный обработчик.
 
-Новые признаки формата ответа помогают понять пробелы сбора без сохранения команд, вывода, сообщений и стеков. Старые данные не восстанавливаются, классификация штатного результата не меняется. Проценты лимита, токены UTC, кэш модели и экономия подписки остаются разными показателями. Скриншоты демонстрационные; приёмка платформ и пакетов указана отдельно в QA.
+Содержимое входов и ошибок не сохраняется. Лимит1МиБ, бесшумный режим, продолжение работы клиента при сбое и правила штатных исходов сохранены. Ошибки хранилища или процесса всё ещё могут мешать учёту; ноль отклонений не доказывает полноту сбора. Старые пропуски не восстанавливаются, их причина и экономия подписки этим исправлением не устанавливаются. Интерфейс не менялся.

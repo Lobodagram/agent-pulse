@@ -2,6 +2,10 @@ name: Release packages
 on:
   push:
     tags: ['v*']
+  workflow_run:
+    workflows: ['Checks']
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       release_tag:
@@ -12,7 +16,59 @@ on:
 permissions:
   contents: read
 jobs:
+  gate:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    outputs:
+      build: ${{ steps.release.outputs.build }}
+      publish: ${{ steps.release.outputs.publish }}
+      source: ${{ steps.release.outputs.source }}
+      tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Select exact checked source and unpublished version
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PULSE_EVENT: ${{ github.event_name }}
+          PULSE_HEAD: ${{ github.event.workflow_run.head_sha || github.sha }}
+          PULSE_MANUAL_TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v$(python -c 'from pulse_version import __version__; print(__version__)')"
+          build=true
+          publish=false
+          if [[ "$PULSE_EVENT" == workflow_run ]]; then
+            current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+            if [[ "$current" != "$PULSE_HEAD" ]]; then build=false; fi
+            # A missing ref is checked through git; API/auth failures never mean missing.
+            git ls-remote --tags origin "refs/tags/$tag" > "$RUNNER_TEMP/pulse-tag-ref"
+            if [[ -s "$RUNNER_TEMP/pulse-tag-ref" ]]; then build=false; fi
+            publish=true
+          elif [[ "$GITHUB_REF_TYPE" == tag || -n "$PULSE_MANUAL_TAG" ]]; then
+            publish=true
+          fi
+          if [[ -n "$PULSE_MANUAL_TAG" ]]; then test "$PULSE_MANUAL_TAG" = "$tag"; fi
+          {
+            echo "build=$build"
+            echo "publish=$publish"
+            echo "source=$PULSE_HEAD"
+            echo "tag=$tag"
+          } >> "$GITHUB_OUTPUT"
   package:
+    needs: gate
+    if: needs.gate.outputs.build == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -27,6 +83,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.source }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -92,13 +150,15 @@ jobs:
           path: dist/*.zip
           if-no-files-found: error
   publish:
-    needs: package
-    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
+    needs: [gate, package]
+    if: needs.gate.outputs.publish == 'true'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.source }}
       - uses: actions/download-artifact@v4
         with:
           path: packages
@@ -106,9 +166,21 @@ jobs:
       - run: cd packages && sha256sum *.zip > SHA256SUMS.txt
       - env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+          RELEASE_TAG: ${{ needs.gate.outputs.tag }}
+          RELEASE_SOURCE: ${{ needs.gate.outputs.source }}
+          PULSE_EVENT: ${{ github.event_name }}
         run: |
+          set -euo pipefail
+          if [[ "$PULSE_EVENT" == workflow_run ]]; then
+            test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$RELEASE_SOURCE"
+            # Creating the release creates only the new exact tag; never move an existing tag.
+            if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG"; then
+              test "$(git ls-remote --tags origin "refs/tags/$RELEASE_TAG" | cut -f1)" = "$RELEASE_SOURCE"
+            else
+              test "$?" = 2
+            fi
+          fi
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release create "$RELEASE_TAG" --verify-tag --prerelease --title "Agent Pulse $RELEASE_TAG — public preview / публичная версия" --notes-file docs/RELEASE_NOTES.md
+            gh release create "$RELEASE_TAG" --target "$RELEASE_SOURCE" --prerelease --title "Agent Pulse $RELEASE_TAG — public preview / публичная версия" --notes-file docs/RELEASE_NOTES.md
           fi
           gh release upload "$RELEASE_TAG" packages/* --clobber

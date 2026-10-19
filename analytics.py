@@ -204,7 +204,7 @@ def report(j,providers=None,session_limit=100):
     coverage=[]
     health={r['provider']:dict(r) for r in j.db.execute('SELECT * FROM health')}
     tool_seen={r['provider']:r['at'] for r in j.db.execute("SELECT provider,max(received) AS at FROM observation WHERE call!='' GROUP BY provider")}
-    for provider in sorted(providers or {c['provider'] for c in calls}):
+    for provider in sorted(set(providers) if providers is not None else {c['provider'] for c in calls} | set(health)):
         h=health.get(provider,{});items=[c for c in calls if c['provider']==provider];seen=h.get('last_event');active=bool(seen and time.time()-seen<600)
         recent_tool=tool_seen.get(provider);tool_active=bool(recent_tool and time.time()-recent_tool<600)
         coverage.append({'provider':provider,'mode':'hook-events' if any(c['source']=='hook' for c in items) else 'projected-events' if items else 'no-events',

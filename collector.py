@@ -638,17 +638,8 @@ def main():
     sub.add_parser('tls-check',help='Inspect actual TLS trust and verify a fixed public quota endpoint without any key')
     a=p.parse_args();os.umask(0o077)
     if a.command=='hook':
-        j=None
-        try:
-            body=sys.stdin.buffer.read(journal.MAX_INPUT+1)
-            if len(body)>journal.MAX_INPUT:raise ValueError('oversize')
-            j=journal.Journal(a.state);j.record(a.provider,json.loads(body))
-        except Exception:
-            try:
-                if j:j.reject(a.provider)
-            except Exception:pass
-        finally:
-            if j:j.close()
+        from hook_bridge import receive
+        receive(a.provider,a.state,sys.stdin.buffer)
         return
     if a.command=='mcp':mcp_server.serve(a.state,a.allow_control);return
     try:

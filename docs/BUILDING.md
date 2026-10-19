@@ -67,3 +67,7 @@ For isolated acceptance, pass an explicit temporary output directory to `build.s
 ## Same-version recovery after a tests/docs-only CI correction
 
 Create version tags after source CI passes on all supported platforms. Never silently move a published tag. If a post-tag correction changes only tests/documentation, the manual `Release packages` input `release_tag` can publish packages for the existing version. Each platform validates the input against `pulse_version.py`, fetches the existing tag and rejects any runtime/build-input drift; only tests, documentation, README/changelog and the recovery workflow itself may differ. Blank input keeps the former artifacts-only behavior. Publication waits for every package job; the existing per-job permission boundary is unchanged. Record the exact artifact build commit, tagged runtime identity and the original failure in QA.
+
+## Version publication after source CI
+
+For a successful `Checks` push on this repository's current main commit, `Release packages` selects only an unpublished canonical version. It skips existing version tags and outdated heads, builds the three packages from the exact checked commit, then creates the prerelease/tag and uploads checksums. A second head check precedes publication; existing tags are never moved. Only the publish job has contents-write permission. Pull-request/fork/failed runs do not enter this path. Explicit tag pushes and the existing guarded manual recovery remain available.

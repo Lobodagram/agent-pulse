@@ -38,6 +38,17 @@ with tempfile.TemporaryDirectory() as tmp:
 print(json.dumps({'explicitReceiptsStorageAndExclusiveBackup':'passed'}))
 with tempfile.TemporaryDirectory() as tmp:
     base=[str(exe),'--state',tmp]
+    for body in (b'{PRIVATE_HOOK_CANARY', b'x'*(1024*1024+1), b'\xff'):
+        r=subprocess.run(base+['hook','--provider','codex'],input=body,capture_output=True,timeout=2,check=True)
+        assert not r.stdout and not r.stderr,'rejected hook must stay silent'
+    r=subprocess.run(base+['journal'],capture_output=True,timeout=20,check=True)
+    rejected=json.loads(r.stdout)
+    assert rejected['calls']==0
+    assert next(row for row in rejected['coverage'] if row['provider']=='codex')['rejected']==3
+    assert not any(b'PRIVATE_HOOK_CANARY' in p.read_bytes() for p in Path(tmp).rglob('*') if p.is_file())
+print(json.dumps({'earlyHookRejectionsCountedWithoutPayloads':'passed'}))
+with tempfile.TemporaryDirectory() as tmp:
+    base=[str(exe),'--state',tmp]
     for event in ['PreToolUse','PostToolUse']:
         raw={'hook_event_name':event,'session_id':'frozen-demo','turn_id':'demo-turn','tool_use_id':'one','tool_name':'Bash','tool_input':{'command':'python -m unittest discover'},'tool_response':{'exit_code':0},'model':'demo-model'}
         r=subprocess.run(base+['hook','--provider','codex'],input=json.dumps(raw).encode(),capture_output=True,timeout=2,check=True)

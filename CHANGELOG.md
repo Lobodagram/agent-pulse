@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.14.7 · 2026-10-19
+
+- New canonical versions on main publish through the existing package workflow only after successful source CI and all three package jobs; exact source/head guards preserve published tags.
+
+- Count early oversized, malformed JSON/encoding and input-read hook rejections through the existing provider counter, without storing payloads. Source, compatibility and frozen CLI entrypoints share one receiver.
+- Hooks remain silent/fail-open; input limit and native result classification are unchanged. Storage initialization/counter failures cannot be counted reliably; old missing results are not reconstructed.
+- Include rejection-only clients in collection coverage without marking them active or fabricating event timestamps.
+- Added isolated rejection/privacy/recovery tests and a packaged 2-second hook check. No UI change; the existing DEMO gallery remains representative.
+
 ## 0.14.6 · 2026-10-16
 
 - Public Mac ARM64/Intel and Windows x64 packages include the accumulated 0.14.1–0.14.6 changes; current EN/RU documentation and synthetic gallery updated. Windows log-test portability corrected; application runtime unchanged.

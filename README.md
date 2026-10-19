@@ -1,6 +1,6 @@
 # Agent Pulse
 
-Version **0.14.6** separates observed automation activity, reviewed improvements and measured effect in the per-client **Pulse benefit** disclosure. It also adds bounded daily reviews and prospective command/result coverage diagnostics. [Metric definitions](docs/WIDGET_BENEFIT.md) · [Diagnostics](docs/DIAGNOSTICS.md).
+Version **0.14.7** separates observed automation activity, reviewed improvements and measured effect in the per-client **Pulse benefit** disclosure. It also provides bounded daily reviews and prospective command/result coverage diagnostics. Patch 0.14.7 counts oversized and malformed hook inputs without retaining their content; storage failures still limit counter coverage. [Metric definitions](docs/WIDGET_BENEFIT.md) · [Diagnostics](docs/DIAGNOSTICS.md).
 
 <p><img src="brand/agent-pulse.png" alt="Agent Pulse" width="112" height="112"></p>
 
@@ -16,7 +16,7 @@ A local tool for improving coding-agent workspaces: collect sanitized tool event
 
 [Architecture and module ownership](docs/ARCHITECTURE.md) · [Linux/headless runtime](docs/HEADLESS.md) · Runtime wheel: Python 3.11+
 
-**[0.14.6 public preview](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.14.6)** targets macOS ARM64/Intel and Windows x64. Source checks, package publication and downloaded verification are recorded separately in [QA](docs/QA.md). macOS uses SwiftUI/AppKit; Windows has a Tk widget with the same collector. Selecting a client does not establish access to its account statistics.
+**[0.14.7 public preview](https://github.com/Lobodagram/agent-pulse/releases/tag/v0.14.7)** targets macOS ARM64/Intel and Windows x64. Source checks, package publication and downloaded verification are recorded separately in [QA](docs/QA.md). macOS uses SwiftUI/AppKit; Windows has a Tk widget with the same collector. Selecting a client does not establish access to its account statistics.
 
 The release includes better bounded shell/skill recognition, separate component coverage for partially understood chains, missing-finish versus unknown-result counts, and fixed response-format evidence for new events. It never turns shell output into a successful exit or reconstructs old payloads. The compact review helper uses saved local quota observations; resets, reported UTC tokens and subscription savings remain separate. [Release notes](docs/RELEASE_NOTES.md) · [Workflow automation](docs/WORKFLOW_AUTOMATION.md).
 

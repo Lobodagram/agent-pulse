@@ -11,10 +11,13 @@ from platform_support import state_directory
 def receive(provider,state,stream):
     j=None
     try:
+        # Initialize before reading/decoding so early input rejections are counted.
+        # If storage itself is unavailable, fail open without retrying it.
+        j=Journal(state)
         body=stream.read(MAX_INPUT+1)
         if len(body)>MAX_INPUT:raise ValueError('oversize')
         raw=json.loads(body)
-        j=Journal(state);j.record(provider,raw)
+        j.record(provider,raw)
         return True
     except Exception:
         try:
@@ -22,7 +25,9 @@ def receive(provider,state,stream):
         except Exception:pass
         return False
     finally:
-        if j:j.close()
+        try:
+            if j:j.close()
+        except Exception:pass
 
 def main():
     a=argparse.ArgumentParser();a.add_argument('--provider',choices=sorted(PROVIDERS),required=True);a.add_argument('--state',type=Path,default=state_directory());x=a.parse_args()
